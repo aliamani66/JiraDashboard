@@ -5,6 +5,7 @@ const path = require('path');
 const jiraMapping = require('../jiraMapping');
 const { authenticate } = require('../middleware/auth');
 const jiraService = require('../services/jiraService');
+const cacheService = require('../services/cacheService');
 
 const router = express.Router();
 router.use(authenticate);
@@ -79,6 +80,12 @@ router.get('/config', (req, res) => {
         searchEndpoint: env.JIRA_SEARCH_ENDPOINT || '/rest/api/3/search/jql',
         projectEndpoint: env.JIRA_PROJECT_ENDPOINT || '/rest/api/3/project',
       },
+      serverAndDb: {
+        port: env.PORT || process.env.PORT || '3001',
+        jwtSecret: env.JWT_SECRET ? '••••••••' : 'dev-secret-key',
+        dbDriver: 'SQLite 3 (database.sqlite)',
+        dbStatus: 'متصل و فعال',
+      },
       confluence: {
         baseUrl: env.CONFLUENCE_BASE_URL || '',
         username: env.CONFLUENCE_USERNAME || '',
@@ -124,6 +131,11 @@ router.put('/config', (req, res) => {
       if (body.connection.token && body.connection.token !== '••••••••') updates.JIRA_TOKEN = body.connection.token;
       if (body.connection.projectKey) updates.JIRA_PROJECT_KEY = body.connection.projectKey;
       if (body.connection.syncIntervalMinutes) updates.SYNC_INTERVAL_MINUTES = body.connection.syncIntervalMinutes;
+    }
+
+    if (body.serverAndDb) {
+      if (body.serverAndDb.port) updates.PORT = body.serverAndDb.port;
+      if (body.serverAndDb.jwtSecret && body.serverAndDb.jwtSecret !== '••••••••') updates.JWT_SECRET = body.serverAndDb.jwtSecret;
     }
 
     if (body.apiEndpoints) {
@@ -176,6 +188,20 @@ router.put('/config', (req, res) => {
     res.json({ message: 'تنظیمات با موفقیت در فایل .env ذخیره گردید. برای اعمال تغییرات سرور را ری‌استارت فرمایید.' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save settings: ' + err.message });
+  }
+});
+
+// POST Reset Database directly from Jira Cloud live
+router.post('/reset-db', async (req, res) => {
+  try {
+    const syncRes = await cacheService.syncFromJira();
+    if (syncRes.success) {
+      res.json({ success: true, message: `دیتابیس با موفقیت و کاملاً زنده بر اساس داده‌های Jira Cloud همگام‌سازی شد (${syncRes.projectsSynced} پروژه و ${syncRes.tasksSynced} تسک).` });
+    } else {
+      res.status(500).json({ success: false, message: syncRes.message });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

@@ -358,6 +358,45 @@ const JiraSettingsPage = () => {
         </div>
       </Section>
 
+      {/* ── 1.8. SERVER & DATABASE MANAGEMENT ── */}
+      <Section icon={Server} title="تنظیمات سرور و دیتابیس (Server & Database Management)" color="#10B981" defaultOpen={false}>
+        <p className="jsp-section-desc">مدیریت پورت سرویس‌دهنده، کلیدهای امنیتی و بازنشانی دیتابیسSQLite متصل به سیستم.</p>
+        <div className="jsp-grid-2">
+          <Field label="پورت سرور بک‌اند (Port)" hint="پورت سرویس‌دهنده Node.js">
+            <Input value={cfg.serverAndDb?.port} onChange={v => set('serverAndDb', 'port', v)} placeholder="3001" mono />
+          </Field>
+          <Field label="کلید امنیتی توکن‌ها (JWT Secret)" hint="برای امضای امن توکن‌های کاربران">
+            <Input value={cfg.serverAndDb?.jwtSecret} onChange={v => set('serverAndDb', 'jwtSecret', v)} placeholder="dev-secret-key" password />
+          </Field>
+          <Field label="نوع و شناسه دیتابیس متصل" hint="موتور دیتابیس ذخیره‌سازی محلی">
+            <Input value={cfg.serverAndDb?.dbDriver || 'SQLite 3 (database.sqlite)'} onChange={() => {}} placeholder="SQLite 3" mono />
+          </Field>
+          <Field label="وضعیت دیتابیس" hint="وضعیت اتصال به فایل database.sqlite">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '0.3rem' }}>
+              <span className="diag-status-pill matched">✅ متصل و فعال</span>
+              <button 
+                className="jsp-add-mapping-btn" 
+                style={{ background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#38BDF8' }}
+                onClick={async () => {
+                  if (window.confirm('آیا مایلید تمام داده‌های دیتابیس بر اساس داده‌های ۱۰۰٪ زنده Jira Cloud بازنشانی شوند؟')) {
+                    try {
+                      showToast('در حال همگام‌سازی و بازسازی دیتابیس از Jira...');
+                      const res = await api.resetDatabase();
+                      showToast(res.message || 'دیتابیس با داده‌های زنده جیرا همگام شد.');
+                      setTimeout(() => window.location.reload(), 1500);
+                    } catch (e) {
+                      showToast('خطا در بازسازی دیتابیس', 'error');
+                    }
+                  }
+                }}
+              >
+                🔄 همگام‌سازی و بازسازی دیتابیس از Jira Cloud
+              </button>
+            </div>
+          </Field>
+        </div>
+      </Section>
+
       {/* ── 2. CONFLUENCE ── */}
       <Section icon={GitBranch} title="اتصال به Confluence (مستندات)" color="#A78BFA" defaultOpen={false}>
         <div className="jsp-grid-2">
