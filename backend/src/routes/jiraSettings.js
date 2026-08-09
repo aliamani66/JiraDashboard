@@ -74,6 +74,11 @@ router.get('/config', (req, res) => {
         isConfigured: jiraService.isConfigured,
         syncIntervalMinutes: env.SYNC_INTERVAL_MINUTES || process.env.SYNC_INTERVAL_MINUTES || '60',
       },
+      apiEndpoints: {
+        apiVersion: env.JIRA_API_VERSION || 'auto', // 'v3', 'v2', 'auto'
+        searchEndpoint: env.JIRA_SEARCH_ENDPOINT || '/rest/api/3/search/jql',
+        projectEndpoint: env.JIRA_PROJECT_ENDPOINT || '/rest/api/3/project',
+      },
       confluence: {
         baseUrl: env.CONFLUENCE_BASE_URL || '',
         username: env.CONFLUENCE_USERNAME || '',
@@ -119,6 +124,13 @@ router.put('/config', (req, res) => {
       if (body.connection.token && body.connection.token !== '••••••••') updates.JIRA_TOKEN = body.connection.token;
       if (body.connection.projectKey) updates.JIRA_PROJECT_KEY = body.connection.projectKey;
       if (body.connection.syncIntervalMinutes) updates.SYNC_INTERVAL_MINUTES = body.connection.syncIntervalMinutes;
+    }
+
+    if (body.apiEndpoints) {
+      const ep = body.apiEndpoints;
+      if (ep.apiVersion) updates.JIRA_API_VERSION = ep.apiVersion;
+      if (ep.searchEndpoint) updates.JIRA_SEARCH_ENDPOINT = ep.searchEndpoint;
+      if (ep.projectEndpoint) updates.JIRA_PROJECT_ENDPOINT = ep.projectEndpoint;
     }
 
     if (body.confluence) {
@@ -187,10 +199,14 @@ router.post('/diagnose', async (req, res) => {
     try {
       projRes = await axios.get(`${baseUrl}/rest/api/3/project/${projectKey}`, { headers, timeout: 10000 });
     } catch (e) {
-      return res.status(400).json({
-        success: false,
-        message: `خطا در برقراری ارتباط با Jira API: ${e.response?.data?.message || e.message}`,
-      });
+      try {
+        projRes = await axios.get(`${baseUrl}/rest/api/2/project/${projectKey}`, { headers, timeout: 10000 });
+      } catch (e2) {
+        return res.status(400).json({
+          success: false,
+          message: `خطا در برقراری ارتباط با Jira API: ${e.response?.data?.message || e.message}`,
+        });
+      }
     }
 
     let searchRes;
@@ -201,7 +217,15 @@ router.post('/diagnose', async (req, res) => {
         fields: ['*all']
       }, { headers, timeout: 15000 });
     } catch (e) {
-      return res.status(400).json({ success: false, message: `خطا در دریافت تسک‌های نمونه: ${e.message}` });
+      try {
+        searchRes = await axios.get(`${baseUrl}/rest/api/2/search`, {
+          headers,
+          params: { jql: `project = ${projectKey} ORDER BY created DESC`, maxResults: 10, fields: '*all' },
+          timeout: 15000
+        });
+      } catch (e2) {
+        return res.status(400).json({ success: false, message: `خطا در دریافت تسک‌های نمونه: ${e.message}` });
+      }
     }
 
     const issues = searchRes.data.issues || [];
@@ -209,7 +233,6 @@ router.post('/diagnose', async (req, res) => {
       return res.json({ success: true, projectName: projRes.data.name, complianceScore: 60, message: 'پروژه متصل شد اما تسکی یافت نشد.', diagnostics: [] });
     }
 
-    // Inspect across all 10 sample issues for maximum accuracy
     let sampleWithComp = issues.find(i => i.fields?.components && i.fields.components.length > 0);
     let sampleWithSprint = issues.find(i => i.fields?.customfield_10020 || i.fields?.sprint);
     let sampleWithAssignee = issues.find(i => i.fields?.assignee?.displayName);
@@ -221,24 +244,18 @@ router.post('/diagnose', async (req, res) => {
 
     const schemaReport = [];
     let matchCount = 0;
-    const total = 8;
 
     const check = (field, label, value, note, status = 'matched') => {
       if (status === 'matched') matchCount++;
       schemaReport.push({ field: `${field} (${label})`, status, value: value ? String(value).substring(0, 80) : null, note });
     };
 
-    // 1. Summary
     check('summary', 'عنوان تسک', fields.summary, 'فیلد استاندارد جیرا - کاملاً متصل', 'matched');
-    
-    // 2. Status
     check('status.name', 'وضعیت', fields.status?.name, 'نگاشت شده به وضعیت‌های داشبورد', 'matched');
     
-    // 3. Assignee
     const assigneeVal = sampleWithAssignee ? sampleWithAssignee.fields.assignee.displayName : fields.assignee?.displayName;
     check('assignee.displayName', 'مسئول', assigneeVal || 'بدون مسئول مستقیم', 'اختیاری - پشتیبانی از نام نمایشی مسئول', 'matched');
     
-    // 4. Components
     if (sampleWithComp) {
       const comps = sampleWithComp.fields.components.map(c => c.name).join(', ');
       check('components', 'کامپوننت‌های جیرا', comps, 'فیلد کامپوننت نیتیو جیرا شناسایی شد و کاملاً متصل است', 'matched');
@@ -246,21 +263,17 @@ router.post('/diagnose', async (req, res) => {
       check('components', 'کامپوننت‌های جیرا', 'شناسایی برچسب‌ها (comp:...)', 'فیلد نیتیو یا برچسب‌های comp: پشتیبانی می‌شوند', 'matched');
     }
 
-    // 5. Sprint
     if (sampleWithSprint) {
       check('customfield_10020 / sprint', 'اسپرینت', 'یافت شد', 'اسپرینت‌های جیرا کاملاً متصل هستند (استفاده در گانت چارت)', 'matched');
     } else {
       check('customfield_10020 / sprint', 'اسپرینت', 'customfield_10020', 'پشتیبانی از اسپرینت‌های چابک جیرا', 'matched');
     }
 
-    // 6. Dates
     check('duedate / created', 'تاریخ‌های زمان‌بندی', fields.duedate || fields.created, 'استفاده در محاسبه بازه زمانی و پیشرفت', 'matched');
 
-    // 7. Labels
     const labelsVal = sampleWithLabels ? sampleWithLabels.fields.labels.join(', ') : (fields.labels?.join(', ') || '—');
     check('labels', 'برچسب‌ها', labelsVal, 'پشتیبانی از برچسب‌های wait:، comp:، reason:', 'matched');
 
-    // 8. Issue Links
     const linksVal = sampleWithLinks ? `${sampleWithLinks.fields.issuelinks.length} لینک` : 'پشتیبانی شده';
     check('issuelinks', 'لینک‌های بین تسک‌ها', linksVal, 'شناسایی هوشمند وابستگی‌ها و تسک‌های منتظر', 'matched');
 

@@ -270,15 +270,15 @@ const JiraSettingsPage = () => {
       </div>
 
       {/* ── 1. CONNECTION ── */}
-      <Section icon={Server} title="اتصال به Jira Cloud (Connection Settings)" color="#38BDF8">
+      <Section icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
         <div className="jsp-grid-2">
-          <Field label="آدرس پایه Jira (Base URL)" hint="مثال: https://company.atlassian.net">
+          <Field label="آدرس پایه Jira (Base URL)" hint="مثال: https://company.atlassian.net یا https://jira.company.com">
             <Input value={cfg.connection?.baseUrl} onChange={v => set('connection', 'baseUrl', v)} placeholder="https://company.atlassian.net" />
           </Field>
-          <Field label="نام کاربری / ایمیل حساب Jira" hint="ایمیل حساب Atlassian">
+          <Field label="نام کاربری / ایمیل حساب Jira" hint="ایمیل حساب Atlassian یا نام کاربری">
             <Input value={cfg.connection?.username} onChange={v => set('connection', 'username', v)} placeholder="you@company.com" />
           </Field>
-          <Field label="API Token جیرا" hint="از صفحه Atlassian API Tokens دریافت کنید">
+          <Field label="API Token / کلمه عبور جیرا" hint="از صفحه Atlassian API Tokens یا کلمه عبور حساب دریافت کنید">
             <Input value={cfg.connection?.token} onChange={v => set('connection', 'token', v)} placeholder="ATATT3xFfG..." password />
           </Field>
           <Field label="کلید پروژه اصلی (Project Key)" hint="مثال: ORD، OPS، DEV">
@@ -286,6 +286,30 @@ const JiraSettingsPage = () => {
           </Field>
           <Field label="فاصله سینک خودکار (دقیقه)" hint="هر چند دقیقه داده‌های جیرا سینک شود">
             <Input value={cfg.connection?.syncIntervalMinutes} onChange={v => set('connection', 'syncIntervalMinutes', v)} placeholder="60" mono />
+          </Field>
+        </div>
+      </Section>
+
+      {/* ── 1.5. API ENDPOINTS & VERSION ── */}
+      <Section icon={Cpu} title="نسخه و مسیرهای API جیرا (API Version & Custom Endpoints)" color="#6366F1">
+        <p className="jsp-section-desc">اگر جیرای سازمان شما نسخه Server / Data Center یا دارای آدرس‌های اختصاصی API است، می‌توانید نسخه و مسیرها را تعیین فرمایید.</p>
+        <div className="jsp-grid-2">
+          <Field label="نوع و نسخه Jira API" hint="تعیین نوع ساختار متدهای API">
+            <select
+              value={cfg.apiEndpoints?.apiVersion || 'auto'}
+              onChange={e => set('apiEndpoints', 'apiVersion', e.target.value)}
+              className="jsp-input"
+            >
+              <option value="auto">🔄 تشخیص خودکار (Auto-Detect Cloud v3 / Server v2)</option>
+              <option value="v3">🌐 Jira Cloud (REST API v3)</option>
+              <option value="v2">🖥️ Jira Server / Data Center (REST API v2)</option>
+            </select>
+          </Field>
+          <Field label="آدرس Endpoint جستجو (Search Endpoint)" hint="مسیر API جستجوی JQL">
+            <Input value={cfg.apiEndpoints?.searchEndpoint} onChange={v => set('apiEndpoints', 'searchEndpoint', v)} placeholder="/rest/api/3/search/jql" mono />
+          </Field>
+          <Field label="آدرس Endpoint پروژه (Project Endpoint)" hint="مسیر API دریافت اطلاعات پروژه">
+            <Input value={cfg.apiEndpoints?.projectEndpoint} onChange={v => set('apiEndpoints', 'projectEndpoint', v)} placeholder="/rest/api/3/project" mono />
           </Field>
         </div>
       </Section>
