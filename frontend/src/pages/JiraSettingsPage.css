@@ -135,6 +135,16 @@
   box-sizing: border-box;
   transition: border-color 0.2s;
 }
+select.jsp-input {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  cursor: pointer;
+}
+select.jsp-input option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  padding: 0.6rem;
+}
 .jsp-input.mono { font-family: monospace; }
 .jsp-input:focus { border-color: var(--accent-blue); box-shadow: 0 0 10px rgba(59,130,246,0.25); }
 .jsp-eye-btn {

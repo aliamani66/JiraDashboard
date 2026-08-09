@@ -44,6 +44,21 @@
   scrollbar-color: rgba(139, 92, 246, 0.7) rgba(10, 15, 30, 0.7) !important;
 }
 
+/* Global Select & Option Dark Theme Styling */
+select {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  padding: 8px 12px;
+}
+
 *::-webkit-scrollbar {
   width: 10px !important;
   height: 10px !important;
