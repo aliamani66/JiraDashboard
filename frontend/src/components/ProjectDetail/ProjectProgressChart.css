@@ -1,0 +1,194 @@
+.project-progress-chart-card {
+  padding: 1.5rem;
+}
+
+.ppc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.ppc-badge-overall {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(234, 179, 8, 0.15);
+  color: #FACC15;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  padding: 0.35rem 0.85rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ppc-badge-overall strong {
+  font-size: 0.95rem;
+  color: #FFFFFF;
+}
+
+.ppc-body-grid {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+/* Donut Chart Wrapper */
+.ppc-donut-wrapper {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto;
+}
+
+.ppc-donut-svg {
+  transform: rotate(0deg);
+}
+
+.ppc-ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.ppc-ring-done {
+  fill: none;
+  stroke: #10B981;
+  transition: stroke-dasharray 0.8s ease;
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
+}
+
+.ppc-ring-progress {
+  fill: none;
+  stroke: #3B82F6;
+  transition: stroke-dasharray 0.8s ease;
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.6));
+}
+
+.ppc-ring-waiting {
+  fill: none;
+  stroke: #F97316;
+  transition: stroke-dasharray 0.8s ease;
+  filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.6));
+}
+
+.ppc-donut-center {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.ppc-donut-pct {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+.ppc-donut-sub {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* Details Column */
+.ppc-details-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.ppc-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.ppc-status-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ppc-status-top {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ppc-status-val {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.ppc-status-val strong {
+  font-size: 1.1rem;
+  color: #FFFFFF;
+}
+
+.ppc-status-val small {
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+.text-emerald { color: #10B981; }
+.text-blue { color: #3B82F6; }
+.text-orange { color: #F97316; }
+.text-purple { color: #A855F7; }
+
+/* Worklog Progress Bar */
+.ppc-worklog-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ppc-worklog-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+}
+
+.ppc-worklog-info strong {
+  color: var(--accent-cyan);
+}
+
+.ppc-worklog-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ppc-worklog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3B82F6 0%, #06B6D4 100%);
+  border-radius: 4px;
+  transition: width 0.8s ease;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+}
+
+@media (max-width: 768px) {
+  .ppc-body-grid {
+    grid-template-columns: 1fr;
+  }
+}

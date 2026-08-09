@@ -1,0 +1,180 @@
+.task-list-card {
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.text-accent-blue {
+  color: var(--accent-blue);
+}
+
+.task-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.task-filters {
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+}
+
+.filter-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0.4rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.filter-btn:hover {
+  color: var(--text-primary);
+}
+
+.filter-btn.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.table-responsive {
+  overflow-x: auto;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.task-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
+}
+
+.task-table th {
+  text-align: right;
+  padding: 0.5rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-bottom: 1px solid var(--glass-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+}
+
+.task-table td {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.task-table tr td:first-child {
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.task-table tr td:last-child {
+  border-top-left-radius: var(--radius-sm);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.task-table tr:hover td {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.task-title-cell {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.task-assignee {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.task-time-col {
+  width: 150px;
+}
+
+.mini-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.mini-progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.mini-progress-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mini-progress-fill {
+  height: 100%;
+  background: var(--accent-blue);
+  border-radius: 2px;
+}
+
+.priority-tag {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.priority-tag.critical {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--accent-red);
+}
+
+.priority-tag.high {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent-yellow);
+}
+
+.priority-tag.normal {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-green);
+}
+
+.no-tasks {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+}
+
+.blocked-team-tag {
+  display: inline-block;
+  margin-right: 0.5rem;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--accent-red);
+  white-space: nowrap;
+}
+
+.row-blocked td {
+  border-right: 3px solid var(--accent-red);
+}
+
+.priority-tag.low {
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--text-muted);
+}

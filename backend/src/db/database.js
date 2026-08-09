@@ -1,0 +1,176 @@
+const initSqlJs = require('sql.js');
+const fs = require('fs');
+const path = require('path');
+
+const dbPath = path.join(__dirname, '../../database.sqlite');
+const schemaPath = path.join(__dirname, 'schema.sql');
+
+let db = null;
+let inTransaction = false;
+
+// Save database to file
+function saveDb() {
+  if (db && !inTransaction) {
+    const data = db.export();
+    const buffer = Buffer.from(data);
+    fs.writeFileSync(dbPath, buffer);
+  }
+}
+
+// Convert @param to :param and build bind object
+function convertNamedParams(sql, params) {
+  if (params.length === 1 && typeof params[0] === 'object' && params[0] !== null && !Array.isArray(params[0])) {
+    const obj = params[0];
+    const sqlConverted = sql.replace(/@(\w+)/g, ':$1');
+    const bindObj = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      bindObj[':' + key] = val === undefined ? null : val;
+    }
+    return { sql: sqlConverted, bind: bindObj };
+  }
+  // Positional params - handle nulls
+  const flatParams = params.map(p => p === undefined ? null : p);
+  return { sql, bind: flatParams };
+}
+
+// Compatibility wrapper to mimic better-sqlite3 API
+function createStatement(sql) {
+  return {
+    run(...params) {
+      try {
+        if (params.length === 0) {
+          db.run(sql);
+        } else {
+          const converted = convertNamedParams(sql, params);
+          db.run(converted.sql, converted.bind);
+        }
+        if (!inTransaction) saveDb();
+        return { changes: db.getRowsModified(), lastInsertRowid: 0 };
+      } catch (e) {
+        console.error('SQL run error:', e.message);
+        console.error('SQL:', sql.substring(0, 200));
+        throw e;
+      }
+    },
+    get(...params) {
+      let stmt;
+      try {
+        const converted = convertNamedParams(sql, params);
+        stmt = db.prepare(converted.sql);
+        if (params.length > 0 && (Array.isArray(converted.bind) ? converted.bind.length > 0 : Object.keys(converted.bind).length > 0)) {
+          stmt.bind(converted.bind);
+        }
+        if (stmt.step()) {
+          const columns = stmt.getColumnNames();
+          const values = stmt.get();
+          const result = {};
+          columns.forEach((col, i) => { result[col] = values[i]; });
+          stmt.free();
+          return result;
+        }
+        stmt.free();
+        return undefined;
+      } catch (e) {
+        if (stmt) try { stmt.free(); } catch(_) {}
+        console.error('SQL get error:', e.message);
+        console.error('SQL:', sql.substring(0, 200));
+        throw e;
+      }
+    },
+    all(...params) {
+      let stmt;
+      try {
+        const converted = convertNamedParams(sql, params);
+        stmt = db.prepare(converted.sql);
+        if (params.length > 0 && (Array.isArray(converted.bind) ? converted.bind.length > 0 : Object.keys(converted.bind).length > 0)) {
+          stmt.bind(converted.bind);
+        }
+        const results = [];
+        const columns = stmt.getColumnNames();
+        while (stmt.step()) {
+          const values = stmt.get();
+          const row = {};
+          columns.forEach((col, i) => { row[col] = values[i]; });
+          results.push(row);
+        }
+        stmt.free();
+        return results;
+      } catch (e) {
+        if (stmt) try { stmt.free(); } catch(_) {}
+        console.error('SQL all error:', e.message);
+        console.error('SQL:', sql.substring(0, 200));
+        throw e;
+      }
+    }
+  };
+}
+
+// Wrapper object that mimics better-sqlite3 database interface
+function createDbWrapper() {
+  return {
+    prepare(sql) {
+      return createStatement(sql);
+    },
+    exec(sql) {
+      db.run(sql);
+      saveDb();
+    },
+    pragma(str) {
+      // sql.js doesn't support WAL, just ignore
+    },
+    transaction(fn) {
+      return function(...args) {
+        inTransaction = true;
+        db.run('BEGIN');
+        try {
+          fn(...args);
+          db.run('COMMIT');
+          inTransaction = false;
+          saveDb();
+        } catch (e) {
+          try {
+            db.run('ROLLBACK');
+          } catch (rollbackErr) {
+            // ignore rollback errors
+          }
+          inTransaction = false;
+          throw e;
+        }
+      };
+    }
+  };
+}
+
+let dbWrapper = null;
+
+async function initDb() {
+  const SQL = await initSqlJs();
+  
+  if (fs.existsSync(dbPath)) {
+    const fileBuffer = fs.readFileSync(dbPath);
+    db = new SQL.Database(fileBuffer);
+  } else {
+    db = new SQL.Database();
+  }
+
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+  db.exec(schema);
+  saveDb();
+
+  dbWrapper = createDbWrapper();
+  console.log('Database initialized successfully.');
+  return dbWrapper;
+}
+
+function getDb() {
+  if (!dbWrapper) {
+    throw new Error('Database not initialized. Call initDb() first.');
+  }
+  return dbWrapper;
+}
+
+module.exports = {
+  initDb,
+  getDb
+};

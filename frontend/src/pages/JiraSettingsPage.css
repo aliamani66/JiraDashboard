@@ -1,0 +1,295 @@
+.jira-settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Header */
+.jsp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.jsp-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0 0 0.3rem;
+}
+.jsp-subtitle {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+/* Buttons */
+.jsp-run-diag-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--gradient-primary);
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: var(--shadow-glow-blue);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.jsp-run-diag-btn.secondary {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+.jsp-run-diag-btn.secondary:hover:not(:disabled) {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+.jsp-run-diag-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.15);
+}
+.jsp-run-diag-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Collapsible Section */
+.jsp-section { padding: 0; overflow: hidden; }
+.jsp-section-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.4rem;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.jsp-section-toggle:hover { background: rgba(255,255,255,0.03); }
+.jsp-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.jsp-section-body {
+  padding: 0 1.4rem 1.25rem;
+  overflow: hidden;
+}
+.jsp-section-desc {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  margin: 0 0 1rem;
+  line-height: 1.6;
+}
+
+/* Two-column grid */
+.jsp-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 768px) { .jsp-grid-2 { grid-template-columns: 1fr; } }
+
+/* Field */
+.jsp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.jsp-field-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.jsp-field-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Input */
+.jsp-input-wrap { position: relative; }
+.jsp-input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.jsp-input.mono { font-family: monospace; }
+.jsp-input:focus { border-color: var(--accent-blue); box-shadow: 0 0 10px rgba(59,130,246,0.25); }
+.jsp-eye-btn {
+  position: absolute;
+  left: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Tag list */
+.jsp-taglist { display: flex; flex-direction: column; gap: 0.7rem; }
+.jsp-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.jsp-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(59,130,246,0.15);
+  border: 1px solid rgba(59,130,246,0.35);
+  color: #38BDF8;
+  padding: 0.25rem 0.65rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-family: monospace;
+  font-weight: 600;
+}
+.jsp-tag-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 0;
+  line-height: 1;
+}
+.jsp-tag-remove:hover { opacity: 1; }
+.jsp-tag-add { display: flex; gap: 0.5rem; }
+.jsp-tag-add-btn {
+  background: rgba(59,130,246,0.15);
+  border: 1px solid rgba(59,130,246,0.3);
+  color: #38BDF8;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.jsp-tag-add-btn:hover { background: rgba(59,130,246,0.3); }
+
+/* Status mapping table */
+.jsp-status-table-wrap { overflow-x: auto; }
+.jsp-status-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.87rem;
+}
+.jsp-status-table th {
+  text-align: right;
+  padding: 0.65rem 0.85rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--glass-border);
+  font-weight: 600;
+}
+.jsp-status-table td { padding: 0.55rem 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.jsp-add-row td { padding-top: 0.85rem; }
+.mono-code { font-family: monospace; color: var(--accent-cyan); font-size: 0.84rem; }
+.jsp-delete-row {
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: #FCA5A5;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.jsp-delete-row:hover { background: rgba(239,68,68,0.3); }
+.jsp-add-mapping-btn {
+  background: rgba(16,185,129,0.15);
+  border: 1px solid rgba(16,185,129,0.3);
+  color: #34D399;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.jsp-add-mapping-btn:hover { background: rgba(16,185,129,0.3); }
+
+/* Diagnostic card */
+.jsp-diag-card { padding: 1.5rem; border: 1px solid var(--accent-blue); }
+.jsp-diag-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+.jsp-diag-header h2 { margin: 0 0 0.25rem; font-size: 1.2rem; }
+.jsp-diag-sub { margin: 0; font-size: 0.83rem; color: var(--text-muted); }
+.jsp-score-badge {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 0.5rem 1.2rem; border-radius: 12px;
+}
+.jsp-score-badge.good { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); }
+.jsp-score-badge.warn { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); }
+.jsp-score-badge.bad  { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.4);  }
+.jsp-score-badge.good .score-num { color: #34D399; }
+.jsp-score-badge.warn .score-num { color: #FBBF24; }
+.jsp-score-badge.bad  .score-num { color: #FCA5A5; }
+.score-num { font-size: 1.75rem; font-weight: 800; }
+.score-lbl { font-size: 0.7rem; color: var(--text-muted); }
+
+.jsp-diag-table-wrapper { overflow-x: auto; }
+.jsp-diag-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.jsp-diag-table th {
+  text-align: right; padding: 0.7rem 0.9rem;
+  color: var(--text-muted); border-bottom: 1px solid var(--glass-border); font-weight: 600;
+}
+.jsp-diag-table td { padding: 0.75rem 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.diag-status-pill { font-size: 0.78rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 10px; }
+.diag-status-pill.matched { background: rgba(16,185,129,0.15); color: #34D399; }
+.diag-status-pill.warning { background: rgba(245,158,11,0.15); color: #FBBF24; }
+.diag-status-pill.missing  { background: rgba(239,68,68,0.15);  color: #FCA5A5; }
+.diag-status-pill.optional { background: rgba(255,255,255,0.07); color: var(--text-secondary); }
+.diag-val-code { font-family: monospace; font-size: 0.79rem; background: rgba(0,0,0,0.3); padding: 0.2rem 0.5rem; border-radius: 4px; color: var(--accent-cyan); }
+.diag-note-text { color: var(--text-secondary); font-size: 0.82rem; }
+
+.jsp-error-msg {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
+  color: #FCA5A5; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.88rem;
+}
+
+.jsp-customfields-footer { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--glass-border); }
+.jsp-customfields-footer h4 { margin: 0 0 0.65rem; font-size: 0.88rem; color: var(--accent-cyan); }
+.jsp-cf-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.jsp-cf-tag {
+  font-family: monospace; font-size: 0.77rem;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+  padding: 0.2rem 0.5rem; border-radius: 5px; color: var(--text-secondary);
+}
+
+/* Spin animation */
+.spin { animation: spinAnim 1s linear infinite; }
+@keyframes spinAnim { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.text-muted { color: var(--text-muted); }

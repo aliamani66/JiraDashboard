@@ -1,0 +1,464 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Settings, Server, Cpu, GitBranch, Tag, Calendar,
+  RefreshCw, Save, CheckCircle2, AlertTriangle, X,
+  ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap
+} from 'lucide-react';
+import { api } from '../services/api';
+import './JiraSettingsPage.css';
+
+// ─────────────────────────── HELPERS ────────────────────────────
+const Section = ({ icon: Icon, title, color, children, defaultOpen = true }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="glass-card jsp-section">
+      <button className="jsp-section-toggle" onClick={() => setOpen(o => !o)}>
+        <span className="jsp-section-title-row">
+          <Icon size={20} style={{ color }} />
+          <span style={{ color }}>{title}</span>
+        </span>
+        {open ? <ChevronUp size={18} className="text-muted" /> : <ChevronDown size={18} className="text-muted" />}
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="jsp-section-body"
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const Field = ({ label, hint, children }) => (
+  <div className="jsp-field">
+    <label className="jsp-field-label">{label}</label>
+    {hint && <span className="jsp-field-hint">{hint}</span>}
+    {children}
+  </div>
+);
+
+const Input = ({ value, onChange, placeholder, mono, password }) => {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="jsp-input-wrap">
+      <input
+        type={password && !show ? 'password' : 'text'}
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`jsp-input ${mono ? 'mono' : ''}`}
+      />
+      {password && (
+        <button className="jsp-eye-btn" onClick={() => setShow(s => !s)}>
+          {show ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+      )}
+    </div>
+  );
+};
+
+// Editable tag list (chips)
+const TagList = ({ items, onChange, placeholder }) => {
+  const [input, setInput] = useState('');
+  const add = () => {
+    const v = input.trim();
+    if (v && !items.includes(v)) onChange([...items, v]);
+    setInput('');
+  };
+  const remove = (i) => onChange(items.filter((_, idx) => idx !== i));
+  return (
+    <div className="jsp-taglist">
+      <div className="jsp-tags">
+        {items.map((t, i) => (
+          <span key={i} className="jsp-tag">
+            {t}
+            <button onClick={() => remove(i)} className="jsp-tag-remove"><X size={11} /></button>
+          </span>
+        ))}
+      </div>
+      <div className="jsp-tag-add">
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && add()}
+          placeholder={placeholder || 'اضافه کردن...'}
+          className="jsp-input mono"
+        />
+        <button onClick={add} className="jsp-tag-add-btn">+ افزودن</button>
+      </div>
+    </div>
+  );
+};
+
+// Status Mapping table
+const StatusMappingEditor = ({ mapping, onChange }) => {
+  const [newFrom, setNewFrom] = useState('');
+  const [newTo, setNewTo] = useState('Done');
+  const targets = ['Done', 'In Progress', 'Waiting', 'To Do'];
+  const entries = Object.entries(mapping);
+
+  return (
+    <div className="jsp-status-table-wrap">
+      <table className="jsp-status-table">
+        <thead>
+          <tr>
+            <th>وضعیت Jira (نام اصلی)</th>
+            <th>نگاشت به وضعیت داشبورد</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map(([from, to]) => (
+            <tr key={from}>
+              <td><code className="mono-code">{from}</code></td>
+              <td>
+                <select
+                  value={to}
+                  onChange={e => onChange({ ...mapping, [from]: e.target.value })}
+                  className="jsp-input"
+                >
+                  {targets.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </td>
+              <td>
+                <button
+                  className="jsp-delete-row"
+                  onClick={() => {
+                    const m = { ...mapping };
+                    delete m[from];
+                    onChange(m);
+                  }}
+                  title="حذف این نگاشت"
+                >
+                  <X size={14} />
+                </button>
+              </td>
+            </tr>
+          ))}
+          <tr className="jsp-add-row">
+            <td>
+              <input
+                value={newFrom}
+                onChange={e => setNewFrom(e.target.value)}
+                placeholder="وضعیت Jira جدید..."
+                className="jsp-input mono"
+              />
+            </td>
+            <td>
+              <select value={newTo} onChange={e => setNewTo(e.target.value)} className="jsp-input">
+                {targets.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </td>
+            <td>
+              <button
+                className="jsp-add-mapping-btn"
+                onClick={() => {
+                  if (newFrom.trim()) {
+                    onChange({ ...mapping, [newFrom.trim()]: newTo });
+                    setNewFrom('');
+                  }
+                }}
+              >+ افزودن</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// ─────────────────────────── MAIN PAGE ────────────────────────────
+const JiraSettingsPage = () => {
+  const [cfg, setCfg] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagResult, setDiagResult] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const fetchConfig = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await api.getJiraConfig();
+      setCfg(data);
+    } catch (e) {
+      showToast('خطا در دریافت تنظیمات جیرا', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchConfig(); }, [fetchConfig]);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await api.saveJiraConfig(cfg);
+      showToast('تنظیمات با موفقیت ذخیره شد. سرور را ری‌استارت کنید تا تغییرات اعمال شوند.');
+    } catch (e) {
+      showToast('خطا در ذخیره تنظیمات', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDiagnose = async () => {
+    try {
+      setDiagLoading(true);
+      setDiagResult(null);
+      const res = await api.runJiraDiagnostic({});
+      setDiagResult(res);
+    } catch (e) {
+      setDiagResult({ success: false, message: e.message });
+    } finally {
+      setDiagLoading(false);
+    }
+  };
+
+  const set = (section, key, val) =>
+    setCfg(prev => ({ ...prev, [section]: { ...prev[section], [key]: val } }));
+
+  if (loading) return <div className="loading-screen">در حال دریافت تنظیمات جیرا...</div>;
+  if (!cfg) return <div className="loading-screen">داده‌ای یافت نشد.</div>;
+
+  return (
+    <motion.div className="jira-settings-page" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            className={`ump-toast ${toast.type}`}
+            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+          >
+            {toast.type === 'success' ? <CheckCircle2 size={17} /> : <AlertTriangle size={17} />}
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Header */}
+      <div className="jsp-header">
+        <div>
+          <h1 className="jsp-title"><Settings size={26} className="text-accent-cyan" />تنظیمات کامل اتصال و مپینگ Jira API</h1>
+          <p className="jsp-subtitle">مدیریت کامل تمام مپینگ‌ها، فیلدهای کاستوم، وضعیت‌ها، برچسب‌ها و تشخیص‌دهنده زنده API جیرا</p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
+          <button className="jsp-run-diag-btn secondary" onClick={handleDiagnose} disabled={diagLoading}>
+            <Zap size={16} className={diagLoading ? 'spin' : ''} />
+            {diagLoading ? 'در حال پایش...' : '🔍 پایش زنده API'}
+          </button>
+          <button className="jsp-run-diag-btn" onClick={handleSave} disabled={saving}>
+            <Save size={16} className={saving ? 'spin' : ''} />
+            {saving ? 'در حال ذخیره...' : '💾 ذخیره همه تنظیمات'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── 1. CONNECTION ── */}
+      <Section icon={Server} title="اتصال به Jira Cloud (Connection Settings)" color="#38BDF8">
+        <div className="jsp-grid-2">
+          <Field label="آدرس پایه Jira (Base URL)" hint="مثال: https://company.atlassian.net">
+            <Input value={cfg.connection?.baseUrl} onChange={v => set('connection', 'baseUrl', v)} placeholder="https://company.atlassian.net" />
+          </Field>
+          <Field label="نام کاربری / ایمیل حساب Jira" hint="ایمیل حساب Atlassian">
+            <Input value={cfg.connection?.username} onChange={v => set('connection', 'username', v)} placeholder="you@company.com" />
+          </Field>
+          <Field label="API Token جیرا" hint="از صفحه Atlassian API Tokens دریافت کنید">
+            <Input value={cfg.connection?.token} onChange={v => set('connection', 'token', v)} placeholder="ATATT3xFfG..." password />
+          </Field>
+          <Field label="کلید پروژه اصلی (Project Key)" hint="مثال: ORD، OPS، DEV">
+            <Input value={cfg.connection?.projectKey} onChange={v => set('connection', 'projectKey', v)} placeholder="ORD" mono />
+          </Field>
+          <Field label="فاصله سینک خودکار (دقیقه)" hint="هر چند دقیقه داده‌های جیرا سینک شود">
+            <Input value={cfg.connection?.syncIntervalMinutes} onChange={v => set('connection', 'syncIntervalMinutes', v)} placeholder="60" mono />
+          </Field>
+        </div>
+      </Section>
+
+      {/* ── 2. CONFLUENCE ── */}
+      <Section icon={GitBranch} title="اتصال به Confluence (مستندات)" color="#A78BFA" defaultOpen={false}>
+        <div className="jsp-grid-2">
+          <Field label="آدرس Confluence Base URL">
+            <Input value={cfg.confluence?.baseUrl} onChange={v => set('confluence', 'baseUrl', v)} placeholder="https://company.atlassian.net/wiki" />
+          </Field>
+          <Field label="ایمیل حساب Confluence">
+            <Input value={cfg.confluence?.username} onChange={v => set('confluence', 'username', v)} placeholder="you@company.com" />
+          </Field>
+          <Field label="کلید پیش‌فرض Space" hint="مثال: OPS، TECH، DEV">
+            <Input value={cfg.confluence?.defaultSpaceKey} onChange={v => set('confluence', 'defaultSpaceKey', v)} placeholder="OPS" mono />
+          </Field>
+        </div>
+      </Section>
+
+      {/* ── 3. WAITING STATUSES ── */}
+      <Section icon={AlertTriangle} title="وضعیت‌های «منتظر» (Waiting Status List)" color="#FBBF24">
+        <p className="jsp-section-desc">وضعیت‌های جیرا که باید به‌عنوان «منتظر تیم‌های دیگر» شناسایی شوند. هر وضعیت را وارد کرده و Enter بزنید.</p>
+        <TagList
+          items={cfg.waitingStatuses || []}
+          onChange={v => setCfg(prev => ({ ...prev, waitingStatuses: v }))}
+          placeholder="OnHolding، Waiting، Blocked..."
+        />
+      </Section>
+
+      {/* ── 4. STATUS MAPPING ── */}
+      <Section icon={Tag} title="نگاشت وضعیت‌های Jira به داشبورد (Status Mapping)" color="#10B981">
+        <p className="jsp-section-desc">هر وضعیت اصلی جیرا را به وضعیت داشبورد نگاشت کنید. وضعیت‌های داشبورد: Done، In Progress، Waiting، To Do</p>
+        <StatusMappingEditor
+          mapping={cfg.statusMapping || {}}
+          onChange={v => setCfg(prev => ({ ...prev, statusMapping: v }))}
+        />
+      </Section>
+
+      {/* ── 5. CUSTOM FIELDS ── */}
+      <Section icon={Cpu} title="فیلدهای کاستوم Jira (Custom Fields Mapping)" color="#EC4899">
+        <p className="jsp-section-desc">شماره کاستوم‌فیلدهای اختصاصی جیرای سازمان را وارد کنید. پس از اجرای پایش زنده، شناسه‌های دقیق نمایش داده می‌شوند.</p>
+        <div className="jsp-grid-2">
+          <Field label="فیلد Sprint" hint="معمولاً customfield_10020">
+            <Input value={cfg.customFields?.sprintField} onChange={v => set('customFields', 'sprintField', v)} placeholder="customfield_10020" mono />
+          </Field>
+          <Field label="فیلد تیم منتظر (Waiting Team)" hint="اختیاری - شناسه فیلد کاستوم">
+            <Input value={cfg.customFields?.waitingTeamField} onChange={v => set('customFields', 'waitingTeamField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+          <Field label="فیلد دلیل انتظار (Waiting Reason)" hint="اختیاری">
+            <Input value={cfg.customFields?.waitingReasonField} onChange={v => set('customFields', 'waitingReasonField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+          <Field label="فیلد لینک Confluence" hint="اختیاری">
+            <Input value={cfg.customFields?.confluenceLinkField} onChange={v => set('customFields', 'confluenceLinkField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+          <Field label="فیلد قابلیت‌های عملیاتی (Capabilities)" hint="اختیاری">
+            <Input value={cfg.customFields?.capabilitiesField} onChange={v => set('customFields', 'capabilitiesField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+          <Field label="فیلد دسته‌بندی پروژه (Category)" hint="اختیاری">
+            <Input value={cfg.customFields?.categoryField} onChange={v => set('customFields', 'categoryField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+        </div>
+      </Section>
+
+      {/* ── 6. DATE MAPPING ── */}
+      <Section icon={Calendar} title="نگاشت فیلدهای تاریخ (Date Field Mapping)" color="#06B6D4" defaultOpen={false}>
+        <div className="jsp-grid-2">
+          <Field label="فیلد تاریخ شروع اپیک" hint="معمولاً created یا customfield_XXXXX">
+            <Input value={cfg.dateMapping?.epicStartDateField} onChange={v => set('dateMapping', 'epicStartDateField', v)} placeholder="created" mono />
+          </Field>
+          <Field label="فیلد تاریخ سررسید اپیک" hint="معمولاً duedate">
+            <Input value={cfg.dateMapping?.epicDueDateField} onChange={v => set('dateMapping', 'epicDueDateField', v)} placeholder="duedate" mono />
+          </Field>
+          <Field label="فیلد تاریخ شروع تسک" hint="اختیاری">
+            <Input value={cfg.dateMapping?.taskStartDateField} onChange={v => set('dateMapping', 'taskStartDateField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+          <Field label="فیلد تاریخ سررسید تسک" hint="معمولاً duedate">
+            <Input value={cfg.dateMapping?.taskDueDateField} onChange={v => set('dateMapping', 'taskDueDateField', v)} placeholder="duedate" mono />
+          </Field>
+        </div>
+      </Section>
+
+      {/* ── 7. LABEL PREFIXES ── */}
+      <Section icon={Tag} title="پیشوندهای لیبل‌های جیرا (Label Prefixes)" color="#F97316" defaultOpen={false}>
+        <p className="jsp-section-desc">برچسب‌هایی که برای تشخیص تیم منتظر، دلیل انتظار و قابلیت‌ها از لیبل‌های Jira استفاده می‌شوند.</p>
+        <div className="jsp-grid-2">
+          <Field label="پیشوند تیم منتظر" hint="مثال: wait: → لیبل: wait:infra-team">
+            <Input value={cfg.labelPrefixes?.waitingTeam} onChange={v => set('labelPrefixes', 'waitingTeam', v)} placeholder="wait:" mono />
+          </Field>
+          <Field label="پیشوند دلیل انتظار" hint="مثال: reason: → لیبل: reason:waiting-for-approval">
+            <Input value={cfg.labelPrefixes?.waitingReason} onChange={v => set('labelPrefixes', 'waitingReason', v)} placeholder="reason:" mono />
+          </Field>
+          <Field label="پیشوند قابلیت عملیاتی" hint="مثال: cap: → لیبل: cap:monitoring">
+            <Input value={cfg.labelPrefixes?.capability} onChange={v => set('labelPrefixes', 'capability', v)} placeholder="cap:" mono />
+          </Field>
+        </div>
+      </Section>
+
+      {/* ── 8. FEATURED COMPONENTS ── */}
+      <Section icon={Cpu} title="کامپوننت‌های برجسته داشبورد (Featured Components)" color="#8B5CF6" defaultOpen={false}>
+        <p className="jsp-section-desc">کامپوننت‌هایی که به‌عنوان دکمه فیلتر سریع در صفحه داشبورد نمایش داده می‌شوند.</p>
+        <TagList
+          items={cfg.featuredComponents || []}
+          onChange={v => setCfg(prev => ({ ...prev, featuredComponents: v }))}
+          placeholder="learning، meeting، support..."
+        />
+      </Section>
+
+      {/* ── 9. DIAGNOSTIC RESULTS ── */}
+      {diagResult && (
+        <motion.div className="glass-card jsp-diag-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <div className="jsp-diag-header">
+            <div>
+              <h2>گزارش پایش زنده ساختار Jira API</h2>
+              {diagResult.projectName && (
+                <p className="jsp-diag-sub">
+                  پروژه: <strong>{diagResult.projectName}</strong> — تسک نمونه: <strong>{diagResult.sampleIssueKey}</strong> — مجموع تسک‌ها: {diagResult.totalIssuesFound}
+                </p>
+              )}
+            </div>
+            {diagResult.complianceScore !== undefined && (
+              <div className={`jsp-score-badge ${diagResult.complianceScore >= 80 ? 'good' : diagResult.complianceScore >= 50 ? 'warn' : 'bad'}`}>
+                <span className="score-num">%{diagResult.complianceScore}</span>
+                <span className="score-lbl">تطابق ساختاری</span>
+              </div>
+            )}
+          </div>
+
+          {!diagResult.success && (
+            <div className="jsp-error-msg"><AlertTriangle size={16} /> {diagResult.message}</div>
+          )}
+
+          {diagResult.diagnostics?.length > 0 && (
+            <div className="jsp-diag-table-wrapper">
+              <table className="jsp-diag-table">
+                <thead>
+                  <tr>
+                    <th>فیلد مورد انتظار</th>
+                    <th>وضعیت</th>
+                    <th>مقدار دریافتی از Jira</th>
+                    <th>توضیح و راهکار</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {diagResult.diagnostics.map((d, i) => (
+                    <tr key={i}>
+                      <td><strong className="mono-code">{d.field}</strong></td>
+                      <td>
+                        <span className={`diag-status-pill ${d.status}`}>
+                          {d.status === 'matched' ? '✅ تطابق' : d.status === 'warning' ? '⚠️ بررسی شود' : d.status === 'missing' ? '❌ یافت نشد' : 'ℹ️ اختیاری'}
+                        </span>
+                      </td>
+                      <td><code className="diag-val-code">{d.value || '—'}</code></td>
+                      <td className="diag-note-text">{d.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {diagResult.rawSampleKeys?.length > 0 && (
+            <div className="jsp-customfields-footer">
+              <h4>فیلدهای شناسایی‌شده در پاسخ Jira (می‌توانید از اینها در بخش Custom Fields استفاده کنید):</h4>
+              <div className="jsp-cf-tags">
+                {diagResult.rawSampleKeys.map(k => <span key={k} className="jsp-cf-tag">{k}</span>)}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+    </motion.div>
+  );
+};
+
+export default JiraSettingsPage;

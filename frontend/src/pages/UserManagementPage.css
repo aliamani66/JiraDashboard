@@ -1,0 +1,430 @@
+.user-management-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.ump-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.ump-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.35rem 0;
+}
+
+.ump-subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.ump-add-user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--gradient-primary);
+  color: #FFFFFF;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: var(--shadow-glow-blue);
+  transition: all 0.25s ease;
+}
+
+.ump-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ump-refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+}
+
+.spin {
+  animation: spinSlow 1s linear infinite;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ump-add-user-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.15);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+}
+
+.ump-toast {
+  position: fixed;
+  top: 85px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 30px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: toastSlide 0.3s ease-out;
+}
+
+.ump-toast.success {
+  background: rgba(16, 185, 129, 0.95);
+  color: #FFFFFF;
+}
+
+.ump-toast.error {
+  background: rgba(239, 68, 68, 0.95);
+  color: #FFFFFF;
+}
+
+.ump-table-card {
+  padding: 1.75rem;
+}
+
+.ump-table-wrapper {
+  overflow-x: auto;
+}
+
+.ump-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.ump-table th {
+  text-align: right;
+  padding: 0.85rem 1rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--glass-border);
+  font-weight: 600;
+}
+
+.ump-table td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ump-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ump-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 700;
+  color: #FFFFFF;
+  font-size: 0.95rem;
+}
+
+.ump-display-name {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.ump-username-tag {
+  font-family: monospace;
+  color: var(--accent-cyan);
+  background: rgba(6, 182, 212, 0.12);
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  font-size: 0.82rem;
+}
+
+.ump-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.ump-role-badge.admin {
+  background: rgba(236, 72, 153, 0.15);
+  color: #F472B6;
+  border: 1px solid rgba(244, 114, 182, 0.3);
+}
+
+.ump-role-badge.manager {
+  background: rgba(59, 130, 246, 0.15);
+  color: #38BDF8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.ump-role-badge.viewer {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.ump-perms-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ump-perm-pill {
+  font-size: 0.76rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  padding: 0.2rem 0.55rem;
+  border-radius: 8px;
+  color: var(--text-secondary);
+}
+
+.ump-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ump-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.ump-action-btn.edit {
+  background: rgba(59, 130, 246, 0.15);
+  color: #38BDF8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.ump-action-btn.edit:hover {
+  background: rgba(59, 130, 246, 0.3);
+  color: #FFFFFF;
+}
+
+.ump-action-btn.delete {
+  background: rgba(239, 68, 68, 0.15);
+  color: #FCA5A5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.ump-action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #FFFFFF;
+}
+
+/* Modal Overlay & Card */
+.ump-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+}
+
+.ump-modal-content {
+  width: 100%;
+  max-width: 600px;
+  padding: 1.75rem;
+  background: #0B1120;
+  border: 1px solid var(--accent-blue);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+}
+
+.ump-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 0.85rem;
+}
+
+.ump-modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ump-close-modal {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.ump-close-modal:hover {
+  color: #FFFFFF;
+}
+
+.ump-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ump-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.ump-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ump-input-group label {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.ump-input-group input, .ump-input-group select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.ump-input-group input:focus, .ump-input-group select:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+.ump-perms-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ump-perms-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
+.ump-perms-checkboxes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.ump-checkbox-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ump-checkbox-card.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--accent-blue);
+}
+
+.ump-checkbox-card input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent-blue);
+}
+
+.cb-icon { font-size: 1rem; }
+.cb-label { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); }
+
+.ump-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--glass-border);
+}
+
+.ump-cancel-btn {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: 0.5rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.ump-submit-btn {
+  background: var(--gradient-primary);
+  border: none;
+  color: #FFFFFF;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: var(--shadow-glow-blue);
+}

@@ -1,0 +1,219 @@
+.project-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.project-card-v2 {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  position: relative;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease, border-color 0.25s ease;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
+.project-card-v2:hover {
+  transform: translateY(-4px);
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.25);
+}
+
+/* Full Stoppage Highlight */
+.project-card-v2.pc-stopped {
+  border-color: rgba(249, 115, 22, 0.6);
+  animation: pulseCardBorder 3s infinite ease-in-out;
+}
+
+@keyframes pulseCardBorder {
+  0% { box-shadow: 0 0 15px rgba(249, 115, 22, 0.3); border-color: rgba(249, 115, 22, 0.5); }
+  50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.6); border-color: rgba(239, 68, 68, 0.8); }
+  100% { box-shadow: 0 0 15px rgba(249, 115, 22, 0.3); border-color: rgba(249, 115, 22, 0.5); }
+}
+
+.pc-stoppage-banner {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(249, 115, 22, 0.25) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #FCA5A5;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.pulse-icon {
+  color: #EF4444;
+  animation: spinPulse 2s infinite ease-in-out;
+}
+
+@keyframes spinPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.stopped-ring {
+  stroke: #F97316 !important;
+  filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.8)) !important;
+}
+
+.pc-waiting-count {
+  font-size: 0.8rem;
+  color: #F97316;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* Component Summary Mini Badges on Main Dashboard */
+.pc-components-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  min-height: 2.2rem;
+  align-content: flex-start;
+}
+
+.pc-comp-pill {
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.18rem 0.55rem;
+  border-radius: 10px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: transform 0.2s ease;
+}
+
+.pc-comp-pill:hover {
+  transform: scale(1.05);
+}
+
+/* Top Row */
+.pc-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.pc-project-id {
+  font-family: monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #94A3B8;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Title */
+.pc-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #F8FAFC;
+  line-height: 1.4;
+  margin: 0 0 1rem 0;
+  height: 3rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: right;
+}
+
+/* Middle Section */
+.pc-middle-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.pc-text-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.pc-task-count {
+  font-size: 1.2rem;
+  color: #E2E8F0;
+  font-weight: 600;
+}
+
+.pc-task-count strong {
+  color: #FFFFFF;
+  font-size: 1.3rem;
+}
+
+.pc-progress-pct {
+  font-size: 0.95rem;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.pc-progress-pct strong {
+  color: #38BDF8;
+}
+
+/* Circular SVG Donut Chart */
+.pc-circle-ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circle-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.circle-progress {
+  fill: none;
+  stroke: #2563EB;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s ease;
+  filter: drop-shadow(0 0 6px rgba(37, 99, 235, 0.6));
+}
+
+/* Dotted Line Divider */
+.pc-dotted-divider {
+  width: 100%;
+  border-top: 2px dotted rgba(255, 255, 255, 0.12);
+  margin-top: auto;
+  margin-bottom: 0.85rem;
+}
+
+/* Bottom Row */
+.pc-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+  color: #94A3B8;
+}
+
+.pc-spent-time strong {
+  color: #F8FAFC;
+  margin-right: 2px;
+}
+
+.pc-estimate-time strong {
+  color: #F8FAFC;
+  margin-left: 2px;
+}

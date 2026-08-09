@@ -1,0 +1,234 @@
+.overall-timeline-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.ot-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.ot-page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.ot-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.ot-kpi-card {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.ot-kpi-card.purple { border-right: 4px solid var(--accent-purple); }
+.ot-kpi-card.blue { border-right: 4px solid var(--accent-blue); }
+.ot-kpi-card.cyan { border-right: 4px solid var(--accent-cyan); }
+
+.ot-kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--accent-cyan);
+}
+
+.ot-kpi-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ot-kpi-title {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.ot-kpi-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ot-kpi-value small {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Master Timeline Chart Card */
+.ot-chart-card {
+  padding: 1.75rem;
+}
+
+.ot-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ot-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+}
+
+.ot-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ot-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.ot-svg-wrapper {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 12px;
+  padding: 1rem 0;
+  border: 1px solid var(--glass-border);
+  overflow: hidden;
+}
+
+.ot-svg-chart {
+  width: 100%;
+  max-width: 100%;
+  height: 240px;
+  display: block;
+}
+
+/* Projects Table */
+.ot-projects-list-card {
+  padding: 1.75rem;
+}
+
+.ot-projects-table-wrapper {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.ot-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.ot-table th {
+  text-align: right;
+  padding: 0.85rem 1rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--glass-border);
+  font-weight: 600;
+}
+
+.ot-table td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ot-proj-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ot-proj-title {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.ot-category-badge {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.25rem 0.65rem;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.ot-progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 160px;
+}
+
+.ot-progress-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ot-progress-bar-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.ot-progress-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.ot-hours-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.ot-view-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #38BDF8;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ot-view-detail-btn:hover {
+  background: rgba(59, 130, 246, 0.3);
+  color: #FFFFFF;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}

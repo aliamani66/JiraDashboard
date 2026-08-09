@@ -1,0 +1,57 @@
+.blocked-tasks-card {
+  padding: 1.5rem;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.blocked-title {
+  color: var(--accent-red);
+}
+
+.blocked-title svg {
+  filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.5));
+}
+
+.blocked-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.blocked-item {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  position: relative;
+}
+
+.blocked-task-name {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.blocked-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.blocked-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.priority-badge {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--accent-red);
+}

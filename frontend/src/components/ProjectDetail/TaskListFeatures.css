@@ -1,0 +1,21 @@
+.task-id-badge {
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.sprint-tag {
+  background: rgba(6, 182, 212, 0.15); /* var(--accent-cyan) */
+  color: var(--accent-cyan);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.row-waiting {
+  background: rgba(249, 115, 22, 0.05) !important;
+}
