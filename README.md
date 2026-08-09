@@ -1,62 +1,100 @@
-# Ops R&D Showcase Dashboard (Jira Operations Dashboard)
+# 🚀 راهنمای کامل راه‌اندازی و نگاشت جیرا (Jira Ops Dashboard Guide)
 
-یک سامانه ویترین عملیاتی و مدیریت پروژه R&D با قابلیت اتکای کامل و سینک زنده به **Jira Cloud / Jira Data Center** و **Confluence**.
-
-![Dashboard Overview](https://img.shields.io/badge/Jira-Cloud%20%26%20Server-0052CC?logo=jira&logoColor=white)
-![React](https://img.shields.io/badge/React-18.x-61DAFB?logo=react&logoColor=black)
-![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite&logoColor=white)
+سامانه ویترین عملیاتی و مدیریت پروژه R&D با قابلیت اتکای کامل و همگام‌سازی زنده با **Jira Cloud / Jira Server / Data Center** و **Confluence**.
 
 ---
 
-## 🌟 امکانات اصلی
+## ⚡ ۱. راه‌اندازی ۱ کلیکی (One-Click Startup)
 
-- 🌐 **داشبورد اصلی پروژه‌ها:** ویترین پروژه‌های فعال و انجام‌شده با کارت‌های هم‌اندازه، درصد پیشرفت، فیلتر سریع کامپوننت‌ها و تب‌های وضعیت.
-- 📊 **گانت چارت چابک (Gantt Chart):** نمایش زمان‌بندی تسک‌ها با لینک مستقیم به Jira Cloud، نشانگر خط امروز (Today line) و فیلترهای پیشرفته.
-- 📈 **تایم‌لاین پیشرفت کل (`/overall-timeline`):** نمودار چندپروژه‌ای سرعت توسعه (Velocity Curve) و میانگین واقعی پیشرفت کل پروژه‌ها.
-- ⏳ **مدیریت تسک‌های منتظر (`/waiting-tasks`):** تفکیک تسک‌هایی که منتظر تیم‌های دیگر هستند بر اساس `is_waiting` و برچسب‌های `wait:`.
-- ⚙️ **تنظیمات و پایش زنده ساختار Jira API (`/jira-settings`):** پنل کامل مدیریت اتصال، نگاشت وضعیت‌ها (Status Mapping)، کاستوم‌فیلدها و تست عارضه‌یابی زنده API.
-- 👥 **مدیریت کاربران و دسترسی‌ها (`/user-management`):** تعریف کاربران، نقش‌ها و تخصیص سطح دسترسی به تک‌تک منوهای جانبی.
+### 🔹 در ویندوز (Windows):
+کافیست روی فایل **`start.bat`** دابل کلیک کنید. اسکریپت خودکار:
+۱. تمام وابستگی‌ها (`npm install`) را نصب می‌کند.
+۲. دیتابیس را ساخته و مقداردهی اولیه می‌کند.
+۳. سرورهای بک‌اند (پورت ۳۰۰۱) و فرانت‌اند (پورت ۵۱۷۳) را روشن می‌کند.
+۴. مرورگر شما را روی آدرس **`http://localhost:5173`** باز می‌کند.
 
----
-
-## 🛠️ تکنولوژی‌ها
-
-- **Frontend:** React 18, Vite, Framer Motion, Lucide React, Recharts, React Router v6.
-- **Backend:** Node.js, Express, SQLite (sql.js / sqlite3), Axios, JWT, bcryptjs, node-cron.
-
----
-
-## 🚀 راه اندازی سریع (Quick Start)
-
-### ۱. کلون پروژه
+### 🔹 در لینوکس / مک (Linux / Mac):
 ```bash
-git clone https://github.com/aliamani66/JiraDashboard.git
-cd JiraDashboard
-```
-
-### ۲. نصب و راه‌اندازی بک‌اند
-```bash
-cd backend
-npm install
-node src/seed.js # ساخت و مقداردهی اولیه دیتابیس
-node src/app.js  # اجرا روی پورت 3001
-```
-
-### ۳. نصب و راه‌اندازی فرانت‌اند
-```bash
-cd ../frontend
-npm install
-npm run dev      # اجرا روی پورت 5173
+chmod +x start.sh
+./start.sh
 ```
 
 ---
 
 ## 🔑 اطلاعات ورود پیش‌فرض
 
-- **مدیر سیستم (Admin):**
+- **مدیر کل سیستم (Admin):**
   - **نام کاربری:** `admin`
   - **کلمه عبور:** `admin123`
-- **کاربر تستی (فقط تسک‌های منتظر):**
+- **کاربر تستی (محدود به تسک‌های منتظر):**
   - **نام کاربری:** `waiting_user`
   - **کلمه عبور:** `123456`
+
+---
+
+## 🛠️ ۲. نحوه متصل کردن جیرای سازمان شما (راهنمای تنظیمات)
+
+تمام تنظیمات سیستم هم از طریق **فایل `.env`** و هم از طریق **پنل وب به آدرس `/jira-settings` (تنظیمات و پایش جیرا)** ۱۰۰٪ قابل پیکربندی است.
+
+### 📄 تنظیم از طریق فایل `backend/.env`:
+```env
+PORT=3001
+JWT_SECRET=your-secret-key
+SYNC_INTERVAL_MINUTES=60
+
+# ۱. اطلاعات اتصال به Jira
+JIRA_BASE_URL=https://your-company.atlassian.net
+JIRA_USERNAME=your-email@company.com
+JIRA_TOKEN=your-atlassian-api-token
+JIRA_PROJECT_KEY=ORD
+
+# ۲. نسخه API (Cloud v3 یا Server v2 یا auto)
+JIRA_API_VERSION=auto
+JIRA_SEARCH_ENDPOINT=/rest/api/3/search/jql
+JIRA_PROJECT_ENDPOINT=/rest/api/3/project
+
+# ۳. وضعیت‌های منتظر
+JIRA_WAITING_STATUSES=OnHolding,Waiting,Blocked,On Hold
+
+# ۴. شناسه‌های کاستوم‌فیلد
+JIRA_SPRINT_FIELD=customfield_10020
+JIRA_WAITING_TEAM_FIELD=customfield_10035
+JIRA_WAITING_REASON_FIELD=customfield_10036
+
+# ۵. پیشوند لیبل‌ها
+JIRA_WAIT_TEAM_PREFIX=wait:
+JIRA_WAIT_REASON_PREFIX=reason:
+JIRA_CAPABILITY_PREFIX=cap:
+```
+
+---
+
+## 🗺️ ۳. چطور کامپوننت‌ها و وضعیت‌های جیرای خودمان را نگاشت (Map) کنیم؟
+
+### 🔹 ۱. نگاشت کامپوننت‌ها (Components):
+سیستم کامپوننت‌ها را به دو روش هوشمند از جیرای شما استخراج می‌کند:
+- **روش نیتیو:** فیلد استاندارد `Components` در تسک‌های جیرا.
+- **روش برچسب‌ها (Labels):** برچسب‌هایی با پیشوند `comp:` (مثلاً `comp:dev` ، `comp:learning` ، `comp:testing`).
+> 💡 هر کامپوننت جدیدی که در تسک‌های جیرایتان اضافه کنید، سیستم به صورت غیرمحدود آن را شناسایی کرده، درصد پیشرفت و ساعات صرف‌شده آن را محاسبه می‌کند.
+
+### 🔹 ۲. نگاشت وضعیت‌ها (Status Mapping):
+در پنل وب به مسیر **`⚙️ تنظیمات و پایش جیرا` ➔ بخش «نگاشت وضعیت‌ها»** بروید:
+- هر نام وضعیتی که در جیرایتان دارید (مثلاً `In Development` یا `تایید فنی`) را وارد کرده و تعیین کنید به کدام وضعیت داشبورد نگاشت شود:
+  - `Done` (انجام شده)
+  - `In Progress` (در حال انجام)
+  - `Waiting` (در انتظار / منتظر)
+  - `To Do` (در صف انجام)
+  - یا **نوشتن وضعیت سفارشی جدید!**
+
+### 🔹 ۳. پیدا کردن کاستوم‌فیلدها (Custom Fields):
+در همان صفحه تنظیمات، روی دکمه **`🔍 پایش زنده API`** کلیک کنید:
+- سیستم پکت تسک‌های جیرای شما را آنالیز کرده و در کادر پایین صفحه، **لیست تمام `customfield_XXXXX`های فعال رو جیرای شما** را می‌نویسد تا شناسه فیلد اسپرینت یا فیلدهای اختصاصی را بردارید و در فرم کپی کنید.
+
+---
+
+## ⚡ ۴. بازسازی دیتابیس بر اساس جیرای زنده شما
+
+پس از تنظیم Base URL و API Token جیرایتان، برای پاکسازی کامل داده‌های دمو و همگام‌سازی دیتابیس ۱۰۰٪ بر اساس جیرای واقعی سازمان:
+1. وارد منوی **`⚙️ تنظیمات و پایش جیرا`** شوید.
+2. به بخش **«تنظیمات سرور و دیتابیس»** بروید.
+3. دکمه **`🔄 همگام‌سازی و بازسازی دیتابیس از Jira Cloud`** را کلیک کنید.
