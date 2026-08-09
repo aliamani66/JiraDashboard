@@ -99,34 +99,58 @@ const TagList = ({ items, onChange, placeholder }) => {
   );
 };
 
-// Status Mapping table
+// Status Mapping table with Custom Target Status support
 const StatusMappingEditor = ({ mapping, onChange }) => {
   const [newFrom, setNewFrom] = useState('');
   const [newTo, setNewTo] = useState('Done');
-  const targets = ['Done', 'In Progress', 'Waiting', 'To Do'];
-  const entries = Object.entries(mapping);
+  const [customToInput, setCustomToInput] = useState('');
+  const [isCustomMode, setIsCustomMode] = useState(false);
+
+  const defaultTargets = ['Done', 'In Progress', 'Waiting', 'To Do', 'In Review', 'Testing', 'Blocked', 'Draft', 'Canceled'];
+  const currentValues = Object.values(mapping || {});
+  const targets = Array.from(new Set([...defaultTargets, ...currentValues]));
+
+  const handleAdd = () => {
+    if (!newFrom.trim()) return;
+    const targetStatus = isCustomMode ? (customToInput.trim() || 'Done') : newTo;
+    onChange({ ...mapping, [newFrom.trim()]: targetStatus });
+    setNewFrom('');
+    setCustomToInput('');
+    setIsCustomMode(false);
+  };
 
   return (
     <div className="jsp-status-table-wrap">
       <table className="jsp-status-table">
         <thead>
           <tr>
-            <th>وضعیت Jira (نام اصلی)</th>
+            <th>وضعیت Jira (نام اصلی در جیرا)</th>
             <th>نگاشت به وضعیت داشبورد</th>
-            <th></th>
+            <th>عملیات</th>
           </tr>
         </thead>
         <tbody>
-          {entries.map(([from, to]) => (
+          {Object.entries(mapping || {}).map(([from, to]) => (
             <tr key={from}>
               <td><code className="mono-code">{from}</code></td>
               <td>
                 <select
-                  value={to}
-                  onChange={e => onChange({ ...mapping, [from]: e.target.value })}
+                  value={targets.includes(to) ? to : 'CUSTOM_VAL'}
+                  onChange={e => {
+                    if (e.target.value === 'CUSTOM_VAL') {
+                      const customName = prompt('نام وضعیت داشبورد جدید را وارد فرمایید:', to);
+                      if (customName && customName.trim()) {
+                        onChange({ ...mapping, [from]: customName.trim() });
+                      }
+                    } else {
+                      onChange({ ...mapping, [from]: e.target.value });
+                    }
+                  }}
                   className="jsp-input"
                 >
                   {targets.map(t => <option key={t} value={t}>{t}</option>)}
+                  {!targets.includes(to) && <option value="CUSTOM_VAL">{to} (سفارشی)</option>}
+                  <option value="CUSTOM_VAL">✏️ + نوشتن وضعیت سفارشی...</option>
                 </select>
               </td>
               <td>
@@ -144,30 +168,50 @@ const StatusMappingEditor = ({ mapping, onChange }) => {
               </td>
             </tr>
           ))}
+          
           <tr className="jsp-add-row">
             <td>
               <input
                 value={newFrom}
                 onChange={e => setNewFrom(e.target.value)}
-                placeholder="وضعیت Jira جدید..."
+                placeholder="نام وضعیت Jira جدید (مثال: Code Review)..."
                 className="jsp-input mono"
               />
             </td>
             <td>
-              <select value={newTo} onChange={e => setNewTo(e.target.value)} className="jsp-input">
-                {targets.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              {isCustomMode ? (
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <input
+                    value={customToInput}
+                    onChange={e => setCustomToInput(e.target.value)}
+                    placeholder="نام وضعیت داشبورد سفارشی..."
+                    className="jsp-input"
+                  />
+                  <button onClick={() => setIsCustomMode(false)} className="jsp-tag-remove" title="انصراف">
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={newTo}
+                  onChange={e => {
+                    if (e.target.value === 'NEW_CUSTOM') {
+                      setIsCustomMode(true);
+                    } else {
+                      setNewTo(e.target.value);
+                    }
+                  }}
+                  className="jsp-input"
+                >
+                  {targets.map(t => <option key={t} value={t}>{t}</option>)}
+                  <option value="NEW_CUSTOM">✏️ + ایجاد وضعیت سفارشی جدید...</option>
+                </select>
+              )}
             </td>
             <td>
-              <button
-                className="jsp-add-mapping-btn"
-                onClick={() => {
-                  if (newFrom.trim()) {
-                    onChange({ ...mapping, [newFrom.trim()]: newTo });
-                    setNewFrom('');
-                  }
-                }}
-              >+ افزودن</button>
+              <button className="jsp-add-mapping-btn" onClick={handleAdd}>
+                + افزودن نگاشت
+              </button>
             </td>
           </tr>
         </tbody>

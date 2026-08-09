@@ -3,26 +3,54 @@ import './common.css';
 
 const StatusBadge = ({ status }) => {
   const getStatusConfig = () => {
-    switch (status) {
-      case 'In Progress':
-      case 'active':
-      case 'in_progress':
-        return { text: 'در حال انجام', className: 'status-active' };
-      case 'Done':
+    const s = (status || '').toLowerCase().trim();
+    
+    switch (s) {
       case 'done':
       case 'completed':
+      case 'resolved':
+      case 'closed':
+      case 'انجام شده':
         return { text: 'انجام شده', className: 'status-done' };
-      case 'Blocked':
+        
+      case 'in progress':
+      case 'in_progress':
+      case 'active':
+      case 'in development':
+      case 'در حال انجام':
+        return { text: 'در حال انجام', className: 'status-active' };
+
+      case 'in review':
+      case 'review':
+      case 'in_review':
+      case 'در حال بررسی':
+        return { text: 'در حال بررسی', className: 'status-active' };
+
+      case 'testing':
+      case 'qa':
+      case 'در حال تست':
+        return { text: 'در حال تست', className: 'status-active' };
+        
       case 'blocked':
-        return { text: 'بلاک شده', className: 'status-blocked' };
-      case 'Waiting':
+      case 'بلاک شده':
+      case 'مسدود شده':
+        return { text: 'مسدود شده', className: 'status-blocked' };
+
       case 'waiting':
-      case 'OnHolding':
       case 'onholding':
+      case 'on hold':
+      case 'on_hold':
+      case 'در انتظار':
         return { text: 'در انتظار', className: 'status-waiting' };
-      case 'To Do':
+        
+      case 'to do':
       case 'todo':
+      case 'backlog':
+      case 'open':
+      case 'برای انجام':
+      case 'در صف انجام':
         return { text: 'برای انجام', className: 'status-todo' };
+        
       default:
         return { text: status || 'نامشخص', className: 'status-todo' };
     }
