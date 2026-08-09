@@ -4,11 +4,19 @@
 
 .sprint-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 1.1rem;
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.5rem;
   border-right: 4px solid var(--accent-cyan);
+}
+
+.sprint-header-main-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .sprint-title {
@@ -133,6 +141,159 @@
   font-size: 0.9rem;
 }
 
+/* 📊 SPRINT STATS BANNER */
+.sprint-stats-banner {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.65rem 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.sstat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.86rem;
+}
+
+.sstat-label {
+  color: var(--text-muted);
+}
+
+.sstat-value {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sstat-item.remaining-highlight {
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+}
+
+.sstat-value.remaining-num {
+  color: #FB923C;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.sstat-item.waiting-highlight {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+}
+
+.sstat-value.waiting-num {
+  color: #FBBF24;
+}
+
+.icon-orange { color: #FB923C; }
+.icon-green  { color: #34D399; }
+.icon-yellow { color: #FBBF24; }
+
+/* 👥 ASSIGNEES WORKLOAD BREAKDOWN */
+.sprint-assignees-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.sab-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.reset-assignee-filter-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
+  color: var(--accent-cyan);
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-right: auto;
+  transition: all 0.2s;
+}
+
+.reset-assignee-filter-btn:hover {
+  background: rgba(6, 182, 212, 0.2);
+}
+
+.sab-cards-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.assignee-workload-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+}
+
+.assignee-workload-chip:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent-cyan);
+}
+
+.assignee-workload-chip.active-filter {
+  background: rgba(59, 130, 246, 0.25) !important;
+  border-color: #38BDF8 !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.assignee-workload-chip.has-remaining {
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.awc-name {
+  font-weight: 600;
+}
+
+.awc-remaining-badge {
+  background: rgba(249, 115, 22, 0.2);
+  color: #FB923C;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.awc-done-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+  padding: 0.15rem 0.55rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Tasks Grid */
 .sprint-tasks-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
