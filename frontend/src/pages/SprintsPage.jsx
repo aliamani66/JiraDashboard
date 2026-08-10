@@ -188,10 +188,27 @@ const SprintsPage = () => {
           </h1>
           <p className="sp-subtitle">بررسی تجمیعی تسک‌ها به تفکیک اسپرینت‌های هفتگی برای تمامی پروژه‌های R&D عملیات</p>
         </div>
-        <button className="sp-export-btn" onClick={() => window.open(`http://localhost:3001/api/reports/sprints-html?token=${localStorage.getItem('token')}`, '_blank')} title="پیش‌نمایش و دانلود خروجی گزارش رسمی اسپرینت‌ها به عنوان PDF">
-          <Printer size={16} />
-          <span>دانلود / چاپ گزارش PDF اسپرینت‌ها</span>
-        </button>
+        <div className="sp-export-btns-group">
+          <button 
+            className="sp-export-btn" 
+            onClick={() => window.open(`http://localhost:3001/api/reports/sprints-html?sprint=${selectedSprint}&token=${localStorage.getItem('token')}`, '_blank')} 
+            title={`دانلود گزارش PDF اختصاصی ${selectedSprint}`}
+          >
+            <Printer size={16} />
+            <span>گزارش PDF ({selectedSprint === 'all' ? 'کل اسپرینت‌ها' : selectedSprint})</span>
+          </button>
+
+          {selectedSprint !== 'all' && (
+            <button 
+              className="sp-export-btn secondary" 
+              onClick={() => window.open(`http://localhost:3001/api/reports/sprints-html?sprint=all&token=${localStorage.getItem('token')}`, '_blank')} 
+              title="دانلود گزارش PDF تجمیعی تمامی اسپرینت‌ها"
+            >
+              <Printer size={16} />
+              <span>گزارش کل اسپرینت‌ها</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Sprint Selector Tabs Bar */}

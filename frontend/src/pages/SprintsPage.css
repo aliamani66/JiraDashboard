@@ -16,6 +16,13 @@
   gap: 0.2rem;
 }
 
+.sp-export-btns-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-right: auto;
+}
+
 .sp-export-btn {
   display: inline-flex;
   align-items: center;
@@ -23,20 +30,32 @@
   background: rgba(56, 189, 248, 0.14);
   border: 1px solid rgba(56, 189, 248, 0.35);
   color: #38BDF8;
-  padding: 0.5rem 1.1rem;
+  padding: 0.5rem 1rem;
   border-radius: 12px;
   font-size: 0.85rem;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  margin-right: auto;
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  white-space: nowrap;
 }
 
 .sp-export-btn:hover {
   background: rgba(56, 189, 248, 0.28);
   box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
   transform: translateY(-2px);
+  color: #FFFFFF;
+}
+
+.sp-export-btn.secondary {
+  background: rgba(139, 92, 246, 0.14);
+  border-color: rgba(139, 92, 246, 0.35);
+  color: #C084FC;
+}
+
+.sp-export-btn.secondary:hover {
+  background: rgba(139, 92, 246, 0.28);
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.4);
   color: #FFFFFF;
 }
 

@@ -306,12 +306,20 @@ router.get('/all-sprints', (req, res) => {
 router.get('/reports/sprints-html', (req, res) => {
   try {
     const db = getDb();
-    const tasks = db.prepare(`
+    const targetSprint = req.query.sprint || 'all';
+
+    let rawTasks = db.prepare(`
       SELECT t.*, p.title as project_title, p.capabilities as project_capabilities, p.category as project_category
       FROM tasks t
       JOIN projects p ON t.project_id = p.id
       ORDER BY t.sprint_name ASC, t.project_id ASC, t.id ASC
     `).all();
+
+    if (targetSprint !== 'all') {
+      rawTasks = rawTasks.filter(t => (t.sprint_name || 'Sprint 10') === targetSprint);
+    }
+
+    const tasks = rawTasks;
 
     const taskOperationalMap = {
       'ORD-1': 'طراحی و استقرار پایپ‌لاین‌های متمرکز CI/CD جهت اتوماسیون تست‌ها و دیپلوی خودکار کانتینرها روی کوبرنتیز',
@@ -633,8 +641,8 @@ router.get('/reports/sprints-html', (req, res) => {
   </div>
 
   <div class="header-banner">
-    <h1>🚀 گزارش خروجی اسپرینت‌ها و قابلیت‌های عملیاتی پلتفرم R&D</h1>
-    <p class="subtitle">گزارش تحلیلی دستاوردهای عملیاتی، قابلیت‌های افزوده شده و پیشرفت اسپرینت‌ها | تاریخ تنظیم: ۲۰ مرداد ۱۴۰۵</p>
+    <h1>🚀 ${targetSprint !== 'all' ? `گزارش خروجی و دستاوردهای اختصاصی ${targetSprint}` : 'گزارش تجمیعی خروجی و قابلیت‌های عملیاتی تمام اسپرینت‌ها'}</h1>
+    <p class="subtitle">گزارش تحلیلی دستاوردهای عملیاتی، قابلیت‌های افزوده شده و پیشرفت تسک‌های پلتفرم R&D | تاریخ تنظیم: ۲۰ مرداد ۱۴۰۵</p>
   </div>
 
   <div class="kpi-row">
