@@ -1,4 +1,5 @@
-FROM node:20-alpine
+ARG REGISTRY=docker.io
+FROM ${REGISTRY}/node:20-alpine
 
 WORKDIR /app
 

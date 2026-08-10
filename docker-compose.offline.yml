@@ -2,29 +2,18 @@ version: '3.8'
 
 services:
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        REGISTRY: ${REGISTRY:-docker.io}
+    image: jira-dashboard-backend:latest
     container_name: jira-dashboard-backend
     restart: always
     ports:
       - "3001:3001"
-    environment:
-      - PORT=3001
-      - CORS_ORIGIN=*
     env_file:
-      - ./backend/.env
+      - ./backend.env
     volumes:
       - sqlite_data:/app/data_volume
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        REGISTRY: ${REGISTRY:-docker.io}
+    image: jira-dashboard-frontend:latest
     container_name: jira-dashboard-frontend
     restart: always
     ports:
