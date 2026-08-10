@@ -191,27 +191,26 @@ const SprintsPage = () => {
       </div>
 
       {/* Sprint Selector Tabs Bar */}
-      <div className="main-filter-tile sp-sprint-selector-tile">
-        <div className="sp-tabs-header">
-          <div className="sp-tabs-title-group">
+      <div className="glass-card sp-sprint-selector-tile">
+        <div className="sp-selector-main-row">
+          <div className="sp-selector-combo-box">
             <Flame size={18} className="text-accent-orange" />
             <span className="sp-tabs-label">انتخاب اسپرینت:</span>
             
-            {/* Quick Dropdown for Unlimited Sprints */}
             <select
               value={selectedSprint}
               onChange={(e) => setSelectedSprint(e.target.value)}
-              className="sp-select sp-sprint-dropdown"
+              className="sp-sprint-select-dropdown"
             >
-              <option value="all">🌐 همه اسپرینت‌ها (نمایش یکجای کل تسک‌ها)</option>
+              <option value="all">🌐 همه اسپرینت‌ها (مشاهده کل تسک‌ها)</option>
               {allSprintNames.map(s => (
                 <option key={s} value={s}>🔥 {s}</option>
               ))}
             </select>
           </div>
 
-          {/* Quick Pills Container (Displays 5 Most Recent Sprints by Default) */}
-          <div className="sp-tabs-wrap-scrollable">
+          {/* Quick Pills Container (Displays Recent Sprints) */}
+          <div className="sp-quick-pills-row">
             <button
               className={`sp-sprint-tab ${selectedSprint === 'all' ? 'active' : ''}`}
               onClick={() => setSelectedSprint('all')}
@@ -232,8 +231,8 @@ const SprintsPage = () => {
 
         {selectedSprint !== 'all' && (
           <div className="sp-sprint-dates-banner">
-            <Calendar size={16} className="text-accent-cyan" />
-            <span>بازه زمان‌بندی {selectedSprint}: <strong>از {selectedDates.start} تا {selectedDates.due}</strong></span>
+            <Calendar size={15} className="text-accent-cyan" />
+            <span>زمان‌بندی {selectedSprint}: <strong>از {selectedDates.start} تا {selectedDates.due}</strong></span>
           </div>
         )}
       </div>
