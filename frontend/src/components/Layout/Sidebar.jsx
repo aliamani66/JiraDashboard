@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, LogOut, TerminalSquare, Clock, ChevronRight, TrendingUp, Users, Settings, Flame } from 'lucide-react';
+import { LayoutDashboard, LogOut, Clock, ChevronRight, TrendingUp, Users, Settings, Flame } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
 
@@ -16,7 +16,6 @@ const Sidebar = ({ isOpen, toggle }) => {
       <div className={`sidebar glass-card ${isOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <div className="sidebar-header-title">
-            <TerminalSquare size={26} className="sidebar-logo-icon" />
             <h1 className="sidebar-logo-text">عملیات R&D</h1>
           </div>
           
