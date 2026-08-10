@@ -399,34 +399,36 @@ router.get('/reports/sprints-html', (req, res) => {
       domainMap[compKey].capabilities.push({ id: t.id, title: t.title, desc: opDesc, status: t.status });
     }
 
+    const domainSummaries = {
+      'dev': 'توسعه سرویس‌ها، فریم‌ورک اختصاصی CLI و خودکارسازی سرویس‌های پلتفرم',
+      'infrastructure': 'ارتقاء پایداری کلاستر کوبرنتیز، پیکربندی Ingress Controller و مقیاس‌پذیری پادها',
+      'security': 'استقرار کلاستر HashiCorp Vault، اسکن امنیتی Container با Trivy و مدیریت کلیدها',
+      'monitoring': 'راه‌اندازی استک متمرکز Prometheus & Grafana و پیکربندی Alertmanager',
+      'database': 'ارتقاء کلاستر PostgreSQL HA به همراه خودکارسازی بکاپ روی ذخیره‌ساز Ceph',
+      'testing': 'اتوماسیون تست‌های استاتیک کد (SAST) با SonarQube و یکپارچه‌سازی گیت‌هاب',
+      'support': 'خودکارسازی گزارش‌های سلامت سرویس‌ها و پشتیبانی عملیاتی کلاسترها'
+    };
+
     let domainCapabilitiesHTML = '';
     for (const dKey of Object.keys(domainMap)) {
       const d = domainMap[dKey];
       const spent = Math.round(d.spentHours);
       const est = Math.round(d.estHours);
       const prog = est > 0 ? Math.min(100, Math.round((spent / est) * 100)) : (d.tasksCount > 0 ? Math.round((d.doneCount / d.tasksCount) * 100) : 0);
-
-      const itemsHTML = d.capabilities.map(c => `
-        <li style="margin-bottom: 4px;">
-          <strong style="color:#0284C7;">[${c.id}] ${c.title}:</strong> ${c.desc}
-        </li>
-      `).join('');
+      const summaryText = domainSummaries[dKey] || 'توسعه و ارتقاء پایداری قابلیت‌های عملیاتی پلتفرم';
 
       domainCapabilitiesHTML += `
         <tr>
-          <td><strong>${d.name}</strong></td>
-          <td><span class="badge badge-task">${d.tasksCount} تسک (${d.doneCount} تکمیل)</span></td>
-          <td><strong>${spent}h</strong> / ${est}h</td>
+          <td><strong style="font-size: 0.93rem; color: #0F172A;">${d.name}</strong></td>
+          <td><strong style="color: #EA580C; font-size: 0.92rem;">${spent} ساعت</strong></td>
           <td>
-            <div class="progress-wrap" style="width: 85px;">
+            <div class="progress-wrap" style="width: 100px;">
               <div class="progress-fill" style="width: ${prog}%"></div>
             </div>
-            <strong style="color: #0284C7; font-size: 0.95rem;">%${prog}</strong>
+            <strong style="color: #16A34A; font-size: 0.98rem; margin-right: 6px;">%${prog} بهبود</strong>
           </td>
-          <td>
-            <ul style="margin: 0; padding-right: 1.2rem; font-size: 0.83rem; color: #334155; line-height: 1.45;">
-              ${itemsHTML}
-            </ul>
+          <td style="font-size: 0.86rem; color: #334155;">
+            ${summaryText}
           </td>
         </tr>
       `;
@@ -731,11 +733,10 @@ router.get('/reports/sprints-html', (req, res) => {
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width: 170px;">حوزه عملیاتی / قابلیت</th>
-          <th style="width: 120px;">تعداد تسک</th>
-          <th style="width: 130px;">حجم کارکرد (ساعت)</th>
-          <th style="width: 150px;">درصد پیشرفت حوزه</th>
-          <th>قابلیت‌ها و دستاوردهای فنی انجام‌شده</th>
+          <th style="width: 220px;">عنوان قابلیت عملیاتی</th>
+          <th style="width: 160px;">کارکرد در این اسپرینت</th>
+          <th style="width: 200px;">میزان بهبود در این اسپرینت</th>
+          <th>خلاصه قابلیت‌ها و ارتقاء فنی ایجادشده</th>
         </tr>
       </thead>
       <tbody>
