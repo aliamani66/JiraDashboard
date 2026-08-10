@@ -126,13 +126,37 @@
   font-weight: 700;
   color: #F8FAFC;
   line-height: 1.4;
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.5rem 0;
   height: 3rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-align: right;
+}
+
+/* Quarter Badges Row */
+.pc-quarters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.pc-quarter-pill {
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  color: var(--accent-cyan, #22d3ee);
+  letter-spacing: 0.5px;
+  direction: ltr;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.15);
 }
 
 /* Middle Section */

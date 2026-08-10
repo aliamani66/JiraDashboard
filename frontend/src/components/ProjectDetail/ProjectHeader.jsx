@@ -70,6 +70,11 @@ const ProjectHeader = ({ project, capabilities = [] }) => {
           </a>
 
           <span className="ph-category">{categoryLabel}</span>
+          {project.quarters && project.quarters.map(q => (
+            <span key={q} className="ph-quarter-badge">
+              📅 {q}
+            </span>
+          ))}
           <StatusBadge status={project.status} />
         </div>
 

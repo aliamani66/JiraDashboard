@@ -116,6 +116,12 @@ router.get('/projects/:id', (req, res) => {
     project.tasks = tasks;
     project.waitingTasks = tasks.filter(t => t.is_waiting === 1 || t.status === 'OnHolding' || t.status === 'Waiting');
     
+    const quarterSet = new Set();
+    for (const t of tasks) {
+      extractQuarterLabels(t.labels).forEach(q => quarterSet.add(q));
+    }
+    project.quarters = Array.from(quarterSet).sort();
+    
     res.json(project);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch project' });
