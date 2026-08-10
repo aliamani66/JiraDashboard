@@ -36,6 +36,11 @@ const StatusBadge = ({ status }) => {
       case 'مسدود شده':
         return { text: 'مسدود شده', className: 'status-blocked' };
 
+      case 'critical':
+      case 'کریتیکال':
+      case 'بحرانی':
+        return { text: '🚨 متوقف (Critical)', className: 'status-critical' };
+
       case 'waiting':
       case 'onholding':
       case 'on hold':

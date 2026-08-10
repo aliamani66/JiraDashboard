@@ -111,13 +111,29 @@
   margin-bottom: 0.85rem;
 }
 
-.pc-project-id {
+.pc-project-id-chip {
   font-family: monospace;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: #94A3B8;
+  color: #CBD5E1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.25rem 0.65rem;
+  border-radius: 10px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.pc-chip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #38BDF8;
+  box-shadow: 0 0 6px #38BDF8;
 }
 
 /* Title */
@@ -187,33 +203,89 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
 }
 
-.pc-text-stats {
+.pc-text-stats-panel {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.35rem;
 }
 
-.pc-task-count {
-  font-size: 1.2rem;
-  color: #E2E8F0;
-  font-weight: 600;
+.pc-task-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
 }
 
-.pc-task-count strong {
-  color: #FFFFFF;
-  font-size: 1.3rem;
-}
-
-.pc-progress-pct {
-  font-size: 0.95rem;
+.pc-task-label {
+  font-size: 0.8rem;
   color: #94A3B8;
-  font-weight: 500;
 }
 
-.pc-progress-pct strong {
+.pc-task-numbers {
+  font-size: 1.1rem;
+  font-weight: 700;
+  direction: ltr;
+}
+
+.pc-task-numbers .completed {
+  color: #34D399;
+}
+
+.pc-task-numbers .divider {
+  color: #64748B;
+  margin: 0 2px;
+}
+
+.pc-task-numbers .total {
+  color: #F8FAFC;
+}
+
+.pc-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: #94A3B8;
+}
+
+.pc-prog-val {
   color: #38BDF8;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.pc-waiting-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  color: #FDBA74;
+  background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  margin-top: 0.15rem;
+}
+
+.pulse-orange-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #F97316;
+  box-shadow: 0 0 6px #F97316;
+  animation: dotPulse 1.8s infinite ease-in-out;
+}
+
+@keyframes dotPulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 /* Circular SVG Donut Chart */
@@ -222,6 +294,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.ring-center-text {
+  position: absolute;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #F8FAFC;
+  direction: ltr;
 }
 
 .circle-bg {

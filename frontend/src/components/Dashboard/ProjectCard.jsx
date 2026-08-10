@@ -59,7 +59,10 @@ const ProjectCard = ({ project }) => {
         {/* Top Row: Status Badge on right, Project ID on left */}
         <div className="pc-top-row">
           <StatusBadge status={isFullyStopped ? 'Critical' : project.status} />
-          <span className="pc-project-id">{project.id}</span>
+          <span className="pc-project-id-chip">
+            <span className="pc-chip-dot"></span>
+            {project.id}
+          </span>
         </div>
 
         {/* Project Title */}
@@ -88,16 +91,25 @@ const ProjectCard = ({ project }) => {
 
         {/* Middle Progress Section */}
         <div className="pc-middle-section">
-          <div className="pc-text-stats">
-            <div className="pc-task-count">
-              <strong>{completedTasks}/{totalTasks}</strong> تسک
+          <div className="pc-text-stats-panel">
+            <div className="pc-task-badge">
+              <span className="pc-task-label">تسک‌ها:</span>
+              <span className="pc-task-numbers">
+                <strong className="completed">{completedTasks}</strong>
+                <span className="divider">/</span>
+                <strong className="total">{totalTasks}</strong>
+              </span>
             </div>
-            <div className="pc-progress-pct">
-              پیشرفت <strong>%{progress}</strong>
+
+            <div className="pc-progress-row">
+              <span className="pc-prog-text">پیشرفت کل:</span>
+              <span className="pc-prog-val">%{progress}</span>
             </div>
+
             {waitingTasks > 0 && (
-              <div className="pc-waiting-count text-orange">
-                ⏳ <strong>{waitingTasks}</strong> تسک منتظر
+              <div className="pc-waiting-chip">
+                <span className="pulse-orange-dot"></span>
+                <span><strong>{waitingTasks}</strong> تسک منتظر</span>
               </div>
             )}
           </div>
@@ -122,6 +134,7 @@ const ProjectCard = ({ project }) => {
                 transform="rotate(-90 35 35)"
               />
             </svg>
+            <span className="ring-center-text">%{progress}</span>
           </div>
         </div>
 

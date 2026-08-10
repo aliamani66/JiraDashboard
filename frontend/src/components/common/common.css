@@ -30,47 +30,90 @@
 .status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.75rem;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
   border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 1px solid transparent;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
+  position: relative;
 }
 
 .status-active {
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--accent-blue);
+  background: rgba(37, 99, 235, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #60A5FA;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
 }
-.status-active .status-dot { background: var(--accent-blue); box-shadow: 0 0 5px var(--accent-blue); }
+.status-active .status-dot { 
+  background: #3B82F6; 
+  box-shadow: 0 0 8px #3B82F6; 
+}
 
 .status-done {
   background: rgba(16, 185, 129, 0.15);
-  color: var(--accent-green);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34D399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
 }
-.status-done .status-dot { background: var(--accent-green); box-shadow: 0 0 5px var(--accent-green); }
+.status-done .status-dot { 
+  background: #10B981; 
+  box-shadow: 0 0 8px #10B981; 
+}
 
 .status-blocked {
   background: rgba(239, 68, 68, 0.15);
-  color: var(--accent-red);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #F87171;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
 }
-.status-blocked .status-dot { background: var(--accent-red); box-shadow: 0 0 5px var(--accent-red); }
+.status-blocked .status-dot { 
+  background: #EF4444; 
+  box-shadow: 0 0 8px #EF4444; 
+}
+
+.status-critical {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(249, 115, 22, 0.25));
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #FCA5A5;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+  animation: criticalPulse 2s infinite ease-in-out;
+}
+.status-critical .status-dot {
+  background: #EF4444;
+  box-shadow: 0 0 10px #EF4444;
+}
+
+@keyframes criticalPulse {
+  0% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 18px rgba(239, 68, 68, 0.6); }
+  100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+}
 
 .status-waiting {
   background: rgba(249, 115, 22, 0.15);
-  color: var(--accent-orange);
+  border-color: rgba(249, 115, 22, 0.4);
+  color: #FDBA74;
 }
 .status-waiting .status-dot {
-  background-color: var(--accent-orange);
+  background-color: #F97316;
+  box-shadow: 0 0 8px #F97316;
 }
 
 .status-todo {
   background: rgba(100, 116, 139, 0.15);
-  color: var(--text-secondary);
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #94A3B8;
 }
-.status-todo .status-dot { background: var(--text-secondary); }
+.status-todo .status-dot { 
+  background: #94A3B8; 
+}
