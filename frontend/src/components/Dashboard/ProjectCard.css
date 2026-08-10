@@ -288,9 +288,10 @@
 }
 
 .pc-status-chip.chip-todo {
-  background: rgba(148, 163, 184, 0.12);
-  border-color: rgba(148, 163, 184, 0.25);
-  color: #CBD5E1;
+  background: rgba(167, 139, 250, 0.16);
+  border-color: rgba(167, 139, 250, 0.4);
+  color: #C084FC;
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.25);
 }
 
 .pc-status-chip.chip-waiting {

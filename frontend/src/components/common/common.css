@@ -134,10 +134,12 @@
 
 /* To Do / Open */
 .status-todo {
-  background: rgba(100, 116, 139, 0.18);
-  border-color: rgba(148, 163, 184, 0.3);
-  color: #CBD5E1;
+  background: rgba(167, 139, 250, 0.16);
+  border-color: rgba(167, 139, 250, 0.4);
+  color: #C084FC;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.25);
 }
 .status-todo .status-dot { 
-  background: #94A3B8; 
+  background: #C084FC; 
+  box-shadow: 0 0 8px #C084FC;
 }
