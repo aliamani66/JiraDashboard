@@ -43,48 +43,44 @@ function extractDateField(issue, fieldName) {
   return null;
 }
 
-// Perform JQL Search with support for Jira Data Center / Server (/rest/api/2/search) and Jira Cloud (/rest/api/3/search/jql)
-async function jiraSearch(jql, fields = [], retries = 2) {
+// Perform JQL Search with retry logic for network stability
+async function jiraSearch(jql, fields = [], retries = 5) {
   const headers = { 
     Authorization: getAuthHeader(),
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   };
 
-  // Filter out null/undefined field names
   const validFields = fields.filter(Boolean);
   const isCloud = jiraConfig.baseUrl && jiraConfig.baseUrl.includes('.atlassian.net');
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  for (let attempt = 0; attempt < retries; attempt++) {
     try {
       if (isCloud) {
         const urlCloud = `${jiraConfig.baseUrl}/rest/api/3/search/jql`;
-        const response = await axios.post(urlCloud, { jql, fields: validFields }, { headers });
+        const response = await axios.post(urlCloud, { jql, fields: validFields }, { headers, timeout: 15000 });
         return response.data;
       } else {
-        // Jira Server / Data Center (e.g. jira.dotin.ir)
         const urlServer = `${jiraConfig.baseUrl}/rest/api/2/search`;
-        const response = await axios.post(urlServer, { jql, fields: validFields }, { headers });
+        const response = await axios.post(urlServer, { jql, fields: validFields }, { headers, timeout: 15000 });
         return response.data;
       }
     } catch (err) {
-      if (err.response?.status === 410 || err.response?.status === 404 || err.response?.status === 405) {
+      console.log(`[JiraSearch Attempt ${attempt + 1}/${retries}] Error: ${err.code || err.message}`);
+      if (attempt === retries - 1) {
         try {
           const urlFallback = `${jiraConfig.baseUrl}/rest/api/2/search`;
           const response = await axios.get(urlFallback, {
             headers,
-            params: { jql, fields: validFields.join(',') }
+            params: { jql, fields: validFields.join(',') },
+            timeout: 15000
           });
           return response.data;
         } catch (e) {
           throw err;
         }
       }
-      if (attempt < retries) {
-        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-        continue;
-      }
-      throw err;
+      await new Promise(r => setTimeout(r, 2000));
     }
   }
 }
