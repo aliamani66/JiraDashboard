@@ -51,6 +51,8 @@ const ProjectHeader = ({ project, capabilities = [] }) => {
     project.total_estimate_hours || tasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0)
   );
 
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
+
   return (
     <div className="glass-card project-header-card">
       <div className="ph-info">
@@ -81,7 +83,19 @@ const ProjectHeader = ({ project, capabilities = [] }) => {
         <h1 className="ph-title">{project.title}</h1>
         
         {project.description && (
-          <p className="ph-description">{project.description}</p>
+          <div className="ph-description-box">
+            <p className={`ph-description ${isDescExpanded ? 'expanded' : 'collapsed'}`}>
+              {project.description}
+            </p>
+            {project.description.length > 100 && (
+              <button 
+                className="ph-toggle-desc-btn" 
+                onClick={() => setIsDescExpanded(!isDescExpanded)}
+              >
+                {isDescExpanded ? 'بستن توضیحات ▴' : 'مشاهده کامل توضیحات اپیک ▾'}
+              </button>
+            )}
+          </div>
         )}
 
         {/* Capabilities Badges directly merged inside Project Header */}
