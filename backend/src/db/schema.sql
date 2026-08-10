@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     labels TEXT DEFAULT '[]',
     component TEXT DEFAULT 'dev',
     sort_order INTEGER DEFAULT 0,
+    is_subtask INTEGER DEFAULT 0,
+    parent_task_id TEXT,
     last_synced TEXT,
     FOREIGN KEY (project_id) REFERENCES projects(id)
 );

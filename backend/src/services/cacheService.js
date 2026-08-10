@@ -39,8 +39,8 @@ async function syncFromJira() {
     `);
 
     const insertTask = db.prepare(`
-      INSERT INTO tasks (id, project_id, title, status, assignee, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, last_synced)
-      VALUES (@id, @project_id, @title, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @last_synced)
+      INSERT INTO tasks (id, project_id, title, status, assignee, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, last_synced)
+      VALUES (@id, @project_id, @title, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @last_synced)
       ON CONFLICT(id) DO UPDATE SET
         title=excluded.title,
         status=excluded.status,
@@ -59,6 +59,8 @@ async function syncFromJira() {
         labels=excluded.labels,
         component=excluded.component,
         sort_order=excluded.sort_order,
+        is_subtask=excluded.is_subtask,
+        parent_task_id=excluded.parent_task_id,
         last_synced=excluded.last_synced
     `);
 

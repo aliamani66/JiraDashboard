@@ -22,8 +22,8 @@ router.get('/projects', (req, res) => {
     const db = getDb();
     const projects = db.prepare(`
       SELECT p.*,
-        IFNULL((SELECT SUM(estimate_hours) FROM tasks WHERE project_id = p.id), 0) as total_estimate_hours,
-        IFNULL((SELECT SUM(spent_hours) FROM tasks WHERE project_id = p.id), 0) as total_spent_hours
+        IFNULL((SELECT SUM(estimate_hours) FROM tasks WHERE project_id = p.id AND (is_subtask IS NULL OR is_subtask = 0)), 0) as total_estimate_hours,
+        IFNULL((SELECT SUM(spent_hours) FROM tasks WHERE project_id = p.id AND (is_subtask IS NULL OR is_subtask = 0)), 0) as total_spent_hours
       FROM projects p
     `).all();
 

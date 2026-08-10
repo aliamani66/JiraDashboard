@@ -215,6 +215,10 @@ async function fetchTasksForEpic(epicKey) {
       'assignee', 
       'timeoriginalestimate', 
       'timespent', 
+      'aggregatetimeoriginalestimate',
+      'aggregatetimespent',
+      'issuetype',
+      'parent',
       'created', 
       'duedate', 
       'priority', 
@@ -399,14 +403,19 @@ async function fetchTasksForEpic(epicKey) {
         }
       }
 
+      const estSec = issue.fields?.aggregatetimeoriginalestimate || issue.fields?.timeoriginalestimate || 0;
+      const spentSec = issue.fields?.aggregatetimespent || issue.fields?.timespent || 0;
+      const isSubtask = issue.fields?.issuetype?.subtask ? 1 : 0;
+      const parentTaskId = issue.fields?.parent?.key || null;
+
       return {
         id: issue.key,
         project_id: epicKey,
         title: issue.fields?.summary || issue.key,
         status: finalStatus,
         assignee: issue.fields?.assignee ? issue.fields.assignee.displayName : null,
-        estimate_hours: issue.fields?.timeoriginalestimate ? issue.fields.timeoriginalestimate / 3600 : 0,
-        spent_hours: issue.fields?.timespent ? issue.fields.timespent / 3600 : 0,
+        estimate_hours: estSec ? estSec / 3600 : 0,
+        spent_hours: spentSec ? spentSec / 3600 : 0,
         start_date: startDate,
         due_date: dueDate,
         is_waiting: isWaiting,
@@ -418,7 +427,9 @@ async function fetchTasksForEpic(epicKey) {
         priority: issue.fields?.priority ? issue.fields.priority.name : 'Medium',
         labels: JSON.stringify(issue.fields?.labels || []),
         component: component,
-        sort_order: index
+        sort_order: index,
+        is_subtask: isSubtask,
+        parent_task_id: parentTaskId
       };
     });
   } catch (err) {

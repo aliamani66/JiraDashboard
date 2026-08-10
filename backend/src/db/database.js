@@ -156,6 +156,11 @@ async function initDb() {
 
   const schema = fs.readFileSync(schemaPath, 'utf8');
   db.exec(schema);
+
+  // Migrations for tasks table
+  try { db.run("ALTER TABLE tasks ADD COLUMN is_subtask INTEGER DEFAULT 0"); } catch (_) {}
+  try { db.run("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT"); } catch (_) {}
+
   saveDb();
 
   dbWrapper = createDbWrapper();
