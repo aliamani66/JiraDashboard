@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flame, Calendar, Clock, ExternalLink, User, Layers, ArrowLeft, Filter, Search, CheckCircle2 } from 'lucide-react';
+import { Flame, Calendar, Clock, ExternalLink, User, Layers, ArrowLeft, Filter, Search, CheckCircle2, Printer } from 'lucide-react';
 import { api } from '../services/api';
 import StatusBadge from '../components/common/StatusBadge';
 import './SprintsPage.css';
@@ -173,6 +173,10 @@ const SprintsPage = () => {
           </h1>
           <p className="sp-subtitle">بررسی تجمیعی تسک‌ها به تفکیک اسپرینت‌های هفتگی برای تمامی پروژه‌های R&D عملیات</p>
         </div>
+        <button className="sp-export-btn" onClick={() => window.print()} title="چاپ یا ذخیره خروجی PDF این اسپرینت">
+          <Printer size={16} />
+          <span>چاپ / خروجی PDF اسپرینت</span>
+        </button>
       </div>
 
       {/* Sprint Selector Tabs Bar */}
