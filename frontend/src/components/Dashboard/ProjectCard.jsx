@@ -67,12 +67,20 @@ const ProjectCard = ({ project }) => {
           {project.title}
         </h3>
 
+        {/* Project Description */}
+        {project.description && (
+          <p className="pc-description" title={project.description}>
+            {project.description}
+          </p>
+        )}
+
         {/* Quarter Badges Row */}
         {project.quarters && project.quarters.length > 0 && (
           <div className="pc-quarters-row">
+            <span className="pc-quarter-heading">فصل‌ها:</span>
             {project.quarters.map(q => (
               <span key={q} className="pc-quarter-pill">
-                📅 {q}
+                🏷️ {q}
               </span>
             ))}
           </div>
