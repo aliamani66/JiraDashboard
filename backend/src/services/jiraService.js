@@ -211,6 +211,7 @@ async function fetchTasksForEpic(epicKey) {
     const jql = `("Epic Link" = ${epicKey} OR parent = ${epicKey}) ORDER BY rank ASC`;
     const fields = [
       'summary', 
+      'description',
       'status', 
       'assignee', 
       'timeoriginalestimate', 
@@ -412,6 +413,7 @@ async function fetchTasksForEpic(epicKey) {
         id: issue.key,
         project_id: epicKey,
         title: issue.fields?.summary || issue.key,
+        description: parseJiraDescription(issue.fields?.description),
         status: finalStatus,
         assignee: issue.fields?.assignee ? issue.fields.assignee.displayName : null,
         estimate_hours: estSec ? estSec / 3600 : 0,

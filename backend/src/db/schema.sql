@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     id TEXT PRIMARY KEY,
     project_id TEXT NOT NULL,
     title TEXT NOT NULL,
+    description TEXT,
     status TEXT DEFAULT 'To Do',
     assignee TEXT,
     estimate_hours REAL DEFAULT 0,

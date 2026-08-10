@@ -94,6 +94,26 @@
 .task-title-cell {
   color: var(--text-primary);
   font-weight: 500;
+  max-width: 440px;
+}
+
+.task-desc-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 420px;
+  cursor: help;
+  transition: color 0.2s ease;
+}
+
+.task-desc-text:hover {
+  color: var(--text-secondary);
 }
 
 .task-assignee {

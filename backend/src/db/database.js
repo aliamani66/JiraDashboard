@@ -160,6 +160,7 @@ async function initDb() {
   // Migrations for tasks table
   try { db.run("ALTER TABLE tasks ADD COLUMN is_subtask INTEGER DEFAULT 0"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT"); } catch (_) {}
+  try { db.run("ALTER TABLE tasks ADD COLUMN description TEXT"); } catch (_) {}
 
   saveDb();
 

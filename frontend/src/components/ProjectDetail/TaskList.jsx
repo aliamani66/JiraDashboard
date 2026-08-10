@@ -118,6 +118,11 @@ const TaskList = ({ tasks }) => {
                     >
                       {task.title}
                     </a>
+                    {task.description && (
+                      <p className="task-desc-text" title={task.description}>
+                        📝 {task.description}
+                      </p>
+                    )}
                     {task.blocked_by_team && (
                       <span className="blocked-team-tag">⏳ {task.blocked_by_team}</span>
                     )}
