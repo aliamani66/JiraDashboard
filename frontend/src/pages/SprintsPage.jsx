@@ -104,17 +104,37 @@ const SprintsPage = () => {
     return true;
   });
 
-  // Calculate Sprint Stats
+  // Calculate Sprint Stats with Strict Mutual Exclusivity (Sum MUST equal totalSprintTasks)
   const totalSprintTasks = filteredTasks.length;
-  const doneTasksCount = filteredTasks.filter(t => t.status === 'Done' || t.status === 'done').length;
-  const activeTasksCount = filteredTasks.filter(t => t.status === 'In Progress' || t.status === 'in_progress').length;
-  const waitingTasksCount = filteredTasks.filter(t => t.is_waiting || t.status === 'Waiting' || t.status === 'OnHolding').length;
+
+  let doneCount = 0;
+  let activeCount = 0;
+  let waitingCount = 0;
+  let todoCount = 0;
+
+  for (const t of filteredTasks) {
+    if (t.status === 'Done' || t.status === 'done') {
+      doneCount++;
+    } else if (t.is_waiting || t.status === 'Waiting' || t.status === 'OnHolding') {
+      waitingCount++;
+    } else if (t.status === 'In Progress' || t.status === 'in_progress') {
+      activeCount++;
+    } else {
+      todoCount++;
+    }
+  }
 
   const totalSpentHours = Math.round(filteredTasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0));
   const totalEstHours = Math.round(filteredTasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0));
   const sprintProgress = totalEstHours > 0 
     ? Math.min(100, Math.round((totalSpentHours / totalEstHours) * 100))
-    : (totalSprintTasks > 0 ? Math.round((doneTasksCount / totalSprintTasks) * 100) : 0);
+    : (totalSprintTasks > 0 ? Math.round((doneCount / totalSprintTasks) * 100) : 0);
+
+  // Percentages for status bar
+  const donePct = totalSprintTasks > 0 ? Math.round((doneCount / totalSprintTasks) * 100) : 0;
+  const activePct = totalSprintTasks > 0 ? Math.round((activeCount / totalSprintTasks) * 100) : 0;
+  const waitingPct = totalSprintTasks > 0 ? Math.round((waitingCount / totalSprintTasks) * 100) : 0;
+  const todoPct = totalSprintTasks > 0 ? Math.round((todoCount / totalSprintTasks) * 100) : 0;
 
   // Group filtered tasks by Project for the Sprint Board View
   const tasksByProjectMap = new Map();
@@ -208,16 +228,36 @@ const SprintsPage = () => {
         <div className="glass-card sp-kpi-card orange">
           <div className="sp-kpi-icon"><Flame size={24} /></div>
           <div className="sp-kpi-info">
-            <span className="sp-kpi-title">تسک‌های اسپرینت</span>
+            <span className="sp-kpi-title">مجموع کل تسک‌های اسپرینت</span>
             <h2 className="sp-kpi-value">{totalSprintTasks} <small>تسک</small></h2>
           </div>
         </div>
 
-        <div className="glass-card sp-kpi-card green">
-          <div className="sp-kpi-icon"><CheckCircle2 size={24} /></div>
-          <div className="sp-kpi-info">
-            <span className="sp-kpi-title">انجام‌شده / در حال اجرا</span>
-            <h2 className="sp-kpi-value">{doneTasksCount} <small>انجام‌شده ({activeTasksCount} در حال انجام)</small></h2>
+        <div className="glass-card sp-kpi-card status-breakdown-card">
+          <div className="sp-status-grid-mini">
+            <div className="sp-mini-chip done" title="تسکس که کامل انجام شده‌اند">
+              <span className="dot green"></span>
+              <span className="lbl">✅ انجام‌شده:</span>
+              <strong>{doneCount}</strong>
+            </div>
+            <div className="sp-mini-chip active" title="تسک‌های در حال اجرا">
+              <span className="dot blue"></span>
+              <span className="lbl">⚡ در حال انجام:</span>
+              <strong>{activeCount}</strong>
+            </div>
+            <div className="sp-mini-chip waiting" title="تسک‌های منتظر / آن‌هولد">
+              <span className="dot orange"></span>
+              <span className="lbl">⏳ منتظر:</span>
+              <strong>{waitingCount}</strong>
+            </div>
+            <div className="sp-mini-chip todo" title="تسک‌های در صف شروع">
+              <span className="dot purple"></span>
+              <span className="lbl">📋 برای انجام:</span>
+              <strong>{todoCount}</strong>
+            </div>
+          </div>
+          <div className="sp-sum-verify-badge">
+            مجموع ({doneCount} + {activeCount} + {waitingCount} + {todoCount}) = {totalSprintTasks} تسک
           </div>
         </div>
 
@@ -237,6 +277,27 @@ const SprintsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Proportional Segmented Status Breakdown Bar */}
+      {totalSprintTasks > 0 && (
+        <div className="glass-card sp-status-segmented-bar-card">
+          <div className="sp-segmented-bar-header">
+            <span>📊 نوار نسبی تفکیک وضعیت تسک‌ها (مجموع ۱۰۰٪ برابر {totalSprintTasks} تسک):</span>
+          </div>
+          <div className="sp-segmented-bar-track">
+            {donePct > 0 && <div className="sp-segment green" style={{ width: `${donePct}%` }} title={`انجام‌شده: ${doneCount} تسک (${donePct}%)`}></div>}
+            {activePct > 0 && <div className="sp-segment blue" style={{ width: `${activePct}%` }} title={`در حال انجام: ${activeCount} تسک (${activePct}%)`}></div>}
+            {waitingPct > 0 && <div className="sp-segment orange" style={{ width: `${waitingPct}%` }} title={`منتظر: ${waitingCount} تسک (${waitingPct}%)`}></div>}
+            {todoPct > 0 && <div className="sp-segment purple" style={{ width: `${todoPct}%` }} title={`برای انجام: ${todoCount} تسک (${todoPct}%)`}></div>}
+          </div>
+          <div className="sp-segmented-bar-legend">
+            <span><span className="dot green"></span> انجام‌شده: {doneCount} ({donePct}%)</span>
+            <span><span className="dot blue"></span> در حال انجام: {activeCount} ({activePct}%)</span>
+            <span><span className="dot orange"></span> منتظر: {waitingCount} ({waitingPct}%)</span>
+            <span><span className="dot purple"></span> برای انجام: {todoCount} ({todoPct}%)</span>
+          </div>
+        </div>
+      )}
 
       {/* Filter & Search Bar */}
       <div className="glass-card sp-filter-bar">

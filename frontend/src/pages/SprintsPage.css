@@ -161,6 +161,120 @@
   border-radius: 16px;
 }
 
+/* Status Breakdown Mini Card inside KPI Grid */
+.status-breakdown-card {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: center;
+  padding: 1rem 1.2rem !important;
+  gap: 0.5rem !important;
+}
+
+.sp-status-grid-mini {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.sp-mini-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sp-mini-chip .lbl {
+  color: var(--text-secondary);
+}
+
+.sp-mini-chip strong {
+  margin-right: auto;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.sp-mini-chip.done strong { color: #34D399; }
+.sp-mini-chip.active strong { color: #60A5FA; }
+.sp-mini-chip.waiting strong { color: #F97316; }
+.sp-mini-chip.todo strong { color: #C084FC; }
+
+.sp-sum-verify-badge {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+}
+
+/* Proportional Segmented Status Bar */
+.sp-status-segmented-bar-card {
+  padding: 1rem 1.4rem;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.sp-segmented-bar-header {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.sp-segmented-bar-track {
+  height: 12px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.sp-segment {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.sp-segment.green { background: linear-gradient(90deg, #059669, #34D399); }
+.sp-segment.blue { background: linear-gradient(90deg, #2563EB, #60A5FA); }
+.sp-segment.orange { background: linear-gradient(90deg, #EA580C, #F97316); }
+.sp-segment.purple { background: linear-gradient(90deg, #7C3AED, #C084FC); }
+
+.sp-segmented-bar-legend {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.sp-segmented-bar-legend span {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot.green { background: #34D399; box-shadow: 0 0 6px #34D399; }
+.dot.blue { background: #60A5FA; box-shadow: 0 0 6px #60A5FA; }
+.dot.orange { background: #F97316; box-shadow: 0 0 6px #F97316; }
+.dot.purple { background: #C084FC; box-shadow: 0 0 6px #C084FC; }
+
 .sp-kpi-icon {
   width: 48px;
   height: 48px;
