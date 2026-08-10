@@ -1251,4 +1251,257 @@ router.get('/reports/project-html/:id', (req, res) => {
   }
 });
 
+// Standalone Waiting & Blocked Tasks Executive Report HTML Endpoint
+router.get('/reports/waiting-html', (req, res) => {
+  try {
+    const db = getDb();
+    const tasks = db.prepare(`
+      SELECT t.*, p.title as project_title, p.category as project_category
+      FROM tasks t
+      JOIN projects p ON t.project_id = p.id
+      WHERE t.is_waiting = 1 OR t.status = 'Waiting' OR t.status = 'OnHolding'
+      ORDER BY t.project_id ASC, t.id ASC
+    `).all();
+
+    const totalWaitingCount = tasks.length;
+    const totalSpent = Math.round(tasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0));
+    const totalEst = Math.round(tasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0));
+
+    // Group tasks by blocked team (waiting_for_team)
+    const teamsMap = {};
+    for (const t of tasks) {
+      const teamName = t.waiting_for_team || 'تیم‌های وابسته خارجی';
+      if (!teamsMap[teamName]) teamsMap[teamName] = [];
+      teamsMap[teamName].push(t);
+    }
+
+    let teamSummaryRowsHTML = '';
+    let detailedTasksTableHTML = '';
+
+    for (const teamName of Object.keys(teamsMap)) {
+      const teamTasks = teamsMap[teamName];
+      const count = teamTasks.length;
+      const spent = Math.round(teamTasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0));
+
+      teamSummaryRowsHTML += `
+        <tr>
+          <td><strong style="color:#C2410C; font-size:0.92rem;">⏳ ${teamName}</strong></td>
+          <td><span class="badge badge-waiting">${count} تسک متوقف‌شده</span></td>
+          <td><strong>${spent} ساعت</strong></td>
+          <td>توقف و انتظار در دریافت تأییدیه یا سرویس از ${teamName}</td>
+        </tr>
+      `;
+
+      for (const t of teamTasks) {
+        detailedTasksTableHTML += `
+          <tr>
+            <td><code class="task-code">${t.id}</code></td>
+            <td>
+              <strong>${t.title}</strong>
+              ${t.waiting_reason ? `<div style="font-size:0.82rem; color:#C2410C; margin-top:2px;">⚠️ <em>علت توقف:</em> ${t.waiting_reason}</div>` : ''}
+            </td>
+            <td><span class="proj-tag">${t.project_id}: ${t.project_title}</span></td>
+            <td>👤 ${t.assignee || 'تیم R&D'}</td>
+            <td><strong style="color:#EA580C;">⏳ ${t.waiting_for_team || 'تیم وابسته'}</strong></td>
+            <td><span class="badge badge-waiting">${t.priority || 'متوسط'}</span></td>
+            <td>${t.spent_hours || 0}h / ${t.estimate_hours || 0}h</td>
+          </tr>
+        `;
+      }
+    }
+
+    const htmlDocument = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>گزارش تسک‌های منتظر و متوقف‌شده (Waiting Tasks Report)</title>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+    body {
+      background: #FFFFFF;
+      color: #0F172A;
+      font-family: 'Vazirmatn', sans-serif;
+      margin: 0;
+      padding: 2rem;
+      direction: rtl;
+      line-height: 1.6;
+    }
+    .no-print-bar {
+      background: #0F172A;
+      color: #FFFFFF;
+      padding: 0.8rem 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .no-print-btn {
+      background: #0EA5E9;
+      color: #FFFFFF;
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .header-banner {
+      background: #FFF7ED;
+      border: 1px solid #FFEDD5;
+      border-radius: 16px;
+      padding: 1.8rem;
+      margin-bottom: 1.5rem;
+      border-top: 4px solid #EA580C;
+    }
+    h1 { margin: 0 0 0.5rem; color: #9A3412; font-size: 1.7rem; font-weight: 800; }
+    .subtitle { color: #C2410C; font-size: 0.92rem; margin: 0; }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .kpi-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 1.1rem;
+      text-align: center;
+    }
+    .kpi-box .val { font-size: 1.75rem; font-weight: 800; color: #EA580C; margin-top: 0.2rem; }
+    .kpi-box .lbl { font-size: 0.84rem; color: #64748B; font-weight: 600; }
+    .card-section {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      page-break-inside: avoid;
+    }
+    .card-section h2 { margin: 0 0 1rem; font-size: 1.25rem; color: #C2410C; font-weight: 800; }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      font-size: 0.86rem;
+    }
+    .data-table th, .data-table td {
+      padding: 0.75rem 0.85rem;
+      text-align: right;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .data-table th {
+      background: #FFEDD5;
+      color: #9A3412;
+      font-weight: 700;
+    }
+    .task-code {
+      background: #FFEDD5;
+      color: #C2410C;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    .proj-tag {
+      font-size: 0.78rem;
+      color: #334155;
+      background: #F1F5F9;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+    }
+    .badge {
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .badge-waiting { background: #FFEDD5; color: #C2410C; border: 1px solid #FDBA74; }
+    @media print {
+      .no-print-bar { display: none !important; }
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print-bar">
+    <span>💡 پیش‌نمایش خروجی رسمی تسک‌های منتظر و آن‌هولد پلتفرم R&D</span>
+    <button className="no-print-btn" onclick="window.print()">🖨️ دانلود و ذخیره به عنوان PDF</button>
+  </div>
+
+  <div class="header-banner">
+    <h1>⏳ گزارش تسک‌های منتظر و متوقف‌شده تیم‌های دیگر</h1>
+    <p class="subtitle">گزارش مدیریتی تسک‌های در انتظار دریافت تأییدیه، زیرساخت یا لایسنس از تیم‌های وابسته خارچی | تاریخ تنظیم: ۲۰ مرداد ۱۴۰۵</p>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-box">
+      <div class="lbl">تعداد کل تسک‌های متوقف‌شده</div>
+      <div class="val">${totalWaitingCount} تسک</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">تعداد تیم‌های وابسته در انتظار</div>
+      <div class="val" style="color: #0284C7;">${Object.keys(teamsMap).length} تیم</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">ساعات کارکرد متوقف‌شده</div>
+      <div class="val" style="color: #C2410C;">${totalSpent}h / ${totalEst}h</div>
+    </div>
+  </div>
+
+  <!-- 📊 Summary Table by Blocked Team -->
+  <div class="card-section">
+    <h2>📊 خلاصه وضعیت تسک‌های متوقف‌شده به تفکیک تیم‌های وابسته</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>نام تیم / واحد در انتظار</th>
+          <th>تعداد تسک متوقف</th>
+          <th>ساعات کارکرد ثبت‌شده</th>
+          <th>توضیحات وابستگی</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${teamSummaryRowsHTML}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 📋 Detailed Tasks Table -->
+  <div class="card-section">
+    <h2>📋 لیست تفکیکی تسک‌های منتظر و علل توقف</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 75px;">کد تسک</th>
+          <th>عنوان تسک و علت توقف</th>
+          <th>پروژه مربوطه</th>
+          <th>مسئول تسک</th>
+          <th>تیم در انتظار</th>
+          <th>اولویت</th>
+          <th>ساعات کارکرد</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${detailedTasksTableHTML}
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(htmlDocument);
+  } catch (err) {
+    res.status(500).send('Error generating waiting report: ' + err.message);
+  }
+});
+
 module.exports = router;

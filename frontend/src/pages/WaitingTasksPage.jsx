@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, Clock, ClipboardList, AlertCircle, Calendar, Flag, ExternalLink } from 'lucide-react';
+import { ChevronLeft, Clock, ClipboardList, AlertCircle, Calendar, Flag, ExternalLink, Printer } from 'lucide-react';
 import { useWaitingTasks } from '../hooks/useProjects';
 import './WaitingTasksPage.css';
 
@@ -39,6 +39,15 @@ const WaitingTasksPage = () => {
           <Clock size={28} className="text-accent-orange" />
           تسک‌های منتظر و آن‌هولد تیم‌های دیگر ({totalWaiting} تسک)
         </h1>
+
+        <button 
+          className="wt-export-btn"
+          onClick={() => window.open(`http://localhost:3001/api/reports/waiting-html?token=${localStorage.getItem('token')}`, '_blank')}
+          title="دانلود و چاپ خروجی گزارش تسک‌های منتظر و آن‌هولد"
+        >
+          <Printer size={16} />
+          <span>چاپ / خروجی PDF تسک‌های منتظر</span>
+        </button>
       </div>
 
       <div className="projects-container">
