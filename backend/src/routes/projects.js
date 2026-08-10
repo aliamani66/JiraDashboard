@@ -832,35 +832,81 @@ router.get('/reports/project-html/:id', (req, res) => {
     const totalEst = Math.round(tasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0));
     const progress = totalEst > 0 ? Math.round((totalSpent / totalEst) * 100) : (totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0);
 
-    // Build Gantt Timeline Rows HTML
+    // Extract sprint list from tasks
+    const projectSprintNames = Array.from(new Set(tasks.map(t => t.sprint_name || 'Sprint 10'))).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, '')) || 0;
+      const numB = parseInt(b.replace(/\D/g, '')) || 0;
+      return numA - numB;
+    });
+
+    const sprintColsCount = Math.max(1, projectSprintNames.length);
+
+    // Build Gantt Timeline Header Columns
+    let ganttHeaderColsHTML = projectSprintNames.map(s => `
+      <div class="gantt-col-header">🔥 ${s}</div>
+    `).join('');
+
+    // Build Gantt Rows
     let ganttRowsHTML = '';
     for (const t of tasks) {
       const tEst = t.estimate_hours || 0;
       const tSpent = t.spent_hours || 0;
       const tProg = tEst > 0 ? Math.min(100, Math.round((tSpent / tEst) * 100)) : (t.status === 'Done' ? 100 : 0);
       const sName = t.sprint_name || 'Sprint 10';
+      const sprintIndex = projectSprintNames.indexOf(sName);
+      
+      // Calculate bar offset and width relative to sprint grid
+      const colWidthPct = 100 / sprintColsCount;
+      const leftOffsetPct = (sprintIndex >= 0 ? sprintIndex : 0) * colWidthPct;
+      const barWidthPct = Math.max(colWidthPct * 0.9, (tProg / 100) * colWidthPct);
 
+      let statusGradient = 'linear-gradient(90deg, #A855F7, #7E22CE)';
+      let statusIcon = '📋';
       let statusBadgeClass = 'badge-todo';
-      let statusText = '📋 برای انجام';
-      if (t.status === 'Done' || t.status === 'done') { statusBadgeClass = 'badge-done'; statusText = '✅ تکمیل شده'; }
-      else if (t.status === 'In Progress' || t.status === 'in_progress') { statusBadgeClass = 'badge-active'; statusText = '⚡ در حال انجام'; }
-      else if (t.is_waiting) { statusBadgeClass = 'badge-waiting'; statusText = `⏳ منتظر (${t.waiting_for_team || 'خارجی'})`; }
+      let statusText = 'برای انجام';
+
+      if (t.status === 'Done' || t.status === 'done') {
+        statusGradient = 'linear-gradient(90deg, #10B981, #059669)';
+        statusIcon = '✅';
+        statusBadgeClass = 'badge-done';
+        statusText = 'تکمیل شد';
+      } else if (t.status === 'In Progress' || t.status === 'in_progress') {
+        statusGradient = 'linear-gradient(90deg, #38BDF8, #0284C7)';
+        statusIcon = '⚡';
+        statusBadgeClass = 'badge-active';
+        statusText = 'در حال انجام';
+      } else if (t.is_waiting) {
+        statusGradient = 'linear-gradient(90deg, #F59E0B, #D97706)';
+        statusIcon = '⏳';
+        statusBadgeClass = 'badge-waiting';
+        statusText = `منتظر (${t.waiting_for_team || 'خارجی'})`;
+      }
 
       ganttRowsHTML += `
         <div class="gantt-row">
           <div class="gantt-label">
-            <code class="task-code">${t.id}</code>
-            <strong style="margin-right: 6px;">${t.title}</strong>
-            <div style="font-size: 0.78rem; color: #64748B; margin-top: 2px;">👤 ${t.assignee || 'تیم R&D'} | 🔥 ${sName}</div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom: 2px;">
+              <code class="task-code">${t.id}</code>
+              <strong style="font-size:0.88rem; color:#0F172A;">${t.title}</strong>
+            </div>
+            <div style="font-size: 0.78rem; color: #64748B;">👤 ${t.assignee || 'تیم R&D'} | <span style="color:#EA580C; font-weight:bold;">🔥 ${sName}</span></div>
           </div>
-          <div class="gantt-timeline-container">
-            <div class="gantt-bar-fill" style="width: ${tProg}%;">
-              <span class="gantt-bar-text">%${tProg}</span>
+
+          <div class="gantt-grid-track">
+            <!-- Grid Lines -->
+            <div class="gantt-grid-lines">
+              ${projectSprintNames.map(() => '<div class="gantt-grid-line"></div>').join('')}
+            </div>
+
+            <!-- Positioned Gantt Bar -->
+            <div class="gantt-bar-fill" style="margin-right: ${leftOffsetPct}%; width: ${barWidthPct}%; background: ${statusGradient};">
+              <span class="gantt-bar-text">${statusIcon} %${tProg}</span>
             </div>
           </div>
+
           <div class="gantt-meta">
             <span class="badge ${statusBadgeClass}">${statusText}</span>
-            <span style="font-weight: bold; font-size: 0.82rem;">${tSpent}h / ${tEst}h</span>
+            <span style="font-weight: bold; font-size: 0.82rem; color: #334155;">${tSpent}h / ${tEst}h</span>
           </div>
         </div>
       `;
@@ -984,37 +1030,83 @@ router.get('/reports/project-html/:id', (req, res) => {
     }
     .card-section h2 { margin: 0 0 1rem; font-size: 1.25rem; color: #0284C7; font-weight: 800; }
     
-    /* Gantt Chart Custom Styling */
-    .gantt-container { display: flex; flex-direction: column; gap: 0.75rem; }
+    /* Executive Gantt Chart Custom Styling */
+    .gantt-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 1rem;
+    }
+    .gantt-header-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 2px solid #CBD5E1;
+      font-weight: 800;
+      font-size: 0.84rem;
+      color: #475569;
+    }
+    .gantt-header-label { width: 300px; flex-shrink: 0; }
+    .gantt-header-timeline {
+      flex: 1;
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+    }
+    .gantt-col-header { flex: 1; color: #EA580C; font-weight: 800; font-size: 0.82rem; }
+    .gantt-header-meta { width: 170px; text-align: left; flex-shrink: 0; }
+
+    .gantt-container { display: flex; flex-direction: column; gap: 0.65rem; }
     .gantt-row {
       display: flex;
       align-items: center;
       gap: 1rem;
-      background: #F8FAFC;
+      background: #FFFFFF;
       border: 1px solid #E2E8F0;
-      padding: 0.75rem 1rem;
-      border-radius: 12px;
+      padding: 0.65rem 0.85rem;
+      border-radius: 10px;
+      transition: all 0.2s ease;
     }
-    .gantt-label { width: 320px; flex-shrink: 0; }
-    .gantt-timeline-container {
+    .gantt-label { width: 300px; flex-shrink: 0; }
+    .gantt-grid-track {
       flex: 1;
-      height: 22px;
-      background: #E2E8F0;
-      border-radius: 10px;
-      overflow: hidden;
+      height: 26px;
+      background: #F1F5F9;
+      border-radius: 8px;
       position: relative;
-    }
-    .gantt-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #0284C7, #16A34A);
-      border-radius: 10px;
+      overflow: hidden;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
-      padding-left: 8px;
+      border: 1px solid #E2E8F0;
     }
-    .gantt-bar-text { color: #FFFFFF; font-size: 0.78rem; font-weight: bold; }
-    .gantt-meta { width: 180px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .gantt-grid-lines {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      pointer-events: none;
+    }
+    .gantt-grid-line {
+      flex: 1;
+      border-left: 1px dashed rgba(203, 213, 225, 0.7);
+    }
+    .gantt-bar-fill {
+      height: 20px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      position: relative;
+      z-index: 2;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      transition: all 0.3s ease;
+    }
+    .gantt-bar-text { color: #FFFFFF; font-size: 0.76rem; font-weight: 800; white-space: nowrap; }
+    .gantt-meta { width: 170px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 
     .data-table {
       width: 100%;
@@ -1112,9 +1204,18 @@ router.get('/reports/project-html/:id', (req, res) => {
 
   <!-- 📊 Gantt Chart / Timeline Section -->
   <div class="card-section">
-    <h2>📅 نمودار گانت و تایم‌لاین پیشرفت تسک‌های پروژه</h2>
-    <div class="gantt-container">
-      ${ganttRowsHTML}
+    <h2>📅 نمودار گانت و تایم‌لاین زمان‌بندی و پیشرفت تسک‌های پروژه</h2>
+    <div class="gantt-wrapper">
+      <div class="gantt-header-row">
+        <div class="gantt-header-label">عنوان تسک و مسئول</div>
+        <div class="gantt-header-timeline">
+          ${ganttHeaderColsHTML}
+        </div>
+        <div class="gantt-header-meta">وضعیت و کارکرد</div>
+      </div>
+      <div class="gantt-container">
+        ${ganttRowsHTML}
+      </div>
     </div>
   </div>
 
