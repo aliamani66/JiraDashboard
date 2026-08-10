@@ -42,6 +42,29 @@ router.get('/projects', (req, res) => {
       }
       p.components_map = compObj;
 
+      // Task status breakdown map (done, active, waiting, todo)
+      const statusRows = db.prepare(`
+        SELECT status, is_waiting, COUNT(*) as count 
+        FROM tasks 
+        WHERE project_id = ? 
+        GROUP BY status, is_waiting
+      `).all(p.id);
+
+      const statusMap = { done: 0, active: 0, waiting: 0, todo: 0 };
+      for (const row of statusRows) {
+        const s = (row.status || '').toLowerCase();
+        if (row.is_waiting === 1 || s === 'waiting' || s === 'onholding' || s === 'on hold') {
+          statusMap.waiting += row.count;
+        } else if (s === 'done' || s === 'completed' || s === 'resolved') {
+          statusMap.done += row.count;
+        } else if (s === 'in progress' || s === 'in_progress' || s === 'active' || s === 'in review' || s === 'testing') {
+          statusMap.active += row.count;
+        } else {
+          statusMap.todo += row.count;
+        }
+      }
+      p.status_map = statusMap;
+
       // Quarter labels — collect unique quarters from all tasks of this project
       const labelRows = db.prepare(`SELECT labels FROM tasks WHERE project_id = ?`).all(p.id);
       const quarterSet = new Set();
@@ -117,10 +140,24 @@ router.get('/projects/:id', (req, res) => {
     project.waitingTasks = tasks.filter(t => t.is_waiting === 1 || t.status === 'OnHolding' || t.status === 'Waiting');
     
     const quarterSet = new Set();
+    const statusMap = { done: 0, active: 0, waiting: 0, todo: 0 };
+
     for (const t of tasks) {
       extractQuarterLabels(t.labels).forEach(q => quarterSet.add(q));
+
+      const s = (t.status || '').toLowerCase();
+      if (t.is_waiting === 1 || s === 'waiting' || s === 'onholding' || s === 'on hold') {
+        statusMap.waiting++;
+      } else if (s === 'done' || s === 'completed' || s === 'resolved') {
+        statusMap.done++;
+      } else if (s === 'in progress' || s === 'in_progress' || s === 'active' || s === 'in review' || s === 'testing') {
+        statusMap.active++;
+      } else {
+        statusMap.todo++;
+      }
     }
     project.quarters = Array.from(quarterSet).sort();
+    project.status_map = statusMap;
     
     res.json(project);
   } catch (err) {

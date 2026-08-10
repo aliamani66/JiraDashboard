@@ -127,6 +127,32 @@ const ProjectCard = ({ project }) => {
           </div>
         </div>
 
+        {/* Task Status Breakdown Badges Row */}
+        {project.status_map && (
+          <div className="pc-task-statuses-row">
+            {project.status_map.done > 0 && (
+              <span className="pc-status-chip chip-done" title="تعداد تسک‌های انجام‌شده">
+                ✅ {project.status_map.done} انجام‌شده
+              </span>
+            )}
+            {project.status_map.active > 0 && (
+              <span className="pc-status-chip chip-active" title="تعداد تسک‌های در حال اجرا">
+                ⚡ {project.status_map.active} در حال انجام
+              </span>
+            )}
+            {project.status_map.todo > 0 && (
+              <span className="pc-status-chip chip-todo" title="تعداد تسک‌های برای انجام">
+                📋 {project.status_map.todo} برای انجام
+              </span>
+            )}
+            {project.status_map.waiting > 0 && (
+              <span className="pc-status-chip chip-waiting" title="تعداد تسک‌های منتظر">
+                ⏳ {project.status_map.waiting} منتظر
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Dynamic Component Distribution Badges Row */}
         {Object.keys(compMap).length > 0 && (
           <div className="pc-components-row">
