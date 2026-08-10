@@ -425,7 +425,7 @@ router.get('/reports/sprints-html', (req, res) => {
             <div class="progress-wrap" style="width: 100px;">
               <div class="progress-fill" style="width: ${prog}%"></div>
             </div>
-            <strong style="color: #16A34A; font-size: 0.98rem; margin-right: 6px;">%${prog} بهبود</strong>
+            <strong style="color: #16A34A; font-size: 0.95rem; margin-right: 6px;">%${prog} پیشرفت (${targetSprint !== 'all' ? targetSprint : 'کل'})</strong>
           </td>
           <td style="font-size: 0.86rem; color: #334155;">
             ${summaryText}
