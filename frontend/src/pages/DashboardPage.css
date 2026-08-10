@@ -4,14 +4,48 @@
   gap: 1.75rem;
 }
 
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .dashboard-header h1 {
   font-size: 1.8rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   color: var(--text-primary);
 }
 
 .dashboard-header p {
   color: var(--text-muted);
+  margin: 0;
+}
+
+.db-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: rgba(2, 132, 199, 0.15);
+  border: 1px solid rgba(2, 132, 199, 0.4);
+  color: #38BDF8;
+  padding: 0.55rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.db-export-btn:hover {
+  background: rgba(2, 132, 199, 0.3);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
+  color: #FFFFFF;
+  transform: translateY(-2px);
 }
 
 .dashboard-section {

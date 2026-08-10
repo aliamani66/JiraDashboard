@@ -1527,4 +1527,398 @@ router.get('/reports/waiting-html', (req, res) => {
   }
 });
 
+// Standalone Overall / Filtered Projects Executive Portfolio Report HTML Endpoint
+router.get('/reports/overall-html', (req, res) => {
+  try {
+    const db = getDb();
+    const { project_ids } = req.query;
+
+    let projects = [];
+    if (project_ids && project_ids.trim() !== '') {
+      const idsList = project_ids.split(',').map(id => id.trim()).filter(Boolean);
+      const placeholders = idsList.map(() => '?').join(',');
+      projects = db.prepare(`SELECT * FROM projects WHERE id IN (${placeholders}) ORDER BY id ASC`).all(...idsList);
+    } else {
+      projects = db.prepare('SELECT * FROM projects ORDER BY id ASC').all();
+    }
+
+    // Attach tasks and capabilities to projects
+    let allTasks = [];
+    for (const p of projects) {
+      const pTasks = db.prepare('SELECT * FROM tasks WHERE project_id = ? ORDER BY id ASC').all(p.id);
+      p.tasks = pTasks;
+      allTasks.push(...pTasks);
+
+      // Parse capabilities
+      if (typeof p.capabilities === 'string') {
+        try { p.capabilities = JSON.parse(p.capabilities); } catch { p.capabilities = []; }
+      }
+      // Parse quarters
+      if (typeof p.quarters === 'string') {
+        try { p.quarters = JSON.parse(p.quarters); } catch { p.quarters = []; }
+      }
+    }
+
+    const totalProjectsCount = projects.length;
+    const totalTasks = allTasks.length;
+    const doneTasks = allTasks.filter(t => t.status === 'Done' || t.status === 'done').length;
+    const totalSpentHours = Math.round(allTasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0));
+    const totalEstimateHours = Math.round(allTasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0));
+    const avgPlatformProgress = projects.length > 0
+      ? Math.round(projects.reduce((sum, p) => sum + (p.progress || 0), 0) / projects.length)
+      : 0;
+
+    // Build Portfolio Gantt Timeline Chart HTML
+    let portfolioGanttRowsHTML = '';
+    for (const p of projects) {
+      const pProg = Math.round(p.progress || 0);
+      const tasksCount = p.tasks ? p.tasks.length : 0;
+      const spent = Math.round(p.tasks ? p.tasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0) : 0);
+      const est = Math.round(p.tasks ? p.tasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0) : 0);
+
+      let statusGradient = 'linear-gradient(90deg, #38BDF8, #0284C7)';
+      let statusBadgeClass = 'badge-active';
+      let statusText = '⚡ در حال اجرا';
+
+      if (p.status === 'Done' || p.status === 'done') {
+        statusGradient = 'linear-gradient(90deg, #10B981, #059669)';
+        statusBadgeClass = 'badge-done';
+        statusText = '✅ تکمیل شده';
+      } else if (p.status === 'Critical' || (p.waiting_tasks && p.waiting_tasks > 0)) {
+        statusGradient = 'linear-gradient(90deg, #F59E0B, #D97706)';
+        statusBadgeClass = 'badge-waiting';
+        statusText = `⏳ دارای ${p.waiting_tasks || 1} تسک منتظر`;
+      }
+
+      portfolioGanttRowsHTML += `
+        <div class="gantt-row">
+          <div class="gantt-label">
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+              <code class="proj-id-badge">${p.id}</code>
+              <strong style="font-size:0.92rem; color:#0F172A;">${p.title}</strong>
+            </div>
+            <div style="font-size:0.78rem; color:#64748B;">📂 ${p.category || 'عمومی'} | 📋 ${tasksCount} تسک | 📅 ${(p.quarters || []).join('، ') || 'Q2-Q3'}</div>
+          </div>
+
+          <div class="gantt-grid-track">
+            <div class="gantt-bar-fill" style="width: ${Math.max(8, pProg)}%; background: ${statusGradient};">
+              <span class="gantt-bar-text">%${pProg} پیشرفت</span>
+            </div>
+          </div>
+
+          <div class="gantt-meta">
+            <span class="badge ${statusBadgeClass}">${statusText}</span>
+            <span style="font-weight:bold; font-size:0.82rem; color:#334155;">${spent}h / ${est}h</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Build Detailed Project Cards HTML
+    let projectCardsHTML = '';
+    for (const p of projects) {
+      const pTasks = p.tasks || [];
+      const spent = Math.round(pTasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0));
+      const est = Math.round(pTasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0));
+      const pProg = Math.round(p.progress || 0);
+
+      let taskRowsHTML = '';
+      for (const t of pTasks) {
+        taskRowsHTML += `
+          <tr>
+            <td><code class="task-code">${t.id}</code></td>
+            <td><strong>${t.title}</strong></td>
+            <td>👤 ${t.assignee || 'تیم R&D'}</td>
+            <td>🔥 ${t.sprint_name || 'Sprint 10'}</td>
+            <td>${t.status === 'Done' ? '<span class="badge badge-done">✅ Done</span>' : (t.is_waiting ? '<span class="badge badge-waiting">⏳ Waiting</span>' : '<span class="badge badge-active">⚡ Active</span>')}</td>
+            <td>${t.spent_hours || 0}h / ${t.estimate_hours || 0}h</td>
+          </tr>
+        `;
+      }
+
+      projectCardsHTML += `
+        <div class="project-detail-card">
+          <div class="pd-header">
+            <div>
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <code class="proj-id-badge">${p.id}</code>
+                <h3 style="margin:0; font-size:1.15rem; color:#0F172A;">${p.title}</h3>
+                <span class="badge ${p.status === 'Done' ? 'badge-done' : 'badge-active'}">${p.status || 'Active'}</span>
+              </div>
+              <p style="margin:4px 0 0; color:#475569; font-size:0.88rem; line-height:1.5;">${p.description || 'توضیحات اپیک در سیستم جیرا ثبت گردیده است.'}</p>
+            </div>
+            <div style="text-align:left; flex-shrink:0;">
+              <div style="font-size:1.5rem; font-weight:800; color:#0284C7;">%${pProg}</div>
+              <div style="font-size:0.78rem; color:#64748B;">${spent}h از ${est}h</div>
+            </div>
+          </div>
+
+          ${(p.capabilities && p.capabilities.length > 0) ? `
+            <div style="margin-top:0.75rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
+              ${p.capabilities.map(c => `<span class="cap-pill">✓ ${c}</span>`).join('')}
+            </div>
+          ` : ''}
+
+          <table class="data-table" style="margin-top:1rem;">
+            <thead>
+              <tr>
+                <th style="width:75px;">کد تسک</th>
+                <th>عنوان تسک</th>
+                <th>مسئول</th>
+                <th>اسپرینت</th>
+                <th>وضعیت</th>
+                <th>کارکرد</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${taskRowsHTML}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    const htmlDocument = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>گزارش جامع وضعیت پروژه‌های پلتفرم R&D (Executive Portfolio Report)</title>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+    body {
+      background: #FFFFFF;
+      color: #0F172A;
+      font-family: 'Vazirmatn', sans-serif;
+      margin: 0;
+      padding: 2rem;
+      direction: rtl;
+      line-height: 1.6;
+    }
+    .no-print-bar {
+      background: #0F172A;
+      color: #FFFFFF;
+      padding: 0.8rem 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .no-print-btn {
+      background: #0EA5E9;
+      color: #FFFFFF;
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .header-banner {
+      background: #F0F9FF;
+      border: 1px solid #BAE6FD;
+      border-radius: 16px;
+      padding: 1.8rem;
+      margin-bottom: 1.5rem;
+      border-top: 4px solid #0284C7;
+    }
+    h1 { margin: 0 0 0.5rem; color: #0369A1; font-size: 1.7rem; font-weight: 800; }
+    .subtitle { color: #0284C7; font-size: 0.92rem; margin: 0; }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .kpi-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 1.1rem;
+      text-align: center;
+    }
+    .kpi-box .val { font-size: 1.75rem; font-weight: 800; color: #0284C7; margin-top: 0.2rem; }
+    .kpi-box .lbl { font-size: 0.84rem; color: #64748B; font-weight: 600; }
+
+    .card-section {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      page-break-inside: avoid;
+    }
+    .card-section h2 { margin: 0 0 1.2rem; font-size: 1.25rem; color: #0284C7; font-weight: 800; }
+
+    /* Gantt Chart Custom Styling */
+    .gantt-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 1rem;
+    }
+    .gantt-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+    }
+    .gantt-label { width: 320px; flex-shrink: 0; }
+    .gantt-grid-track {
+      flex: 1;
+      height: 26px;
+      background: #E2E8F0;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+    }
+    .gantt-bar-fill {
+      height: 20px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-left: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+    .gantt-bar-text { color: #FFFFFF; font-size: 0.78rem; font-weight: 800; white-space: nowrap; padding-right: 8px; }
+    .gantt-meta { width: 170px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+
+    .project-detail-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+      page-break-inside: avoid;
+    }
+    .pd-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .proj-id-badge {
+      background: #E0F2FE;
+      color: #0284C7;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    .cap-pill {
+      background: #E0F2FE;
+      color: #0369A1;
+      border: 1px solid #BAE6FD;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+    .data-table th, .data-table td {
+      padding: 0.65rem 0.75rem;
+      text-align: right;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .data-table th {
+      background: #F1F5F9;
+      color: #334155;
+      font-weight: 700;
+    }
+    .task-code {
+      background: #E0F2FE;
+      color: #0284C7;
+      padding: 0.15rem 0.4rem;
+      border-radius: 5px;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    .badge {
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .badge-done { background: #DCFCE7; color: #15803D; border: 1px solid #86EFAC; }
+    .badge-active { background: #DBEAFE; color: #1D4ED8; border: 1px solid #93C5FD; }
+    .badge-waiting { background: #FFEDD5; color: #C2410C; border: 1px solid #FDBA74; }
+    @media print {
+      .no-print-bar { display: none !important; }
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print-bar">
+    <span>💡 پیش‌نمایش خروجی جامع داشبورد پروژه‌های پلتفرم R&D</span>
+    <button className="no-print-btn" onclick="window.print()">🖨️ دانلود و ذخیره به عنوان PDF</button>
+  </div>
+
+  <div class="header-banner">
+    <h1>🚀 گزارش جامع وضعیت پروژه‌های پلتفرم R&D</h1>
+    <p class="subtitle">خلاصه وضعیت، تایم‌لاین پیشرفت و دستاوردهای ${totalProjectsCount} پروژه انتخاب‌شده | تاریخ تنظیم: ۲۰ مرداد ۱۴۰۵</p>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-box">
+      <div class="lbl">تعداد پروژه‌های انتخابی</div>
+      <div class="val">${totalProjectsCount} پروژه</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">مجموع تسک‌های پروژه</div>
+      <div class="val" style="color: #16A34A;">${totalTasks} تسک (${doneTasks} Done)</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">کل کارکرد / تخمین اولیه</div>
+      <div class="val" style="color: #EA580C;">${totalSpentHours}h / ${totalEstimateHours}h</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">میانگین پیشرفت کلی</div>
+      <div class="val" style="color: #16A34A;">%${avgPlatformProgress}</div>
+    </div>
+  </div>
+
+  <!-- 📊 Portfolio Gantt Chart Section -->
+  <div class="card-section">
+    <h2>📅 تایم‌لاین و نمودار گانت پیشرفت پروژه‌ها</h2>
+    <div class="gantt-wrapper">
+      ${portfolioGanttRowsHTML}
+    </div>
+  </div>
+
+  <!-- 📑 Detailed Project Breakdown Section -->
+  <div class="card-section">
+    <h2>📑 جزئیات پروژه‌ها و خروجی تسک‌های عملیاتی</h2>
+    ${projectCardsHTML}
+  </div>
+
+</body>
+</html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(htmlDocument);
+  } catch (err) {
+    res.status(500).send('Error generating overall report: ' + err.message);
+  }
+});
+
 module.exports = router;

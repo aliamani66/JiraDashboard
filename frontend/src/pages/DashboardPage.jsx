@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Printer } from 'lucide-react';
 import { useProjects, useQuarters } from '../hooks/useProjects';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -99,6 +100,13 @@ const DashboardPage = () => {
     setSearchQuery('');
   };
 
+  const handleExportOverallReport = () => {
+    const projectIds = filteredProjects.map(p => p.id).join(',');
+    const token = localStorage.getItem('token') || '';
+    const url = `http://localhost:3001/api/reports/overall-html?project_ids=${encodeURIComponent(projectIds)}&token=${token}`;
+    window.open(url, '_blank');
+  };
+
   return (
     <motion.div 
       className="dashboard-page"
@@ -107,8 +115,19 @@ const DashboardPage = () => {
       transition={{ duration: 0.5 }}
     >
       <div className="dashboard-header">
-        <h1>نمای کلی پروژه‌ها</h1>
-        <p>وضعیت لحظه‌ای پروژه‌های تیم تحقیق و توسعه عملیات ({projects.length} پروژه)</p>
+        <div>
+          <h1>نمای کلی پروژه‌ها</h1>
+          <p>وضعیت لحظه‌ای پروژه‌های تیم تحقیق و توسعه عملیات ({projects.length} پروژه)</p>
+        </div>
+
+        <button 
+          className="db-export-btn"
+          onClick={handleExportOverallReport}
+          title="دانلود و چاپ گزارش جامع پروژه‌های انتخابی به همراه تایم‌لاین و گانت چارت"
+        >
+          <Printer size={16} />
+          <span>چاپ / خروجی PDF پروژه‌ها ({filteredProjects.length} پروژه)</span>
+        </button>
       </div>
 
       {/* Top 4 KPI Summary Stat Cards */}
