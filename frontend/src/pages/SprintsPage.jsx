@@ -313,26 +313,7 @@ const SprintsPage = () => {
         </div>
       </div>
 
-      {/* Proportional Segmented Status Breakdown Bar */}
-      {totalSprintTasks > 0 && (
-        <div className="glass-card sp-status-segmented-bar-card">
-          <div className="sp-segmented-bar-header">
-            <span>📊 نوار نسبی تفکیک وضعیت تسک‌ها (مجموع ۱۰۰٪ برابر {totalSprintTasks} تسک):</span>
-          </div>
-          <div className="sp-segmented-bar-track">
-            {donePct > 0 && <div className="sp-segment green" style={{ width: `${donePct}%` }} title={`انجام‌شده: ${doneCount} تسک (${donePct}%)`}></div>}
-            {activePct > 0 && <div className="sp-segment blue" style={{ width: `${activePct}%` }} title={`در حال انجام: ${activeCount} تسک (${activePct}%)`}></div>}
-            {waitingPct > 0 && <div className="sp-segment orange" style={{ width: `${waitingPct}%` }} title={`منتظر: ${waitingCount} تسک (${waitingPct}%)`}></div>}
-            {todoPct > 0 && <div className="sp-segment purple" style={{ width: `${todoPct}%` }} title={`برای انجام: ${todoCount} تسک (${todoPct}%)`}></div>}
-          </div>
-          <div className="sp-segmented-bar-legend">
-            <span><span className="dot green"></span> انجام‌شده: {doneCount} ({donePct}%)</span>
-            <span><span className="dot blue"></span> در حال انجام: {activeCount} ({activePct}%)</span>
-            <span><span className="dot orange"></span> منتظر: {waitingCount} ({waitingPct}%)</span>
-            <span><span className="dot purple"></span> برای انجام: {todoCount} ({todoPct}%)</span>
-          </div>
-        </div>
-      )}
+
 
       {/* Filter & Search Bar */}
       <div className="glass-card sp-filter-bar">
