@@ -26,7 +26,7 @@
   background: var(--gradient-danger);
 }
 
-/* StatusBadge Styles */
+/* ─── Premium StatusBadge Styles ─── */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -38,7 +38,9 @@
   letter-spacing: 0.3px;
   border: 1px solid transparent;
   backdrop-filter: blur(8px);
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
+  user-select: none;
+  white-space: nowrap;
 }
 
 .status-dot {
@@ -46,46 +48,58 @@
   height: 7px;
   border-radius: 50%;
   position: relative;
+  flex-shrink: 0;
 }
 
+/* Active / In Progress */
 .status-active {
-  background: rgba(37, 99, 235, 0.15);
-  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(59, 130, 246, 0.45);
   color: #60A5FA;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
 }
 .status-active .status-dot { 
   background: #3B82F6; 
   box-shadow: 0 0 8px #3B82F6; 
+  animation: pulseDotBlue 2s infinite ease-in-out;
 }
 
+@keyframes pulseDotBlue {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Done / Completed */
 .status-done {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.45);
   color: #34D399;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
 }
 .status-done .status-dot { 
   background: #10B981; 
   box-shadow: 0 0 8px #10B981; 
 }
 
+/* Blocked */
 .status-blocked {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.45);
   color: #F87171;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
 }
 .status-blocked .status-dot { 
   background: #EF4444; 
   box-shadow: 0 0 8px #EF4444; 
 }
 
+/* Critical / Stopped */
 .status-critical {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(249, 115, 22, 0.25));
-  border-color: rgba(239, 68, 68, 0.6);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(249, 115, 22, 0.3));
+  border-color: rgba(239, 68, 68, 0.65);
   color: #FCA5A5;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.45);
   animation: criticalPulse 2s infinite ease-in-out;
 }
 .status-critical .status-dot {
@@ -99,20 +113,30 @@
   100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
 }
 
+/* Waiting / OnHolding */
 .status-waiting {
-  background: rgba(249, 115, 22, 0.15);
-  border-color: rgba(249, 115, 22, 0.4);
+  background: rgba(249, 115, 22, 0.18);
+  border-color: rgba(249, 115, 22, 0.45);
   color: #FDBA74;
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.25);
 }
 .status-waiting .status-dot {
   background-color: #F97316;
   box-shadow: 0 0 8px #F97316;
+  animation: pulseDotOrange 2s infinite ease-in-out;
 }
 
+@keyframes pulseDotOrange {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* To Do / Open */
 .status-todo {
-  background: rgba(100, 116, 139, 0.15);
-  border-color: rgba(148, 163, 184, 0.2);
-  color: #94A3B8;
+  background: rgba(100, 116, 139, 0.18);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #CBD5E1;
 }
 .status-todo .status-dot { 
   background: #94A3B8; 
