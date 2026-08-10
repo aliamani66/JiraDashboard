@@ -268,37 +268,391 @@ router.get('/waiting-tasks', (req, res) => {
   }
 });
 
-// Consolidated Sprint Review Endpoint (All Tasks Across All Projects Grouped by Sprint)
-router.get('/all-sprints', (req, res) => {
+// Standalone Clean HTML Report Endpoint for Sprints Export (PDF Printable)
+router.get('/reports/sprints-html', (req, res) => {
   try {
     const db = getDb();
     const tasks = db.prepare(`
-      SELECT t.*, p.title as project_title, p.category as project_category
+      SELECT t.*, p.title as project_title, p.capabilities as project_capabilities, p.category as project_category
       FROM tasks t
       JOIN projects p ON t.project_id = p.id
-      ORDER BY t.sprint_name ASC, t.sort_order ASC, t.id ASC
+      ORDER BY t.sprint_name ASC, t.project_id ASC, t.id ASC
     `).all();
+
+    const taskOperationalMap = {
+      'ORD-1': 'طراحی و استقرار پایپ‌لاین‌های متمرکز CI/CD جهت اتوماسیون تست‌ها و دیپلوی خودکار کانتینرها روی کوبرنتیز',
+      'ORD-2': 'پیکربندی استیج تست خودکار نرم‌افزار و تحلیل کیفیت سورس کد با SonarQube',
+      'ORD-3': 'ایجاد ساختار داکر مالتی-استیج جهت کاهش حجم ایمیج‌های خروجی و افزایش سرعت دیپلوی',
+      'ORD-4': 'راه‌اندازی ابزار پایش خودکار دیپلوی ArgoCD بر پایه متدولوژی GitOps جهت همگام‌سازی کلاستر',
+      'ORD-5': 'استقرار استک مانیتورینگ متمرکز Prometheus & Grafana جهت پایش آنی منابع سخت‌افزاری و سرویس‌ها',
+      'ORD-6': 'طراحی داشبوردهای مدیریتی اختصاصی Grafana برای تحلیل ترافیک شبکه، مصرف CPU/RAM و وضعیت پادها',
+      'ORD-7': 'پیکربندی Alertmanager و اتصال هوشمند هشدارهای قطعی زیرساخت به کانال اطلاع‌رسانی تیم عملیات',
+      'ORD-8': 'تست و اعتبارسنجی هشدارهای پیشگیرانه روی سرویس‌های حساس پلتفرم با شبیه‌سازی بار کاری',
+      'ORD-9': 'مهاجرت سرویس‌های اصلی به کلاستر کوبرنتیز و ارتقاء پایداری و مقیاس‌پذیری زیرساخت',
+      'ORD-10': 'راه‌اندازی کلاستر PostgreSQL HA به همراه پشتیبان‌گیری خودکار روی ذخیره‌ساز Ceph',
+      'ORD-11': 'پیکربندی Ingress Controller و گواهی‌نامه‌های SSL خودکار جهت مدیریت ترافیک ورود به کلاستر',
+      'ORD-12': 'اجرای تست‌های پایداری و بازیابی از خرابی (Disaster Recovery) روی سرویس‌های دیتابیس',
+      'ORD-13': 'ارتقاء و خودکارسازی امنیت ابری، مدیریت اسرار و اسکن آسیب‌پذیری‌های امنیتی',
+      'ORD-14': 'پیاده‌سازی ابزار Trivy برای اسکن خودکار ایمیج‌های داکر و انسداد ایمیج‌های دارای آسیب‌پذیری بالا',
+      'ORD-15': 'طراحی و استقرار کلاستر متمرکز HashiCorp Vault جهت مدیریت امن کلیدها و گواهی‌نامه‌های SSL',
+      'ORD-16': 'اتوماسیون کامل تست‌های SAST با SonarQube و اتصال هوشمند به مخزن گیت‌هاب تیم توسعه',
+      'ORD-17': 'توسعه فریم‌ورک اختصاصی CLI به زبان Go جهت اتوماسیون عملیات کلاستر و مدیریت منابع',
+      'ORD-18': 'ایجاد دستورات اختصاصی مدیریت پادها، پاکسازی گاربج داکر و بررسی بهداشت سرویس‌ها',
+      'ORD-19': 'توسعه ماژول گزارش‌گیری خودکار وضعیت سلامت سرورها و ارسال گزارش دوره به تیم پشتیبانی',
+      'ORD-20': 'تست‌های واحد و یکپارچه‌سازی ابزار CLI Go در محیط‌های عملیاتی واقعی'
+    };
 
     const sprintsMap = {};
     for (const t of tasks) {
       const sName = t.sprint_name || 'Sprint 10';
-      if (!sprintsMap[sName]) {
-        sprintsMap[sName] = {
-          sprintName: sName,
-          startDate: t.sprint_start_date,
-          endDate: t.sprint_end_date,
-          tasks: []
-        };
-      }
-      sprintsMap[sName].tasks.push(t);
+      if (!sprintsMap[sName]) sprintsMap[sName] = [];
+      sprintsMap[sName].push(t);
     }
 
-    res.json({
-      tasks,
-      sprintsMap
+    const componentLabels = {
+      'dev': '🚀 توسعه نرم‌افزار',
+      'infrastructure': '🌐 زیرساخت و کوبرنتیز',
+      'security': '🔐 امنیت ابری و Vault',
+      'monitoring': '📊 مانیتورینگ Prometheus',
+      'ai': '🤖 مدل‌های هوش مصنوعی',
+      'database': '🗄️ دیتابیس و Ceph',
+      'testing': '🧪 ارزیابی کیفیت و SAST',
+      'support': '🛠️ پشتیبانی عملیاتی',
+      'meeting': '📅 برنامه محصول'
+    };
+
+    const sortedSprintKeys = Object.keys(sprintsMap).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, '')) || 0;
+      const numB = parseInt(b.replace(/\D/g, '')) || 0;
+      return numA - numB;
     });
+
+    let totalAllTasks = tasks.length;
+    let totalAllDone = tasks.filter(t => t.status === 'Done' || t.status === 'done').length;
+    let totalAllSpent = Math.round(tasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0));
+    let totalAllEst = Math.round(tasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0));
+    let overallProg = totalAllEst > 0 ? Math.round((totalAllSpent / totalAllEst) * 100) : 0;
+
+    let summaryTableRows = '';
+    let sprintCardsHTML = '';
+
+    for (const sKey of sortedSprintKeys) {
+      const sTasks = sprintsMap[sKey];
+      const total = sTasks.length;
+      const done = sTasks.filter(t => t.status === 'Done' || t.status === 'done').length;
+      const active = sTasks.filter(t => t.status === 'In Progress' || t.status === 'in_progress').length;
+      const waiting = sTasks.filter(t => t.is_waiting || t.status === 'Waiting' || t.status === 'OnHolding').length;
+      const todo = total - (done + active + waiting);
+
+      const spent = Math.round(sTasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0));
+      const est = Math.round(sTasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0));
+      const prog = est > 0 ? Math.min(100, Math.round((spent / est) * 100)) : (total > 0 ? Math.round((done / total) * 100) : 0);
+
+      summaryTableRows += `
+        <tr>
+          <td><strong>🔥 ${sKey}</strong></td>
+          <td><span class="badge badge-task">${total} تسک</span></td>
+          <td><span class="badge badge-done">✅ ${done}</span></td>
+          <td><span class="badge badge-active">⚡ ${active}</span></td>
+          <td><span class="badge badge-waiting">⏳ ${waiting}</span></td>
+          <td><span class="badge badge-todo">📋 ${todo}</span></td>
+          <td><strong>${spent}h</strong> / ${est}h</td>
+          <td>
+            <div class="progress-wrap">
+              <div class="progress-fill" style="width: ${prog}%"></div>
+            </div>
+            <strong>%${prog}</strong>
+          </td>
+        </tr>
+      `;
+
+      let doneTasksHTML = '';
+      for (const t of sTasks) {
+        const tEst = t.estimate_hours || 0;
+        const tSpent = t.spent_hours || 0;
+        const tProg = tEst > 0 ? Math.min(100, Math.round((tSpent / tEst) * 100)) : (t.status === 'Done' ? 100 : 0);
+        const opDesc = taskOperationalMap[t.id] || t.description || `توسعه و ارتقاء پایداری ماژول ${t.component || 'عملیاتی'}`;
+        const compName = componentLabels[t.component] || t.component || 'عملیات';
+
+        let statusBadgeHTML = '<span class="badge badge-todo">📋 برای انجام</span>';
+        if (t.status === 'Done' || t.status === 'done') statusBadgeHTML = '<span class="badge badge-done">✅ تکمیل شده</span>';
+        else if (t.status === 'In Progress' || t.status === 'in_progress') statusBadgeHTML = '<span class="badge badge-active">⚡ در حال انجام</span>';
+        else if (t.is_waiting) statusBadgeHTML = `<span class="badge badge-waiting">⏳ منتظر (${t.waiting_for_team || 'تیم خارجی'})</span>`;
+
+        doneTasksHTML += `
+          <tr>
+            <td><code class="task-code">${t.id}</code></td>
+            <td>
+              <strong>${t.title}</strong>
+              <div style="font-size:0.82rem; color:#475569; margin-top:3px; line-height:1.4;">
+                💡 <em>قابلیت افزوده‌شده:</em> ${opDesc}
+              </div>
+            </td>
+            <td><span class="proj-tag">${t.project_id}: ${t.project_title}</span></td>
+            <td>👤 ${t.assignee || 'تیم R&D'}</td>
+            <td>${statusBadgeHTML}</td>
+            <td>${tSpent}h / ${tEst}h</td>
+            <td>
+              <div class="progress-wrap">
+                <div class="progress-fill" style="width: ${tProg}%"></div>
+              </div>
+              <strong>%${tProg}</strong>
+            </td>
+            <td><span class="cap-tag">${compName}</span></td>
+          </tr>
+        `;
+      }
+
+      sprintCardsHTML += `
+        <div class="sprint-card">
+          <div class="sprint-header">
+            <h2>🔥 خروجی و دستاوردهای عملیاتی ${sKey}</h2>
+            <span class="sprint-badge">${done} تسک انجام‌شده از ${total} تسک | کارکرد: ${spent}h (پیشرفت %${prog})</span>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:75px;">کد تسک</th>
+                <th>عنوان تسک و دستاورد عملیاتی ایجاد شده</th>
+                <th>پروژه مربوطه</th>
+                <th>مسئول</th>
+                <th>وضعیت</th>
+                <th>ساعات کارکرد</th>
+                <th>پیشرفت</th>
+                <th>حوزه عملیاتی</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${doneTasksHTML}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    const htmlDocument = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>گزارش خروجی اسپرینت‌ها و قابلیت‌های عملیاتی پلتفرم R&D</title>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+    body {
+      background: #FFFFFF;
+      color: #0F172A;
+      font-family: 'Vazirmatn', sans-serif;
+      margin: 0;
+      padding: 2rem;
+      direction: rtl;
+      line-height: 1.6;
+    }
+    .no-print-bar {
+      background: #0F172A;
+      color: #FFFFFF;
+      padding: 0.8rem 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .no-print-btn {
+      background: #0EA5E9;
+      color: #FFFFFF;
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .header-banner {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 1.8rem;
+      margin-bottom: 1.5rem;
+      border-top: 4px solid #0EA5E9;
+    }
+    h1 { margin: 0 0 0.5rem; color: #0F172A; font-size: 1.7rem; font-weight: 800; }
+    .subtitle { color: #64748B; font-size: 0.92rem; margin: 0; }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .kpi-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 1.1rem;
+      text-align: center;
+    }
+    .kpi-box .val { font-size: 1.75rem; font-weight: 800; color: #0EA5E9; margin-top: 0.2rem; }
+    .kpi-box .lbl { font-size: 0.84rem; color: #64748B; font-weight: 600; }
+    .sprint-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 1.4rem;
+      margin-bottom: 1.5rem;
+      page-break-inside: avoid;
+    }
+    .sprint-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.65rem;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .sprint-header h2 { margin: 0; font-size: 1.2rem; color: #EA580C; font-weight: 800; }
+    .sprint-badge {
+      background: rgba(234, 88, 12, 0.1);
+      color: #C2410C;
+      border: 1px solid rgba(234, 88, 12, 0.3);
+      padding: 0.3rem 0.85rem;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      font-size: 0.86rem;
+    }
+    .data-table th, .data-table td {
+      padding: 0.75rem 0.85rem;
+      text-align: right;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .data-table th {
+      background: #F1F5F9;
+      color: #334155;
+      font-weight: 700;
+    }
+    .task-code {
+      background: #E0F2FE;
+      color: #0284C7;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    .proj-tag {
+      font-size: 0.78rem;
+      color: #334155;
+      background: #F1F5F9;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+    }
+    .cap-tag {
+      background: #DCFCE7;
+      color: #15803D;
+      border: 1px solid #86EFAC;
+      padding: 0.2rem 0.5rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .badge {
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .badge-done { background: #DCFCE7; color: #15803D; border: 1px solid #86EFAC; }
+    .badge-active { background: #DBEAFE; color: #1D4ED8; border: 1px solid #93C5FD; }
+    .badge-waiting { background: #FFEDD5; color: #C2410C; border: 1px solid #FDBA74; }
+    .badge-todo { background: #F3E8FF; color: #7E22CE; border: 1px solid #D8B4FE; }
+    .badge-task { background: #F1F5F9; color: #334155; }
+    .progress-wrap {
+      width: 65px;
+      height: 6px;
+      background: #E2E8F0;
+      border-radius: 4px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 0.4rem;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0284C7, #16A34A);
+    }
+    @media print {
+      .no-print-bar { display: none !important; }
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print-bar">
+    <span>💡 پیش‌نمایش خروجی گزارش رسمی اسپرینت‌های تیم R&D</span>
+    <button className="no-print-btn" onclick="window.print()">🖨️ دانلود و ذخیره به عنوان PDF</button>
+  </div>
+
+  <div class="header-banner">
+    <h1>🚀 گزارش خروجی اسپرینت‌ها و قابلیت‌های عملیاتی پلتفرم R&D</h1>
+    <p class="subtitle">گزارش تحلیلی دستاوردهای عملیاتی، قابلیت‌های افزوده شده و پیشرفت اسپرینت‌ها | تاریخ تنظیم: ۲۰ مرداد ۱۴۰۵</p>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-box">
+      <div class="lbl">مجموع کل تسک‌ها</div>
+      <div class="val">${totalAllTasks} تسک</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">تسک‌های انجام‌شده (Done)</div>
+      <div class="val" style="color: #16A34A;">${totalAllDone} تسک</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">مجموع کارکرد ثبت‌شده</div>
+      <div class="val" style="color: #EA580C;">${totalAllSpent}h / ${totalAllEst}h</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">پیشرفت کل اسپرینت‌ها</div>
+      <div class="val" style="color: #7E22CE;">%${overallProg}</div>
+    </div>
+  </div>
+
+  <div class="sprint-card">
+    <h2>📊 جدول خلاصه‌ وضعیت مدیریتی اسپرینت‌ها</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>عنوان اسپرینت</th>
+          <th>کل تسک‌ها</th>
+          <th>✅ انجام‌شده</th>
+          <th>⚡ در حال انجام</th>
+          <th>⏳ منتظر</th>
+          <th>📋 برای انجام</th>
+          <th>کارکرد / تخمین</th>
+          <th>درصد پیشرفت</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${summaryTableRows}
+      </tbody>
+    </table>
+  </div>
+
+  ${sprintCardsHTML}
+
+</body>
+</html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(htmlDocument);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch all sprints data' });
+    res.status(500).send('Error generating report: ' + err.message);
   }
 });
 

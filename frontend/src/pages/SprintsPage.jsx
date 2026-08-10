@@ -184,9 +184,9 @@ const SprintsPage = () => {
           </h1>
           <p className="sp-subtitle">بررسی تجمیعی تسک‌ها به تفکیک اسپرینت‌های هفتگی برای تمامی پروژه‌های R&D عملیات</p>
         </div>
-        <button className="sp-export-btn" onClick={() => window.print()} title="چاپ یا ذخیره خروجی PDF این اسپرینت">
+        <button className="sp-export-btn" onClick={() => window.open(`http://localhost:3001/api/reports/sprints-html?token=${localStorage.getItem('token')}`, '_blank')} title="پیش‌نمایش و دانلود خروجی گزارش رسمی اسپرینت‌ها به عنوان PDF">
           <Printer size={16} />
-          <span>چاپ / خروجی PDF اسپرینت</span>
+          <span>دانلود / چاپ گزارش PDF اسپرینت‌ها</span>
         </button>
       </div>
 

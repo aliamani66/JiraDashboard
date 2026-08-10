@@ -560,14 +560,50 @@
   font-size: 1.05rem;
 }
 
-@media (max-width: 1200px) {
-  .sp-kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 600px) {
   .sp-kpi-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* 🖨️ Robust Print Media Styles */
+@media print {
+  .sidebar, 
+  .topbar, 
+  .back-btn, 
+  .sp-export-btn, 
+  .sp-sprint-selector-tile, 
+  .sp-filter-bar,
+  .menu-toggle,
+  .sidebar-overlay,
+  .no-print {
+    display: none !important;
+  }
+
+  body, .layout-container, .layout-content, .sprints-page {
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    direction: rtl !important;
+  }
+
+  .glass-card, .sp-project-group-card, .sp-task-card, .sp-kpi-card, .sp-status-segmented-bar-card {
+    background: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #0F172A !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    break-inside: avoid;
+  }
+
+  .sp-page-title, .sp-group-title, .sp-task-title a {
+    color: #0F172A !important;
+  }
+
+  .sp-task-desc {
+    color: #475569 !important;
   }
 }
