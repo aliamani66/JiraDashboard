@@ -191,7 +191,7 @@ const SprintsPage = () => {
         <div className="sp-export-btns-group">
           <button 
             className="sp-export-btn" 
-            onClick={() => window.open(`http://localhost:3001/api/reports/sprints-html?sprint=${selectedSprint}&token=${localStorage.getItem('token')}`, '_blank')} 
+            onClick={() => window.open(`http://localhost:3001/api/reports/sprints-html?sprint=${encodeURIComponent(selectedSprint)}&token=${localStorage.getItem('token')}`, '_blank')} 
             title={`دانلود گزارش PDF اختصاصی ${selectedSprint}`}
           >
             <Printer size={16} />
