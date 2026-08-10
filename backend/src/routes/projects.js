@@ -1293,16 +1293,23 @@ router.get('/reports/waiting-html', (req, res) => {
       `;
 
       for (const t of teamTasks) {
+        const blockingText = t.waiting_reason || (t.blocked_by_task ? `تسک مسدودکننده: ${t.blocked_by_task}` : 'در انتظار دریافت سرویس و تأییدیه فنی');
+
         detailedTasksTableHTML += `
           <tr>
             <td><code class="task-code">${t.id}</code></td>
             <td>
-              <strong>${t.title}</strong>
-              ${t.waiting_reason ? `<div style="font-size:0.82rem; color:#C2410C; margin-top:2px;">⚠️ <em>علت توقف:</em> ${t.waiting_reason}</div>` : ''}
+              <strong style="color: #0F172A; font-size: 0.92rem;">${t.title}</strong>
             </td>
             <td><span class="proj-tag">${t.project_id}: ${t.project_title}</span></td>
             <td>👤 ${t.assignee || 'تیم R&D'}</td>
-            <td><strong style="color:#EA580C;">⏳ ${t.waiting_for_team || 'تیم وابسته'}</strong></td>
+            <td><strong style="color:#C2410C;">🏢 ${t.waiting_for_team || 'تیم وابسته'}</strong></td>
+            <td>
+              <div class="blocking-reason-box">
+                <span class="blocking-icon">⛔</span>
+                <span>${blockingText}</span>
+              </div>
+            </td>
             <td><span class="badge badge-waiting">${t.priority || 'متوسط'}</span></td>
             <td>${t.spent_hours || 0}h / ${t.estimate_hours || 0}h</td>
           </tr>
@@ -1382,6 +1389,21 @@ router.get('/reports/waiting-html', (req, res) => {
     }
     .card-section h2 { margin: 0 0 1rem; font-size: 1.25rem; color: #C2410C; font-weight: 800; }
 
+    .blocking-reason-box {
+      background: #FEF2F2;
+      border: 1px solid #FCA5A5;
+      color: #991B1B;
+      padding: 0.35rem 0.65rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      line-height: 1.4;
+    }
+    .blocking-icon { font-size: 0.95rem; }
+
     .data-table {
       width: 100%;
       border-collapse: collapse;
@@ -1430,13 +1452,13 @@ router.get('/reports/waiting-html', (req, res) => {
 <body>
 
   <div class="no-print-bar">
-    <span>💡 پیش‌نمایش خروجی رسمی تسک‌های منتظر و آن‌هولد پلتفرم R&D</span>
+    <span>💡 پیش‌نمایش خروجی رسمی تسک‌های منتظر و متوقف‌کننده پلتفرم R&D</span>
     <button className="no-print-btn" onclick="window.print()">🖨️ دانلود و ذخیره به عنوان PDF</button>
   </div>
 
   <div class="header-banner">
-    <h1>⏳ گزارش تسک‌های منتظر و متوقف‌شده تیم‌های دیگر</h1>
-    <p class="subtitle">گزارش مدیریتی تسک‌های در انتظار دریافت تأییدیه، زیرساخت یا لایسنس از تیم‌های وابسته خارچی | تاریخ تنظیم: ۲۰ مرداد ۱۴۰۵</p>
+    <h1>⏳ گزارش جامع تسک‌های منتظر و علل مسدودکننده (Blocking Tasks Report)</h1>
+    <p class="subtitle">گزارش مدیریتی تسک‌های متوقف‌شده به همراه شناسایی دقیق تسک‌ها و تیم‌های مسدودکننده | تاریخ تنظیم: ۲۰ مرداد ۱۴۰۵</p>
   </div>
 
   <div class="kpi-row">
@@ -1445,7 +1467,7 @@ router.get('/reports/waiting-html', (req, res) => {
       <div class="val">${totalWaitingCount} تسک</div>
     </div>
     <div class="kpi-box">
-      <div class="lbl">تعداد تیم‌های وابسته در انتظار</div>
+      <div class="lbl">تعداد تیم‌های مسدودکننده</div>
       <div class="val" style="color: #0284C7;">${Object.keys(teamsMap).length} تیم</div>
     </div>
     <div class="kpi-box">
@@ -1460,9 +1482,9 @@ router.get('/reports/waiting-html', (req, res) => {
     <table class="data-table">
       <thead>
         <tr>
-          <th>نام تیم / واحد در انتظار</th>
+          <th>نام تیم / واحد مسدودکننده</th>
           <th>تعداد تسک متوقف</th>
-          <th>ساعات کارکرد ثبت‌شده</th>
+          <th>ساعات کارکرد معطل</th>
           <th>توضیحات وابستگی</th>
         </tr>
       </thead>
@@ -1474,15 +1496,16 @@ router.get('/reports/waiting-html', (req, res) => {
 
   <!-- 📋 Detailed Tasks Table -->
   <div class="card-section">
-    <h2>📋 لیست تفکیکی تسک‌های منتظر و علل توقف</h2>
+    <h2>📋 لیست تفکیکی تسک‌های منتظر و شناسایی علل مسدودکننده</h2>
     <table class="data-table">
       <thead>
         <tr>
           <th style="width: 75px;">کد تسک</th>
-          <th>عنوان تسک و علت توقف</th>
+          <th style="width: 200px;">عنوان تسک متوقف‌شده</th>
           <th>پروژه مربوطه</th>
           <th>مسئول تسک</th>
           <th>تیم در انتظار</th>
+          <th style="width: 250px;">⛔ تسک و علت مسدودکننده (Blocking Cause)</th>
           <th>اولویت</th>
           <th>ساعات کارکرد</th>
         </tr>
