@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ClipboardList, Clock } from 'lucide-react';
 import StatusBadge from '../common/StatusBadge';
 import './ProjectCard.css';
 
@@ -30,18 +30,15 @@ const ProjectCard = ({ project }) => {
   const progress = Math.round(project.progress || 0);
 
   const activeTasks = totalTasks - completedTasks;
-  // Check if 100% of remaining active tasks are waiting/onholding
   const isFullyStopped = totalTasks > 0 && activeTasks > 0 && waitingTasks >= activeTasks;
 
   const estimateHours = Math.round(project.total_estimate_hours || (project.tasks ? project.tasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0) : 0));
   const spentHours = Math.round(project.total_spent_hours || (project.tasks ? project.tasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0) : 0));
 
-  // Circular SVG ring math
   const radius = 28;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  // Dynamic component map for this project
   const compMap = project.components_map || {};
 
   return (
@@ -56,13 +53,10 @@ const ProjectCard = ({ project }) => {
           </div>
         )}
 
-        {/* Top Row: Status Badge on right, Project ID on left */}
+        {/* Top Row: Status Badge on right, Project ID badge on left */}
         <div className="pc-top-row">
           <StatusBadge status={isFullyStopped ? 'Critical' : project.status} />
-          <span className="pc-project-id-chip">
-            <span className="pc-chip-dot"></span>
-            {project.id}
-          </span>
+          <span className="project-id-badge">{project.id}</span>
         </div>
 
         {/* Project Title */}
@@ -91,24 +85,19 @@ const ProjectCard = ({ project }) => {
 
         {/* Middle Progress Section */}
         <div className="pc-middle-section">
-          <div className="pc-text-stats-panel">
-            <div className="pc-task-badge">
-              <span className="pc-task-label">تسک‌ها:</span>
-              <span className="pc-task-numbers">
-                <strong className="completed">{completedTasks}</strong>
-                <span className="divider">/</span>
-                <strong className="total">{totalTasks}</strong>
-              </span>
+          <div className="pc-text-stats">
+            <div className="pc-task-count">
+              <ClipboardList size={16} className="text-accent-cyan" />
+              <span><strong>{completedTasks}/{totalTasks}</strong> تسک</span>
             </div>
 
-            <div className="pc-progress-row">
-              <span className="pc-prog-text">پیشرفت کل:</span>
-              <span className="pc-prog-val">%{progress}</span>
+            <div className="pc-progress-pct">
+              پیشرفت: <strong>%{progress}</strong>
             </div>
 
             {waitingTasks > 0 && (
-              <div className="pc-waiting-chip">
-                <span className="pulse-orange-dot"></span>
+              <div className="pc-waiting-count text-accent-orange">
+                <Clock size={14} className="text-accent-orange" />
                 <span><strong>{waitingTasks}</strong> تسک منتظر</span>
               </div>
             )}
@@ -166,7 +155,7 @@ const ProjectCard = ({ project }) => {
             صرف‌شده: <strong>{spentHours}h</strong>
           </div>
           <div className="pc-estimate-time">
-            Estimate: <strong>{estimateHours}h</strong>
+            تخمین: <strong>{estimateHours}h</strong>
           </div>
         </div>
       </div>

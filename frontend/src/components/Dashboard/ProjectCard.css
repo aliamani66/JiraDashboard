@@ -14,17 +14,14 @@
   height: 100%;
   position: relative;
   transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease, border-color 0.25s ease;
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   box-sizing: border-box;
 }
 
 .project-card-v2:hover {
   transform: translateY(-4px);
-  border-color: rgba(59, 130, 246, 0.4);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.25);
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba(6, 182, 212, 0.15);
 }
 
 /* Full Stoppage Highlight */
@@ -40,10 +37,10 @@
 }
 
 .pc-stoppage-banner {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(249, 115, 22, 0.25) 100%);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(249, 115, 22, 0.2) 100%);
   border: 1px solid rgba(239, 68, 68, 0.4);
   color: #FCA5A5;
-  padding: 0.4rem 0.8rem;
+  padding: 0.45rem 0.85rem;
   border-radius: 8px;
   font-size: 0.78rem;
   font-weight: 700;
@@ -54,7 +51,7 @@
 }
 
 .pulse-icon {
-  color: #EF4444;
+  color: var(--accent-red);
   animation: spinPulse 2s infinite ease-in-out;
 }
 
@@ -65,15 +62,170 @@
 }
 
 .stopped-ring {
-  stroke: #F97316 !important;
+  stroke: var(--accent-orange) !important;
   filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.8)) !important;
 }
 
-.pc-waiting-count {
-  font-size: 0.8rem;
-  color: #F97316;
+/* Top Row */
+.pc-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.project-id-badge {
+  font-family: monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  background: rgba(6, 182, 212, 0.15);
+  padding: 3px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  letter-spacing: 0.5px;
+}
+
+/* Title */
+.pc-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin: 0 0 0.35rem 0;
+  height: 2.8rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: right;
+}
+
+/* Description */
+.pc-description {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0 0 0.75rem 0;
+  height: 2.3rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: right;
+  opacity: 0.85;
+}
+
+/* Quarter Badges Row */
+.pc-quarters-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.pc-quarter-heading {
+  font-size: 0.75rem;
+  color: var(--text-muted);
   font-weight: 600;
-  margin-top: 2px;
+  margin-left: 0.2rem;
+}
+
+.pc-quarter-pill {
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  color: var(--accent-cyan);
+  letter-spacing: 0.5px;
+  direction: ltr;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Middle Section */
+.pc-middle-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+}
+
+.pc-text-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.pc-task-count {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.pc-task-count strong {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pc-progress-pct {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.pc-progress-pct strong {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.pc-waiting-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--accent-orange);
+  font-weight: 600;
+  margin-top: 0.15rem;
+}
+
+/* Circular SVG Donut Chart */
+.pc-circle-ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring-center-text {
+  position: absolute;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  direction: ltr;
+}
+
+.circle-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.circle-progress {
+  fill: none;
+  stroke: var(--accent-cyan);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s ease;
+  filter: drop-shadow(0 0 6px rgba(6, 182, 212, 0.5));
 }
 
 /* Component Summary Mini Badges on Main Dashboard */
@@ -103,220 +255,6 @@
   transform: scale(1.05);
 }
 
-/* Top Row */
-.pc-top-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.85rem;
-}
-
-.pc-project-id-chip {
-  font-family: monospace;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #CBD5E1;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 0.25rem 0.65rem;
-  border-radius: 10px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.pc-chip-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #38BDF8;
-  box-shadow: 0 0 6px #38BDF8;
-}
-
-/* Title */
-.pc-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #F8FAFC;
-  line-height: 1.4;
-  margin: 0 0 0.35rem 0;
-  height: 2.8rem;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-align: right;
-}
-
-/* Description */
-.pc-description {
-  font-size: 0.82rem;
-  color: #94A3B8;
-  line-height: 1.4;
-  margin: 0 0 0.75rem 0;
-  height: 2.3rem;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-align: right;
-}
-
-/* Quarter Badges Row */
-.pc-quarters-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.85rem;
-}
-
-.pc-quarter-heading {
-  font-size: 0.75rem;
-  color: #64748B;
-  font-weight: 600;
-  margin-left: 0.2rem;
-}
-
-.pc-quarter-pill {
-  font-size: 0.76rem;
-  font-weight: 700;
-  padding: 0.2rem 0.6rem;
-  border-radius: 12px;
-  background: rgba(34, 211, 238, 0.14);
-  border: 1px solid rgba(34, 211, 238, 0.4);
-  color: #38BDF8;
-  letter-spacing: 0.5px;
-  direction: ltr;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
-}
-
-/* Middle Section */
-.pc-middle-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 0.85rem 1rem;
-  border-radius: 14px;
-}
-
-.pc-text-stats-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.pc-task-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.9rem;
-}
-
-.pc-task-label {
-  font-size: 0.8rem;
-  color: #94A3B8;
-}
-
-.pc-task-numbers {
-  font-size: 1.1rem;
-  font-weight: 700;
-  direction: ltr;
-}
-
-.pc-task-numbers .completed {
-  color: #34D399;
-}
-
-.pc-task-numbers .divider {
-  color: #64748B;
-  margin: 0 2px;
-}
-
-.pc-task-numbers .total {
-  color: #F8FAFC;
-}
-
-.pc-progress-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.82rem;
-  color: #94A3B8;
-}
-
-.pc-prog-val {
-  color: #38BDF8;
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-.pc-waiting-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.76rem;
-  color: #FDBA74;
-  background: rgba(249, 115, 22, 0.12);
-  border: 1px solid rgba(249, 115, 22, 0.3);
-  padding: 0.15rem 0.5rem;
-  border-radius: 10px;
-  margin-top: 0.15rem;
-}
-
-.pulse-orange-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #F97316;
-  box-shadow: 0 0 6px #F97316;
-  animation: dotPulse 1.8s infinite ease-in-out;
-}
-
-@keyframes dotPulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.4); opacity: 0.6; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-/* Circular SVG Donut Chart */
-.pc-circle-ring {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ring-center-text {
-  position: absolute;
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #F8FAFC;
-  direction: ltr;
-}
-
-.circle-bg {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.08);
-}
-
-.circle-progress {
-  fill: none;
-  stroke: #2563EB;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.8s ease;
-  filter: drop-shadow(0 0 6px rgba(37, 99, 235, 0.6));
-}
-
 /* Dotted Line Divider */
 .pc-dotted-divider {
   width: 100%;
@@ -330,16 +268,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.88rem;
-  color: #94A3B8;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
 }
 
-.pc-spent-time strong {
-  color: #F8FAFC;
-  margin-right: 2px;
-}
-
+.pc-spent-time strong,
 .pc-estimate-time strong {
-  color: #F8FAFC;
-  margin-left: 2px;
+  color: var(--text-primary);
 }
