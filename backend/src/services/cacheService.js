@@ -66,12 +66,15 @@ async function syncFromJira() {
 
     const updateProjectStats = db.prepare(`
       UPDATE projects SET
-        total_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id),
-        completed_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (status = 'Done' OR status = 'Completed')),
-        waiting_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_waiting = 1 OR status = 'OnHolding' OR status = 'Waiting')),
-        progress = CASE WHEN (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id) > 0 
-                   THEN (CAST((SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (status = 'Done' OR status = 'Completed')) AS REAL) / (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id)) * 100 
-                   ELSE 0 END
+        total_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0)),
+        completed_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (status = 'Done' OR status = 'Completed')),
+        waiting_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (is_waiting = 1 OR status = 'OnHolding' OR status = 'Waiting')),
+        progress = CASE 
+          WHEN (SELECT IFNULL(SUM(estimate_hours), 0) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0)) > 0
+          THEN MIN(100, ROUND((CAST((SELECT IFNULL(SUM(spent_hours), 0) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0)) AS REAL) / (SELECT IFNULL(SUM(estimate_hours), 0) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0))) * 100))
+          WHEN (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id) > 0 
+          THEN ROUND((CAST((SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (status = 'Done' OR status = 'Completed')) AS REAL) / (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id)) * 100)
+          ELSE 0 END
       WHERE id = ?
     `);
 

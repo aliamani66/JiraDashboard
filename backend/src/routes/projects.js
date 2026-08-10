@@ -72,6 +72,17 @@ router.get('/projects', (req, res) => {
         extractQuarterLabels(row.labels).forEach(q => quarterSet.add(q));
       }
       p.quarters = Array.from(quarterSet).sort();
+
+      // Calculate progress dynamically based on Time Logged vs Estimate Hours
+      const est = p.total_estimate_hours || 0;
+      const spent = p.total_spent_hours || 0;
+      if (est > 0) {
+        p.progress = Math.min(100, Math.round((spent / est) * 100));
+      } else if (p.total_tasks > 0) {
+        p.progress = Math.round(((p.completed_tasks || 0) / p.total_tasks) * 100);
+      } else {
+        p.progress = 0;
+      }
     }
 
     res.json({
@@ -159,6 +170,15 @@ router.get('/projects/:id', (req, res) => {
     project.quarters = Array.from(quarterSet).sort();
     project.status_map = statusMap;
     
+    // Calculate progress based on Spent vs Estimate Hours
+    const est = project.total_estimate_hours || 0;
+    const spent = project.total_spent_hours || 0;
+    if (est > 0) {
+      project.progress = Math.min(100, Math.round((spent / est) * 100));
+    } else if (project.total_tasks > 0) {
+      project.progress = Math.round(((project.completed_tasks || 0) / project.total_tasks) * 100);
+    }
+
     res.json(project);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch project' });
