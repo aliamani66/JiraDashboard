@@ -101,6 +101,36 @@
   to { transform: rotate(360deg); }
 }
 
+/* 🎨 THEME TOGGLE BUTTON */
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 0.4rem 0.85rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 14px rgba(189, 147, 249, 0.3);
+}
+
+.theme-toggle-btn.dracula-active {
+  background: rgba(189, 147, 249, 0.15);
+  border-color: #bd93f9;
+  color: #ff79c6;
+  box-shadow: 0 0 12px rgba(189, 147, 249, 0.35);
+}
+
 .sync-toast {
   position: fixed;
   top: 85px;

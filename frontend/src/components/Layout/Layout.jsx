@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, User, CheckCircle2, LogOut, Shield, ChevronDown } from 'lucide-react';
+import { RefreshCw, User, CheckCircle2, LogOut, Shield, ChevronDown, Palette } from 'lucide-react';
 import Sidebar from './Sidebar';
 import './Layout.css';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState('---');
@@ -87,6 +89,18 @@ const Layout = ({ children }) => {
           </div>
           
           <div className="topbar-left">
+            {/* 🎨 Theme Toggle Button */}
+            <button 
+              className={`theme-toggle-btn ${theme === 'dracula' ? 'dracula-active' : ''}`}
+              onClick={toggleTheme}
+              title={theme === 'dracula' ? 'تغییر به تم سایبرپانک (پیش‌فرض)' : 'تغییر به تم دراکولا (Dracula Theme)'}
+            >
+              <Palette size={16} />
+              <span className="theme-toggle-label">
+                {theme === 'dracula' ? '🧛 تم دراکولا' : '🌌 تم سایبرپانک'}
+              </span>
+            </button>
+
             <div className="sync-section">
               <span className="last-sync">آخرین سینک: {lastSync}</span>
               <button 

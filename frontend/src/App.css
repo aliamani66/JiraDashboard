@@ -36,6 +36,65 @@
   --header-height: 70px;
 }
 
+/* 🧛 DRACULA THEME PALETTE */
+[data-theme="dracula"] {
+  --bg-primary: #282a36;
+  --bg-secondary: #1e1f29;
+  --bg-card: rgba(44, 47, 60, 0.82);
+  --bg-card-hover: rgba(68, 71, 90, 0.95);
+  --glass: rgba(189, 147, 249, 0.08);
+  --glass-border: rgba(98, 114, 164, 0.35);
+
+  --text-primary: #f8f8f2;
+  --text-secondary: #a4b3e6;
+  --text-muted: #6272a4;
+
+  --accent-blue: #8be9fd;
+  --accent-purple: #bd93f9;
+  --accent-cyan: #8be9fd;
+  --accent-green: #50fa7b;
+  --accent-yellow: #f1fa8c;
+  --accent-red: #ff5555;
+  --accent-orange: #ffb86c;
+
+  --gradient-primary: linear-gradient(135deg, #bd93f9 0%, #ff79c6 100%);
+  --gradient-success: linear-gradient(135deg, #50fa7b 0%, #8be9fd 100%);
+  --gradient-warning: linear-gradient(135deg, #f1fa8c 0%, #ffb86c 100%);
+  --gradient-danger: linear-gradient(135deg, #ff5555 0%, #ffb86c 100%);
+
+  --shadow-lg: 0 10px 40px rgba(19, 20, 26, 0.5);
+  --shadow-glow-blue: 0 0 20px rgba(139, 233, 253, 0.35);
+  --shadow-glow-purple: 0 0 20px rgba(189, 147, 249, 0.45);
+}
+
+[data-theme="dracula"] select {
+  background-color: #44475a !important;
+  color: #f8f8f2 !important;
+  border-color: #6272a4 !important;
+}
+
+[data-theme="dracula"] select option {
+  background-color: #282a36 !important;
+  color: #f8f8f2 !important;
+}
+
+[data-theme="dracula"] *::-webkit-scrollbar-track {
+  background: #1e1f29 !important;
+}
+
+[data-theme="dracula"] *::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #bd93f9 0%, #ff79c6 100%) !important;
+  border: 2px solid #1e1f29 !important;
+}
+
+[data-theme="dracula"] *::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #ff79c6 0%, #8be9fd 100%) !important;
+}
+
+[data-theme="dracula"] .user-dropdown-card {
+  background: rgba(40, 42, 54, 0.98) !important;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
