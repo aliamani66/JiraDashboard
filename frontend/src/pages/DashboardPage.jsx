@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useProjects } from '../hooks/useProjects';
+import { useProjects, useQuarters } from '../hooks/useProjects';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import StatsCards from '../components/Dashboard/StatsCards';
@@ -10,8 +10,10 @@ import './DashboardPage.css';
 const DashboardPage = () => {
   const { projects, stats, loading } = useProjects();
   const { user } = useAuth();
+  const quarters = useQuarters();
   const [compFilter, setCompFilter] = useState('all');
-  const [statusTab, setStatusTab] = useState('all'); // 'all', 'active', 'done'
+  const [statusTab, setStatusTab] = useState('all');
+  const [quarterFilter, setQuarterFilter] = useState('all');
 
   const perms = user?.permissions || [];
   const hasDashboardAccess = user?.role === 'admin' || perms.includes('dashboard');
@@ -35,7 +37,7 @@ const DashboardPage = () => {
     waitingTasks: projects.reduce((s, p) => s + (p.waiting_tasks || 0), 0)
   };
 
-  // Filter projects based on status tab and selected component
+  // Filter projects based on status tab, selected component, and quarter
   const filteredProjects = projects.filter(p => {
     // 1. Status Filter
     if (statusTab === 'active' && p.status === 'Done') return false;
@@ -45,6 +47,12 @@ const DashboardPage = () => {
     if (compFilter !== 'all') {
       const count = p.components_map ? p.components_map[compFilter] : 0;
       if (count === 0) return false;
+    }
+
+    // 3. Quarter Filter
+    if (quarterFilter !== 'all') {
+      const pQuarters = p.quarters || [];
+      if (!pQuarters.includes(quarterFilter)) return false;
     }
 
     return true;
@@ -100,6 +108,28 @@ const DashboardPage = () => {
             <span className="active-filter-label">فیلتر کامپوننت: {compFilter}</span>
           )}
         </div>
+
+        {/* Quarter Filter */}
+        {quarters.length > 0 && (
+          <div className="quarter-filter-bar">
+            <span className="quarter-filter-label">📅 فصل:</span>
+            <button
+              className={`quarter-btn ${quarterFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setQuarterFilter('all')}
+            >
+              همه
+            </button>
+            {quarters.map(q => (
+              <button
+                key={q}
+                className={`quarter-btn ${quarterFilter === q ? 'active' : ''}`}
+                onClick={() => setQuarterFilter(quarterFilter === q ? 'all' : q)}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
 
         {filteredProjects.length === 0 ? (
           <div className="no-projects-msg">پروژه‌ای در این دسته با شرایط انتخابی یافت نشد.</div>

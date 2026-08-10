@@ -232,3 +232,51 @@
     font-size: 1.4rem;
   }
 }
+
+/* ── Quarter Filter Bar ── */
+.quarter-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  margin-bottom: 0.25rem;
+}
+
+.quarter-filter-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-left: 0.25rem;
+  white-space: nowrap;
+}
+
+.quarter-btn {
+  padding: 0.35rem 1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+  direction: ltr;
+}
+
+.quarter-btn:hover {
+  border-color: var(--accent-cyan, #22d3ee);
+  color: var(--accent-cyan, #22d3ee);
+  background: rgba(34, 211, 238, 0.08);
+}
+
+.quarter-btn.active {
+  background: linear-gradient(135deg, var(--accent-cyan, #22d3ee), var(--accent-blue, #3b82f6));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.35);
+}

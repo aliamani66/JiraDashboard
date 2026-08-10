@@ -6,6 +6,16 @@ const mapping = require('../jiraMapping');
 const router = express.Router();
 router.use(authenticate);
 
+// Helper: extract quarter labels (e.g. 1405Q1, 1404Q3) from a JSON labels string
+function extractQuarterLabels(labelsJson) {
+  try {
+    const arr = JSON.parse(labelsJson || '[]');
+    return arr.filter(l => /^\d{4}Q[1-4]$/i.test(l)).map(l => l.toUpperCase());
+  } catch {
+    return [];
+  }
+}
+
 // List all projects with summary stats
 router.get('/projects', (req, res) => {
   try {
@@ -18,6 +28,7 @@ router.get('/projects', (req, res) => {
     `).all();
 
     for (const p of projects) {
+      // Component map
       const compRows = db.prepare(`
         SELECT component, COUNT(*) as count 
         FROM tasks 
@@ -30,6 +41,14 @@ router.get('/projects', (req, res) => {
         if (row.component) compObj[row.component] = row.count;
       }
       p.components_map = compObj;
+
+      // Quarter labels — collect unique quarters from all tasks of this project
+      const labelRows = db.prepare(`SELECT labels FROM tasks WHERE project_id = ?`).all(p.id);
+      const quarterSet = new Set();
+      for (const row of labelRows) {
+        extractQuarterLabels(row.labels).forEach(q => quarterSet.add(q));
+      }
+      p.quarters = Array.from(quarterSet).sort();
     }
 
     res.json({
@@ -38,6 +57,22 @@ router.get('/projects', (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch projects' });
+  }
+});
+
+// All unique quarter labels across all projects
+router.get('/quarters', (req, res) => {
+  try {
+    const db = getDb();
+    const rows = db.prepare(`SELECT DISTINCT labels FROM tasks WHERE labels IS NOT NULL AND labels != '[]'`).all();
+    const quarterSet = new Set();
+    for (const row of rows) {
+      extractQuarterLabels(row.labels).forEach(q => quarterSet.add(q));
+    }
+    const quarters = Array.from(quarterSet).sort();
+    res.json({ quarters });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch quarters' });
   }
 });
 

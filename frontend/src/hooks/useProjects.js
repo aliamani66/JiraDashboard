@@ -84,3 +84,15 @@ export const useWaitingTasks = () => {
   
   return { data, loading };
 };
+
+export const useQuarters = () => {
+  const [quarters, setQuarters] = useState([]);
+
+  useEffect(() => {
+    api.getQuarters()
+      .then(res => setQuarters(res?.quarters || []))
+      .catch(() => setQuarters([]));
+  }, []);
+
+  return quarters;
+};

@@ -31,6 +31,7 @@ export const api = {
   getProjectBlocked: (id) => fetchWithAuth(`/projects/${id}/blocked`),
   getWaitingTasks: () => fetchWithAuth('/waiting-tasks'),
   getStats: () => fetchWithAuth('/stats'),
+  getQuarters: () => fetchWithAuth('/quarters'),
   getSyncStatus: () => fetchWithAuth('/sync/status'),
   triggerSync: () => fetchWithAuth('/sync', { method: 'POST' }),
   getUsers: () => fetchWithAuth('/users'),
