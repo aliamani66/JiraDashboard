@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage';
 import ProjectPage from './pages/ProjectPage';
 import WaitingTasksPage from './pages/WaitingTasksPage';
 import OverallTimelinePage from './pages/OverallTimelinePage';
+import SprintsPage from './pages/SprintsPage';
 import UserManagementPage from './pages/UserManagementPage';
 import JiraSettingsPage from './pages/JiraSettingsPage';
 
@@ -39,6 +40,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProjectPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/sprints" 
+              element={
+                <ProtectedRoute>
+                  <SprintsPage />
                 </ProtectedRoute>
               } 
             />

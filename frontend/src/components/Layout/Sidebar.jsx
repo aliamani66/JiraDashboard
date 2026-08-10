@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, LogOut, TerminalSquare, Clock, ChevronRight, TrendingUp, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, LogOut, TerminalSquare, Clock, ChevronRight, TrendingUp, Users, Settings, Flame } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
 
@@ -35,6 +35,17 @@ const Sidebar = ({ isOpen, toggle }) => {
             >
               <LayoutDashboard size={20} className="nav-icon" />
               <span className="nav-text">داشبورد</span>
+            </NavLink>
+          )}
+
+          {hasPerm('overall_timeline') && (
+            <NavLink 
+              to="/sprints" 
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              title="جلسات اسپرینت"
+            >
+              <Flame size={20} className="nav-icon" />
+              <span className="nav-text">جلسات اسپرینت</span>
             </NavLink>
           )}
 

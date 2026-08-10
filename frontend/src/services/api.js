@@ -42,4 +42,5 @@ export const api = {
   saveJiraConfig: (cfg) => fetchWithAuth('/jira/config', { method: 'PUT', body: JSON.stringify(cfg) }),
   runJiraDiagnostic: (params) => fetchWithAuth('/jira/diagnose', { method: 'POST', body: JSON.stringify(params || {}) }),
   resetDatabase: () => fetchWithAuth('/jira/reset-db', { method: 'POST' }),
+  getAllSprints: () => fetchWithAuth('/all-sprints'),
 };
