@@ -60,12 +60,16 @@ const SprintsPage = () => {
 
   if (loading) return <div className="loading-screen">در حال دریافت داده‌های اسپرینت پروژه‌ها...</div>;
 
-  // Dynamically extract all unique sprint names from backend tasks
-  const allSprintNames = Array.from(new Set(tasks.map(t => t.sprint_name || 'Sprint 10'))).sort((a, b) => {
+  const defaultSprintList = ['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4', 'Sprint 5', 'Sprint 6', 'Sprint 7', 'Sprint 8', 'Sprint 9', 'Sprint 10'];
+
+  // Dynamically extract all unique sprint names from backend tasks with fallback
+  const extractedSprints = Array.from(new Set(tasks.map(t => t.sprint_name).filter(Boolean))).sort((a, b) => {
     const numA = parseInt(a.replace(/\D/g, '')) || 0;
     const numB = parseInt(b.replace(/\D/g, '')) || 0;
     return numA - numB;
   });
+
+  const allSprintNames = extractedSprints.length > 0 ? extractedSprints : defaultSprintList;
 
   // Get 5 most recent sprints for quick pill bar
   const recent5Sprints = allSprintNames.slice(-5);
@@ -315,6 +319,22 @@ const SprintsPage = () => {
 
       {/* Filter & Search Bar */}
       <div className="glass-card sp-filter-bar">
+        {/* Sprint Filter Dropdown */}
+        <div className="sp-filter-item">
+          <Flame size={16} className="text-accent-orange" />
+          <span className="sp-filter-label">فیلتر اسپرینت:</span>
+          <select 
+            value={selectedSprint} 
+            onChange={(e) => setSelectedSprint(e.target.value)}
+            className="sp-select sp-filter-sprint-dropdown"
+          >
+            <option value="all">🌐 همه اسپرینت‌ها ({allSprintNames.length})</option>
+            {allSprintNames.map(s => (
+              <option key={s} value={s}>🔥 {s}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Assignee / Person Filter */}
         <div className="sp-filter-item">
           <User size={16} className="text-accent-blue" />

@@ -361,6 +361,18 @@
   border-radius: 10px;
 }
 
+.sp-filter-sprint-dropdown {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border: 1px solid #F97316 !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  border-radius: 10px !important;
+  padding: 0.4rem 0.8rem !important;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.25);
+  cursor: pointer;
+}
+
 .sp-search-box {
   position: relative;
   display: flex;
