@@ -37,7 +37,18 @@ const SprintsPage = () => {
       try {
         setLoading(true);
         const data = await api.getAllSprints();
-        setTasks(data.tasks || []);
+        const tList = data.tasks || [];
+        setTasks(tList);
+
+        // Auto-select the latest sprint by default
+        const sNames = Array.from(new Set(tList.map(t => t.sprint_name || 'Sprint 10'))).sort((a, b) => {
+          const numA = parseInt(a.replace(/\D/g, '')) || 0;
+          const numB = parseInt(b.replace(/\D/g, '')) || 0;
+          return numA - numB;
+        });
+        if (sNames.length > 0) {
+          setSelectedSprint(sNames[sNames.length - 1]);
+        }
       } catch (err) {
         console.error('Failed to fetch sprints data:', err);
       } finally {
