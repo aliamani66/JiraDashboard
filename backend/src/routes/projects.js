@@ -268,6 +268,40 @@ router.get('/waiting-tasks', (req, res) => {
   }
 });
 
+// Consolidated Sprint Review Endpoint (All Tasks Across All Projects Grouped by Sprint)
+router.get('/all-sprints', (req, res) => {
+  try {
+    const db = getDb();
+    const tasks = db.prepare(`
+      SELECT t.*, p.title as project_title, p.category as project_category
+      FROM tasks t
+      JOIN projects p ON t.project_id = p.id
+      ORDER BY t.sprint_name ASC, t.sort_order ASC, t.id ASC
+    `).all();
+
+    const sprintsMap = {};
+    for (const t of tasks) {
+      const sName = t.sprint_name || 'Sprint 10';
+      if (!sprintsMap[sName]) {
+        sprintsMap[sName] = {
+          sprintName: sName,
+          startDate: t.sprint_start_date,
+          endDate: t.sprint_end_date,
+          tasks: []
+        };
+      }
+      sprintsMap[sName].tasks.push(t);
+    }
+
+    res.json({
+      tasks,
+      sprintsMap
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch all sprints data' });
+  }
+});
+
 // Standalone Clean HTML Report Endpoint for Sprints Export (PDF Printable)
 router.get('/reports/sprints-html', (req, res) => {
   try {
