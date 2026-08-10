@@ -4,6 +4,7 @@ import { useProjects, useQuarters } from '../hooks/useProjects';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import StatsCards from '../components/Dashboard/StatsCards';
+import DashboardFilterPanel from '../components/Dashboard/DashboardFilterPanel';
 import ProjectGrid from '../components/Dashboard/ProjectGrid';
 import './DashboardPage.css';
 
@@ -11,9 +12,12 @@ const DashboardPage = () => {
   const { projects, stats, loading } = useProjects();
   const { user } = useAuth();
   const quarters = useQuarters();
-  const [compFilter, setCompFilter] = useState('all');
-  const [statusTab, setStatusTab] = useState('all');
-  const [quarterFilter, setQuarterFilter] = useState('all');
+
+  // Multi-select Filter States
+  const [statusFilters, setStatusFilters] = useState([]);
+  const [quarterFilters, setQuarterFilters] = useState([]);
+  const [componentFilters, setComponentFilters] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const perms = user?.permissions || [];
   const hasDashboardAccess = user?.role === 'admin' || perms.includes('dashboard');
@@ -37,26 +41,63 @@ const DashboardPage = () => {
     waitingTasks: projects.reduce((s, p) => s + (p.waiting_tasks || 0), 0)
   };
 
-  // Filter projects based on status tab, selected component, and quarter
-  const filteredProjects = projects.filter(p => {
-    // 1. Status Filter
-    if (statusTab === 'active' && p.status === 'Done') return false;
-    if (statusTab === 'done' && p.status !== 'Done') return false;
+  // Collect all unique component keys dynamically across projects
+  const availableComponents = Array.from(
+    new Set(projects.flatMap(p => Object.keys(p.components_map || {})))
+  );
 
-    // 2. Component Filter
-    if (compFilter !== 'all') {
-      const count = p.components_map ? p.components_map[compFilter] : 0;
-      if (count === 0) return false;
+  // Filter projects with multi-select logic
+  const filteredProjects = projects.filter(p => {
+    // 0. Search Query
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase().trim();
+      const matchId = (p.id || '').toLowerCase().includes(q);
+      const matchTitle = (p.title || '').toLowerCase().includes(q);
+      const matchDesc = (p.description || '').toLowerCase().includes(q);
+      if (!matchId && !matchTitle && !matchDesc) return false;
     }
 
-    // 3. Quarter Filter
-    if (quarterFilter !== 'all') {
+    // 1. Status Filter (Multi-select)
+    if (statusFilters.length > 0) {
+      const totalTasks = p.total_tasks || 0;
+      const completedTasks = p.completed_tasks || 0;
+      const waitingTasks = p.waiting_tasks || 0;
+      const activeTasks = totalTasks - completedTasks;
+      const isCritical = totalTasks > 0 && activeTasks > 0 && waitingTasks >= activeTasks;
+      const isDone = p.status === 'Done';
+
+      const matchStatus = statusFilters.some(st => {
+        if (st === 'active') return !isDone && !isCritical;
+        if (st === 'done') return isDone;
+        if (st === 'critical') return isCritical;
+        return true;
+      });
+      if (!matchStatus) return false;
+    }
+
+    // 2. Quarter Filter (Multi-select)
+    if (quarterFilters.length > 0) {
       const pQuarters = p.quarters || [];
-      if (!pQuarters.includes(quarterFilter)) return false;
+      const hasQuarter = quarterFilters.some(q => pQuarters.includes(q));
+      if (!hasQuarter) return false;
+    }
+
+    // 3. Component Filter (Multi-select)
+    if (componentFilters.length > 0) {
+      const compMap = p.components_map || {};
+      const hasComp = componentFilters.some(c => (compMap[c] || 0) > 0);
+      if (!hasComp) return false;
     }
 
     return true;
   });
+
+  const handleResetAll = () => {
+    setStatusFilters([]);
+    setQuarterFilters([]);
+    setComponentFilters([]);
+    setSearchQuery('');
+  };
 
   return (
     <motion.div 
@@ -70,69 +111,34 @@ const DashboardPage = () => {
         <p>وضعیت لحظه‌ای پروژه‌های تیم تحقیق و توسعه عملیات ({projects.length} پروژه)</p>
       </div>
 
-      {/* Interactive Component Summary Panel inside StatsCards */}
+      {/* Top 4 KPI Summary Stat Cards */}
       <StatsCards 
         stats={displayStats} 
         projects={projects} 
-        activeCompFilter={compFilter}
-        onSelectComponent={setCompFilter}
+      />
+
+      {/* Unified Full-Width Glass Filter Tile with 3 Sub-Cards */}
+      <DashboardFilterPanel 
+        statusFilters={statusFilters}
+        setStatusFilters={setStatusFilters}
+        quarterFilters={quarterFilters}
+        setQuarterFilters={setQuarterFilters}
+        componentFilters={componentFilters}
+        setComponentFilters={setComponentFilters}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        quarters={quarters}
+        availableComponents={availableComponents}
+        totalProjectsCount={projects.length}
+        filteredCount={filteredProjects.length}
+        onResetAll={handleResetAll}
       />
       
       <div className="dashboard-section">
-        {/* Status Filter Tabs (All / Active / Done) */}
-        <div className="section-header-row">
-          <div className="dash-status-tabs">
-            <button 
-              className={`dash-status-tab ${statusTab === 'all' ? 'active' : ''}`}
-              onClick={() => setStatusTab('all')}
-            >
-              🌐 همه پروژه‌ها ({projects.length})
-            </button>
-
-            <button 
-              className={`dash-status-tab ${statusTab === 'active' ? 'active' : ''}`}
-              onClick={() => setStatusTab('active')}
-            >
-              ⚡ در حال اجرا ({activeProjects.length})
-            </button>
-
-            <button 
-              className={`dash-status-tab done-tab ${statusTab === 'done' ? 'active' : ''}`}
-              onClick={() => setStatusTab('done')}
-            >
-              ✅ انجام‌شده / تکمیل‌شده ({doneProjects.length})
-            </button>
-          </div>
-
-          {compFilter !== 'all' && (
-            <span className="active-filter-label">فیلتر کامپوننت: {compFilter}</span>
-          )}
-        </div>
-
-        {/* Quarter Filter */}
-        {quarters.length > 0 && (
-          <div className="quarter-filter-bar">
-            <span className="quarter-filter-label">📅 فصل:</span>
-            <button
-              className={`quarter-btn ${quarterFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setQuarterFilter('all')}
-            >
-              همه
-            </button>
-            {quarters.map(q => (
-              <button
-                key={q}
-                className={`quarter-btn ${quarterFilter === q ? 'active' : ''}`}
-                onClick={() => setQuarterFilter(quarterFilter === q ? 'all' : q)}
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-        )}
-
         {filteredProjects.length === 0 ? (
-          <div className="no-projects-msg">پروژه‌ای در این دسته با شرایط انتخابی یافت نشد.</div>
+          <div className="no-projects-msg">
+            پروژه‌ای با ترکیب فیلترهای انتخابی یافت نشد. برای مشاهده همه پروژه‌ها، فیلترها را پاک کنید.
+          </div>
         ) : (
           <ProjectGrid projects={filteredProjects} />
         )}
