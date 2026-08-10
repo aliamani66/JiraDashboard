@@ -56,6 +56,13 @@ const SprintsPage = () => {
     return numA - numB;
   });
 
+  // Get 5 most recent sprints for quick pill bar
+  const recent5Sprints = allSprintNames.slice(-5);
+  const quickPills = [...recent5Sprints];
+  if (selectedSprint !== 'all' && !quickPills.includes(selectedSprint)) {
+    quickPills.unshift(selectedSprint);
+  }
+
   // Extract unique project options
   const projectOptions = Array.from(new Set(tasks.map(t => JSON.stringify({ id: t.project_id, title: t.project_title }))))
     .map(s => JSON.parse(s));
@@ -168,7 +175,7 @@ const SprintsPage = () => {
             </select>
           </div>
 
-          {/* Scrollable Pills Container for Unlimited Sprints */}
+          {/* Quick Pills Container (Displays 5 Most Recent Sprints by Default) */}
           <div className="sp-tabs-wrap-scrollable">
             <button
               className={`sp-sprint-tab ${selectedSprint === 'all' ? 'active' : ''}`}
@@ -176,7 +183,7 @@ const SprintsPage = () => {
             >
               🌐 همه
             </button>
-            {allSprintNames.map(s => (
+            {quickPills.map(s => (
               <button
                 key={s}
                 className={`sp-sprint-tab ${selectedSprint === s ? 'active' : ''}`}
