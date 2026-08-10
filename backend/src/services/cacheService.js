@@ -28,7 +28,7 @@ async function syncFromJira() {
       VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @last_synced)
       ON CONFLICT(id) DO UPDATE SET
         title=excluded.title,
-        description=excluded.description,
+        description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE projects.description END,
         status=excluded.status,
         capabilities=excluded.capabilities,
         category=excluded.category,
@@ -43,7 +43,7 @@ async function syncFromJira() {
       VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @last_synced)
       ON CONFLICT(id) DO UPDATE SET
         title=excluded.title,
-        description=excluded.description,
+        description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE tasks.description END,
         status=excluded.status,
         assignee=excluded.assignee,
         estimate_hours=excluded.estimate_hours,
@@ -84,6 +84,15 @@ async function syncFromJira() {
         epic.last_synced = syncTime;
         if (!epic.capabilities) epic.capabilities = '';
         if (!epic.confluence_link) epic.confluence_link = null;
+
+        // Preserve existing non-empty description if Jira description is empty
+        if (!epic.description || epic.description.trim() === '') {
+          const existingProj = db.prepare('SELECT description FROM projects WHERE id = ?').get(epic.id);
+          if (existingProj && existingProj.description && existingProj.description.trim() !== '') {
+            epic.description = existingProj.description;
+          }
+        }
+
         insertProject.run(epic);
         projectsSynced++;
       }
