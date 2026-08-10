@@ -29,7 +29,7 @@ module.exports = {
   // 4. پشتیبانی از کاستوم فیلدهای اختصاصی جیرا (Custom Fields Mapping)
   customFields: {
     sprintField: process.env.JIRA_SPRINT_FIELD || 'customfield_10020',
-    waitingTeamField: process.env.JIRA_WAITING_TEAM_FIELD || null, 
+    waitingTeamField: process.env.JIRA_WAITING_TEAM_FIELD || 'customfield_16800', 
     waitingReasonField: process.env.JIRA_WAITING_REASON_FIELD || null,
     confluenceLinkField: process.env.JIRA_CONFLUENCE_LINK_FIELD || null,
     capabilitiesField: process.env.JIRA_CAPABILITIES_FIELD || null,

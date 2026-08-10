@@ -341,7 +341,17 @@ async function fetchTasksForEpic(epicKey) {
       }
 
       // Waiting Team & Reason Extraction (Custom Fields, Labels, or Issue Links)
-      let waitingForTeam = customFields.waitingTeamField ? issue.fields?.[customFields.waitingTeamField] : null;
+      let rawWaitingTeam = customFields.waitingTeamField ? issue.fields?.[customFields.waitingTeamField] : null;
+      let waitingForTeam = null;
+      if (rawWaitingTeam) {
+        if (Array.isArray(rawWaitingTeam)) {
+          waitingForTeam = rawWaitingTeam.map(item => typeof item === 'object' ? (item.name || item.value || JSON.stringify(item)) : String(item)).join(', ');
+        } else if (typeof rawWaitingTeam === 'object') {
+          waitingForTeam = rawWaitingTeam.name || rawWaitingTeam.value || String(rawWaitingTeam);
+        } else {
+          waitingForTeam = String(rawWaitingTeam);
+        }
+      }
       let waitingReason = customFields.waitingReasonField ? issue.fields?.[customFields.waitingReasonField] : null;
 
       if (!waitingForTeam || !waitingReason) {
