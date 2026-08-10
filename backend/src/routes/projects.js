@@ -779,4 +779,375 @@ router.get('/reports/sprints-html', (req, res) => {
   }
 });
 
+// Standalone Single Project Executive Report & Gantt Timeline HTML Endpoint
+router.get('/reports/project-html/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDb();
+
+    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+    if (!project) {
+      return res.status(404).send('Project not found');
+    }
+
+    const tasks = db.prepare('SELECT * FROM tasks WHERE project_id = ? ORDER BY sort_order ASC, id ASC').all(id);
+
+    const taskOperationalMap = {
+      'ORD-1': 'طراحی و استقرار پایپ‌لاین‌های متمرکز CI/CD جهت اتوماسیون تست‌ها و دیپلوی خودکار کانتینرها روی کوبرنتیز',
+      'ORD-2': 'پیکربندی استیج تست خودکار نرم‌افزار و تحلیل کیفیت سورس کد با SonarQube',
+      'ORD-3': 'ایجاد ساختار داکر مالتی-استیج جهت کاهش حجم ایمیج‌های خروجی و افزایش سرعت دیپلوی',
+      'ORD-4': 'راه‌اندازی ابزار پایش خودکار دیپلوی ArgoCD بر پایه متدولوژی GitOps جهت همگام‌سازی کلاستر',
+      'ORD-5': 'استقرار استک مانیتورینگ متمرکز Prometheus & Grafana جهت پایش آنی منابع سخت‌افزاری و سرویس‌ها',
+      'ORD-6': 'طراحی داشبوردهای مدیریتی اختصاصی Grafana برای تحلیل ترافیک شبکه، مصرف CPU/RAM و وضعیت پادها',
+      'ORD-7': 'پیکربندی Alertmanager و اتصال هوشمند هشدارهای قطعی زیرساخت به کانال اطلاع‌رسانی تیم عملیات',
+      'ORD-8': 'تست و اعتبارسنجی هشدارهای پیشگیرانه روی سرویس‌های حساس پلتفرم با شبیه‌سازی بار کاری',
+      'ORD-9': 'مهاجرت سرویس‌های اصلی به کلاستر کوبرنتیز و ارتقاء پایداری و مقیاس‌پذیری زیرساخت',
+      'ORD-10': 'راه‌اندازی کلاستر PostgreSQL HA به همراه پشتیبان‌گیری خودکار روی ذخیره‌ساز Ceph',
+      'ORD-11': 'پیکربندی Ingress Controller و گواهی‌نامه‌های SSL خودکار جهت مدیریت ترافیک ورود به کلاستر',
+      'ORD-12': 'اجرای تست‌های پایداری و بازیابی از خرابی (Disaster Recovery) روی سرویس‌های دیتابیس',
+      'ORD-13': 'ارتقاء و خودکارسازی امنیت ابری، مدیریت اسرار و اسکن آسیب‌پذیری‌های امنیتی',
+      'ORD-14': 'پیاده‌سازی ابزار Trivy برای اسکن خودکار ایمیج‌های داکر و انسداد ایمیج‌های دارای آسیب‌پذیری بالا',
+      'ORD-15': 'طراحی و استقرار کلاستر متمرکز HashiCorp Vault جهت مدیریت امن کلیدها و گواهی‌نامه‌های SSL',
+      'ORD-16': 'اتوماسیون کامل تست‌های SAST با SonarQube و اتصال هوشمند به مخزن گیت‌هاب تیم توسعه',
+      'ORD-17': 'توسعه فریم‌ورک اختصاصی CLI به زبان Go جهت اتوماسیون عملیات کلاستر و مدیریت منابع',
+      'ORD-18': 'ایجاد دستورات اختصاصی مدیریت پادها، پاکسازی گاربج داکر و بررسی بهداشت سرویس‌ها',
+      'ORD-19': 'توسعه ماژول گزارش‌گیری خودکار وضعیت سلامت سرورها و ارسال گزارش دوره به تیم پشتیبانی',
+      'ORD-20': 'تست‌های واحد و یکپارچه‌سازی ابزار CLI Go در محیط‌های عملیاتی واقعی'
+    };
+
+    let capabilities = [];
+    try {
+      capabilities = JSON.parse(project.capabilities || '[]');
+    } catch (e) {
+      capabilities = [];
+    }
+
+    const totalTasks = tasks.length;
+    const doneTasks = tasks.filter(t => t.status === 'Done' || t.status === 'done').length;
+    const activeTasks = tasks.filter(t => t.status === 'In Progress' || t.status === 'in_progress').length;
+    const waitingTasks = tasks.filter(t => t.is_waiting || t.status === 'Waiting' || t.status === 'OnHolding').length;
+    const todoTasks = totalTasks - (doneTasks + activeTasks + waitingTasks);
+
+    const totalSpent = Math.round(tasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0));
+    const totalEst = Math.round(tasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0));
+    const progress = totalEst > 0 ? Math.round((totalSpent / totalEst) * 100) : (totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0);
+
+    // Build Gantt Timeline Rows HTML
+    let ganttRowsHTML = '';
+    for (const t of tasks) {
+      const tEst = t.estimate_hours || 0;
+      const tSpent = t.spent_hours || 0;
+      const tProg = tEst > 0 ? Math.min(100, Math.round((tSpent / tEst) * 100)) : (t.status === 'Done' ? 100 : 0);
+      const sName = t.sprint_name || 'Sprint 10';
+
+      let statusBadgeClass = 'badge-todo';
+      let statusText = '📋 برای انجام';
+      if (t.status === 'Done' || t.status === 'done') { statusBadgeClass = 'badge-done'; statusText = '✅ تکمیل شده'; }
+      else if (t.status === 'In Progress' || t.status === 'in_progress') { statusBadgeClass = 'badge-active'; statusText = '⚡ در حال انجام'; }
+      else if (t.is_waiting) { statusBadgeClass = 'badge-waiting'; statusText = `⏳ منتظر (${t.waiting_for_team || 'خارجی'})`; }
+
+      ganttRowsHTML += `
+        <div class="gantt-row">
+          <div class="gantt-label">
+            <code class="task-code">${t.id}</code>
+            <strong style="margin-right: 6px;">${t.title}</strong>
+            <div style="font-size: 0.78rem; color: #64748B; margin-top: 2px;">👤 ${t.assignee || 'تیم R&D'} | 🔥 ${sName}</div>
+          </div>
+          <div class="gantt-timeline-container">
+            <div class="gantt-bar-fill" style="width: ${tProg}%;">
+              <span class="gantt-bar-text">%${tProg}</span>
+            </div>
+          </div>
+          <div class="gantt-meta">
+            <span class="badge ${statusBadgeClass}">${statusText}</span>
+            <span style="font-weight: bold; font-size: 0.82rem;">${tSpent}h / ${tEst}h</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Build Tasks Table Rows HTML
+    let taskTableRowsHTML = '';
+    for (const t of tasks) {
+      const tEst = t.estimate_hours || 0;
+      const tSpent = t.spent_hours || 0;
+      const tProg = tEst > 0 ? Math.min(100, Math.round((tSpent / tEst) * 100)) : (t.status === 'Done' ? 100 : 0);
+      const opDesc = taskOperationalMap[t.id] || t.description || 'توسعه و ارتقاء قابلیت‌های پروژه';
+
+      let statusBadgeHTML = '<span class="badge badge-todo">📋 برای انجام</span>';
+      if (t.status === 'Done' || t.status === 'done') statusBadgeHTML = '<span class="badge badge-done">✅ تکمیل شده</span>';
+      else if (t.status === 'In Progress' || t.status === 'in_progress') statusBadgeHTML = '<span class="badge badge-active">⚡ در حال انجام</span>';
+      else if (t.is_waiting) statusBadgeHTML = `<span class="badge badge-waiting">⏳ منتظر (${t.waiting_for_team || 'تیم خارجی'})</span>`;
+
+      taskTableRowsHTML += `
+        <tr>
+          <td><code class="task-code">${t.id}</code></td>
+          <td>
+            <strong>${t.title}</strong>
+            <div style="font-size:0.82rem; color:#475569; margin-top:3px; line-height:1.4;">
+              💡 <em>دستاورد عملیاتی:</em> ${opDesc}
+            </div>
+          </td>
+          <td>👤 ${t.assignee || 'تیم R&D'}</td>
+          <td>🔥 ${t.sprint_name || 'Sprint 10'}</td>
+          <td>${statusBadgeHTML}</td>
+          <td>${tSpent}h / ${tEst}h</td>
+          <td>
+            <div class="progress-wrap">
+              <div class="progress-fill" style="width: ${tProg}%"></div>
+            </div>
+            <strong>%${tProg}</strong>
+          </td>
+        </tr>
+      `;
+    }
+
+    const htmlDocument = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>گزارش و گانت‌چارت پروژه ${project.id}: ${project.title}</title>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+    body {
+      background: #FFFFFF;
+      color: #0F172A;
+      font-family: 'Vazirmatn', sans-serif;
+      margin: 0;
+      padding: 2rem;
+      direction: rtl;
+      line-height: 1.6;
+    }
+    .no-print-bar {
+      background: #0F172A;
+      color: #FFFFFF;
+      padding: 0.8rem 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .no-print-btn {
+      background: #0EA5E9;
+      color: #FFFFFF;
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .header-banner {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 1.8rem;
+      margin-bottom: 1.5rem;
+      border-top: 4px solid #0EA5E9;
+    }
+    h1 { margin: 0 0 0.5rem; color: #0F172A; font-size: 1.7rem; font-weight: 800; }
+    .subtitle { color: #475569; font-size: 0.95rem; margin: 0 0 1rem; line-height: 1.6; white-space: pre-line; }
+    .ph-cap-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
+    .ph-cap-pill {
+      background: #E0F2FE;
+      color: #0369A1;
+      border: 1px solid #BAE6FD;
+      padding: 0.25rem 0.65rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .kpi-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 1.1rem;
+      text-align: center;
+    }
+    .kpi-box .val { font-size: 1.75rem; font-weight: 800; color: #0EA5E9; margin-top: 0.2rem; }
+    .kpi-box .lbl { font-size: 0.84rem; color: #64748B; font-weight: 600; }
+    .card-section {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      page-break-inside: avoid;
+    }
+    .card-section h2 { margin: 0 0 1rem; font-size: 1.25rem; color: #0284C7; font-weight: 800; }
+    
+    /* Gantt Chart Custom Styling */
+    .gantt-container { display: flex; flex-direction: column; gap: 0.75rem; }
+    .gantt-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+    }
+    .gantt-label { width: 320px; flex-shrink: 0; }
+    .gantt-timeline-container {
+      flex: 1;
+      height: 22px;
+      background: #E2E8F0;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    .gantt-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0284C7, #16A34A);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-left: 8px;
+    }
+    .gantt-bar-text { color: #FFFFFF; font-size: 0.78rem; font-weight: bold; }
+    .gantt-meta { width: 180px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      font-size: 0.86rem;
+    }
+    .data-table th, .data-table td {
+      padding: 0.75rem 0.85rem;
+      text-align: right;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .data-table th {
+      background: #F1F5F9;
+      color: #334155;
+      font-weight: 700;
+    }
+    .task-code {
+      background: #E0F2FE;
+      color: #0284C7;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    .badge {
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .badge-done { background: #DCFCE7; color: #15803D; border: 1px solid #86EFAC; }
+    .badge-active { background: #DBEAFE; color: #1D4ED8; border: 1px solid #93C5FD; }
+    .badge-waiting { background: #FFEDD5; color: #C2410C; border: 1px solid #FDBA74; }
+    .badge-todo { background: #F3E8FF; color: #7E22CE; border: 1px solid #D8B4FE; }
+    .badge-task { background: #F1F5F9; color: #334155; }
+    .progress-wrap {
+      width: 65px;
+      height: 6px;
+      background: #E2E8F0;
+      border-radius: 4px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 0.4rem;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0284C7, #16A34A);
+    }
+    @media print {
+      .no-print-bar { display: none !important; }
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print-bar">
+    <span>💡 پیش‌نمایش خروجی گزارش و گانت‌چارت پروژه ${project.id}</span>
+    <button className="no-print-btn" onclick="window.print()">🖨️ دانلود و ذخیره به عنوان PDF</button>
+  </div>
+
+  <div class="header-banner">
+    <h1>🚀 گزارش پروژه ${project.id}: ${project.title}</h1>
+    <p class="subtitle">${project.description || 'توضیحات و اهداف عملیاتی این پروژه در اپیک جیرا ثبت شده است.'}</p>
+    
+    ${capabilities.length > 0 ? `
+      <div style="font-size: 0.86rem; font-weight: bold; color: #0284C7; margin-bottom: 4px;">🎯 قابلیت‌های اصلی پروژه:</div>
+      <div class="ph-cap-pills">
+        ${capabilities.map(c => `<span class="ph-cap-pill">✓ ${c}</span>`).join('')}
+      </div>
+    ` : ''}
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-box">
+      <div class="lbl">تعداد کل تسک‌ها</div>
+      <div class="val">${totalTasks} تسک</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">تسک‌های انجام‌شده (Done)</div>
+      <div class="val" style="color: #16A34A;">${doneTasks} تسک</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">کارکرد / تخمین کل</div>
+      <div class="val" style="color: #EA580C;">${totalSpent}h / ${totalEst}h</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">پیشرفت کل پروژه</div>
+      <div class="val" style="color: #16A34A;">%${progress}</div>
+    </div>
+  </div>
+
+  <!-- 📊 Gantt Chart / Timeline Section -->
+  <div class="card-section">
+    <h2>📅 نمودار گانت و تایم‌لاین پیشرفت تسک‌های پروژه</h2>
+    <div class="gantt-container">
+      ${ganttRowsHTML}
+    </div>
+  </div>
+
+  <!-- 📋 Detailed Tasks Table -->
+  <div class="card-section">
+    <h2>📋 جدول تفکیکی تسک‌ها و دستاوردهای عملیاتی</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 75px;">کد تسک</th>
+          <th>عنوان تسک و دستاورد فنی حاصل شده</th>
+          <th>مسئول تسک</th>
+          <th>اسپرینت</th>
+          <th>وضعیت</th>
+          <th>ساعات کارکرد</th>
+          <th>پیشرفت</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${taskTableRowsHTML}
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(htmlDocument);
+  } catch (err) {
+    res.status(500).send('Error generating project report: ' + err.message);
+  }
+});
+
 module.exports = router;

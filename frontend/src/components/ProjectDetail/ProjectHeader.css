@@ -133,6 +133,38 @@
   text-decoration: underline;
 }
 
+.ph-capabilities.ph-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.ph-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38BDF8;
+  padding: 0.35rem 0.85rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  margin-right: auto;
+  transition: all 0.25s ease;
+}
+
+.ph-export-btn:hover {
+  background: rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
 .ph-capabilities-row {
   display: flex;
   align-items: center;

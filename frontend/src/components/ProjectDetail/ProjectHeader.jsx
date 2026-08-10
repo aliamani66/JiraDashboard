@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, ExternalLink, Zap, Clock, CheckCircle2 } from 'lucide-react';
+import { Calendar, ExternalLink, Zap, Clock, CheckCircle2, Printer } from 'lucide-react';
 import StatusBadge from '../common/StatusBadge';
 import './ProjectHeader.css';
 
@@ -78,6 +78,15 @@ const ProjectHeader = ({ project, capabilities = [] }) => {
             </span>
           ))}
           <StatusBadge status={project.status} />
+
+          <button 
+            className="ph-export-btn"
+            onClick={() => window.open(`http://localhost:3001/api/reports/project-html/${project.id}?token=${localStorage.getItem('token')}`, '_blank')}
+            title="دانلود / چاپ گزارش رسمی و نمودار گانت پروژه"
+          >
+            <Printer size={14} />
+            <span>چاپ / خروجی PDF پروژه</span>
+          </button>
         </div>
 
         <h1 className="ph-title">{project.title}</h1>
