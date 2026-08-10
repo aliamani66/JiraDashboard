@@ -16,12 +16,8 @@ const SprintsPage = () => {
   const [projectFilter, setProjectFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [componentFilter, setComponentFilter] = useState('all');
+  const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-
-  const sprintList = [
-    'Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4', 'Sprint 5', 
-    'Sprint 6', 'Sprint 7', 'Sprint 8', 'Sprint 9', 'Sprint 10', 'all'
-  ];
 
   const sprintDates = {
     'Sprint 1':  { start: '۱۴۰۵/۰۱/۲۶', due: '۱۴۰۵/۰۲/۲۱' },
@@ -53,9 +49,19 @@ const SprintsPage = () => {
 
   if (loading) return <div className="loading-screen">در حال دریافت داده‌های اسپرینت پروژه‌ها...</div>;
 
+  // Dynamically extract all unique sprint names from backend tasks
+  const allSprintNames = Array.from(new Set(tasks.map(t => t.sprint_name || 'Sprint 10'))).sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, '')) || 0;
+    const numB = parseInt(b.replace(/\D/g, '')) || 0;
+    return numA - numB;
+  });
+
   // Extract unique project options
   const projectOptions = Array.from(new Set(tasks.map(t => JSON.stringify({ id: t.project_id, title: t.project_title }))))
     .map(s => JSON.parse(s));
+
+  // Extract unique assignee / person options
+  const assigneeOptions = Array.from(new Set(tasks.map(t => t.assignee).filter(Boolean))).sort();
 
   // Filter Tasks
   const filteredTasks = tasks.filter(task => {
@@ -64,6 +70,9 @@ const SprintsPage = () => {
 
     // Project Filter
     if (projectFilter !== 'all' && task.project_id !== projectFilter) return false;
+
+    // Assignee / Person Filter
+    if (assigneeFilter !== 'all' && (task.assignee || 'تخصیص‌نیافته') !== assigneeFilter) return false;
 
     // Status Filter
     if (statusFilter === 'active' && !(task.status === 'In Progress' || task.status === 'in_progress')) return false;
@@ -81,7 +90,8 @@ const SprintsPage = () => {
       const matchTitle = (task.title || '').toLowerCase().includes(q);
       const matchDesc = (task.description || '').toLowerCase().includes(q);
       const matchProj = (task.project_title || '').toLowerCase().includes(q);
-      if (!matchKey && !matchTitle && !matchDesc && !matchProj) return false;
+      const matchAssignee = (task.assignee || '').toLowerCase().includes(q);
+      if (!matchKey && !matchTitle && !matchDesc && !matchProj && !matchAssignee) return false;
     }
 
     return true;
@@ -141,15 +151,38 @@ const SprintsPage = () => {
       {/* Sprint Selector Tabs Bar */}
       <div className="main-filter-tile sp-sprint-selector-tile">
         <div className="sp-tabs-header">
-          <span className="sp-tabs-label">انتخاب اسپرینت:</span>
-          <div className="sp-tabs-wrap">
-            {sprintList.map(s => (
+          <div className="sp-tabs-title-group">
+            <Flame size={18} className="text-accent-orange" />
+            <span className="sp-tabs-label">انتخاب اسپرینت:</span>
+            
+            {/* Quick Dropdown for Unlimited Sprints */}
+            <select
+              value={selectedSprint}
+              onChange={(e) => setSelectedSprint(e.target.value)}
+              className="sp-select sp-sprint-dropdown"
+            >
+              <option value="all">🌐 همه اسپرینت‌ها (نمایش یکجای کل تسک‌ها)</option>
+              {allSprintNames.map(s => (
+                <option key={s} value={s}>🔥 {s}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Scrollable Pills Container for Unlimited Sprints */}
+          <div className="sp-tabs-wrap-scrollable">
+            <button
+              className={`sp-sprint-tab ${selectedSprint === 'all' ? 'active' : ''}`}
+              onClick={() => setSelectedSprint('all')}
+            >
+              🌐 همه
+            </button>
+            {allSprintNames.map(s => (
               <button
                 key={s}
                 className={`sp-sprint-tab ${selectedSprint === s ? 'active' : ''}`}
                 onClick={() => setSelectedSprint(s)}
               >
-                {s === 'all' ? '🌐 همه اسپرینت‌ها' : `🔥 ${s}`}
+                🔥 {s}
               </button>
             ))}
           </div>
@@ -200,6 +233,22 @@ const SprintsPage = () => {
 
       {/* Filter & Search Bar */}
       <div className="glass-card sp-filter-bar">
+        {/* Assignee / Person Filter */}
+        <div className="sp-filter-item">
+          <User size={16} className="text-accent-blue" />
+          <span className="sp-filter-label">مسئول تسک:</span>
+          <select 
+            value={assigneeFilter} 
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+            className="sp-select"
+          >
+            <option value="all">همه افراد ({assigneeOptions.length})</option>
+            {assigneeOptions.map(person => (
+              <option key={person} value={person}>👤 {person}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="sp-filter-item">
           <Filter size={16} className="text-accent-cyan" />
           <span className="sp-filter-label">پروژه:</span>

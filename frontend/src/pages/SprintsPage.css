@@ -40,8 +40,56 @@
 .sp-tabs-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
+  justify-content: space-between;
+  width: 100%;
   flex-wrap: wrap;
+}
+
+.sp-tabs-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  white-space: nowrap;
+}
+
+.sp-sprint-dropdown {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border: 1px solid #F97316 !important;
+  color: var(--text-primary) !important;
+  font-weight: 700 !important;
+  font-size: 0.88rem !important;
+  padding: 0.45rem 1rem !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 14px rgba(249, 115, 22, 0.3);
+  cursor: pointer;
+}
+
+.sp-tabs-wrap-scrollable {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.25rem 0.1rem 0.5rem;
+  max-width: 65%;
+  scroll-behavior: smooth;
+  white-space: nowrap;
+}
+
+/* Custom Scrollbar for Sprints Bar */
+.sp-tabs-wrap-scrollable::-webkit-scrollbar {
+  height: 5px;
+}
+.sp-tabs-wrap-scrollable::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+.sp-tabs-wrap-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.5);
+  border-radius: 4px;
+}
+.sp-tabs-wrap-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #F97316;
 }
 
 .sp-tabs-label {
@@ -49,12 +97,6 @@
   font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
-}
-
-.sp-tabs-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
 }
 
 .sp-sprint-tab {
