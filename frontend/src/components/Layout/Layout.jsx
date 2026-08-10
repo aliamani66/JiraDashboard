@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, User, CheckCircle2, LogOut, Shield, ChevronDown, Palette } from 'lucide-react';
+import { RefreshCw, User, CheckCircle2, LogOut, Shield, ChevronDown, Palette, Sparkles } from 'lucide-react';
 import Sidebar from './Sidebar';
 import './Layout.css';
 import { api } from '../../services/api';
@@ -85,7 +85,12 @@ const Layout = ({ children }) => {
             <button className="menu-toggle" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
               ☰
             </button>
-            <h2 className="page-title">داشبورد ویترین عملیات R&D</h2>
+            <div className="topbar-brand">
+              <div className="brand-pulse-badge">
+                <Sparkles size={16} className="text-accent-cyan" />
+              </div>
+              <h2 className="page-title">داشبورد ویترین عملیات R&D</h2>
+            </div>
           </div>
           
           <div className="topbar-left">
@@ -102,13 +107,16 @@ const Layout = ({ children }) => {
             </button>
 
             <div className="sync-section">
-              <span className="last-sync">آخرین سینک: {lastSync}</span>
+              <div className="live-sync-badge">
+                <span className="live-pulse-dot"></span>
+                <span className="last-sync">آخرین سینک: <strong>{lastSync}</strong></span>
+              </div>
               <button 
                 className={`sync-btn ${isSyncing ? 'syncing' : ''}`} 
                 onClick={handleSync}
-                title="بروزرسانی داده‌ها از جیرا"
+                title="همگام‌سازی فوری داده‌ها با سیستم جیرا"
               >
-                <RefreshCw size={18} className={isSyncing ? 'spin-icon' : ''} />
+                <RefreshCw size={17} className={isSyncing ? 'spin-icon' : ''} />
               </button>
             </div>
 
