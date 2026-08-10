@@ -375,6 +375,63 @@ router.get('/reports/sprints-html', (req, res) => {
     let totalAllEst = Math.round(tasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0));
     let overallProg = totalAllEst > 0 ? Math.round((totalAllSpent / totalAllEst) * 100) : 0;
 
+    // 🌟 Aggregate Capabilities & Workload Progress by Operational Domain
+    const domainMap = {};
+    for (const t of tasks) {
+      const compKey = t.component || 'infrastructure';
+      const compName = componentLabels[compKey] || compKey || 'زیرساخت و عملیات';
+      if (!domainMap[compKey]) {
+        domainMap[compKey] = {
+          name: compName,
+          tasksCount: 0,
+          doneCount: 0,
+          spentHours: 0,
+          estHours: 0,
+          capabilities: []
+        };
+      }
+      domainMap[compKey].tasksCount += 1;
+      if (t.status === 'Done' || t.status === 'done') domainMap[compKey].doneCount += 1;
+      domainMap[compKey].spentHours += (t.spent_hours || 0);
+      domainMap[compKey].estHours += (t.estimate_hours || 0);
+      
+      const opDesc = taskOperationalMap[t.id] || t.description || t.title;
+      domainMap[compKey].capabilities.push({ id: t.id, title: t.title, desc: opDesc, status: t.status });
+    }
+
+    let domainCapabilitiesHTML = '';
+    for (const dKey of Object.keys(domainMap)) {
+      const d = domainMap[dKey];
+      const spent = Math.round(d.spentHours);
+      const est = Math.round(d.estHours);
+      const prog = est > 0 ? Math.min(100, Math.round((spent / est) * 100)) : (d.tasksCount > 0 ? Math.round((d.doneCount / d.tasksCount) * 100) : 0);
+
+      const itemsHTML = d.capabilities.map(c => `
+        <li style="margin-bottom: 4px;">
+          <strong style="color:#0284C7;">[${c.id}] ${c.title}:</strong> ${c.desc}
+        </li>
+      `).join('');
+
+      domainCapabilitiesHTML += `
+        <tr>
+          <td><strong>${d.name}</strong></td>
+          <td><span class="badge badge-task">${d.tasksCount} تسک (${d.doneCount} تکمیل)</span></td>
+          <td><strong>${spent}h</strong> / ${est}h</td>
+          <td>
+            <div class="progress-wrap" style="width: 85px;">
+              <div class="progress-fill" style="width: ${prog}%"></div>
+            </div>
+            <strong style="color: #0284C7; font-size: 0.95rem;">%${prog}</strong>
+          </td>
+          <td>
+            <ul style="margin: 0; padding-right: 1.2rem; font-size: 0.83rem; color: #334155; line-height: 1.45;">
+              ${itemsHTML}
+            </ul>
+          </td>
+        </tr>
+      `;
+    }
+
     let summaryTableRows = '';
     let sprintCardsHTML = '';
 
@@ -662,6 +719,29 @@ router.get('/reports/sprints-html', (req, res) => {
       <div class="lbl">پیشرفت کل اسپرینت‌ها</div>
       <div class="val" style="color: #7E22CE;">%${overallProg}</div>
     </div>
+  </div>
+
+  <!-- 🎯 Summary Section: Capabilities worked on & progress per domain -->
+  <div class="sprint-card" style="border-top: 4px solid #0EA5E9; background: #F8FAFC; margin-bottom: 1.8rem;">
+    <h2 style="color: #0284C7; margin-top: 0;">🎯 خلاصه وضعیت پیشرفت قابلیت‌ها و کارکرد حوزه‌های عملیاتی ${targetSprint !== 'all' ? `در ${targetSprint}` : 'در کل اسپرینت‌ها'}</h2>
+    <p style="font-size: 0.88rem; color: #64748B; margin-bottom: 1rem;">
+      جدول زیر میزان کارکرد (ساعت)، درصد پیشرفت و قابلیت‌های فنی توسعه‌یافته را به تفکیک حوزه عملیاتی نشان می‌دهد:
+    </p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 170px;">حوزه عملیاتی / قابلیت</th>
+          <th style="width: 120px;">تعداد تسک</th>
+          <th style="width: 130px;">حجم کارکرد (ساعت)</th>
+          <th style="width: 150px;">درصد پیشرفت حوزه</th>
+          <th>قابلیت‌ها و دستاوردهای فنی انجام‌شده</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${domainCapabilitiesHTML}
+      </tbody>
+    </table>
   </div>
 
   <div class="sprint-card">
