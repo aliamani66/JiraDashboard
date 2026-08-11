@@ -1,4 +1,4 @@
-ARG REGISTRY=docker.io
+ARG REGISTRY=docker.arvancloud.ir
 FROM ${REGISTRY}/nginx:alpine
 
 # نصب openssl برای ساخت سرتیفیکیت

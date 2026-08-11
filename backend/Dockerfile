@@ -1,4 +1,4 @@
-ARG REGISTRY=docker.io
+ARG REGISTRY=docker.arvancloud.ir
 FROM ${REGISTRY}/node:20-alpine
 
 WORKDIR /app

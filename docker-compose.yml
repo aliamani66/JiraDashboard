@@ -8,16 +8,14 @@ services:
       context: ./nginx-proxy
       dockerfile: Dockerfile
       args:
-        REGISTRY: ${REGISTRY:-docker.io}
+        REGISTRY: ${REGISTRY:-docker.arvancloud.ir}
     image: jira-nginx-proxy:latest
     container_name: jira-nginx-proxy
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     volumes:
-      # سرتیفیکیت self-signed در volume ذخیره می‌شه
-      # تا هر بار دوباره generate نشه
       - ssl_certs:/etc/nginx/ssl
     depends_on:
       - frontend
@@ -30,12 +28,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        REGISTRY: ${REGISTRY:-docker.io}
+        REGISTRY: ${REGISTRY:-docker.arvancloud.ir}
     image: jira-dashboard-frontend:latest
     container_name: jira-dashboard-frontend
     restart: always
     expose:
       - "80"
+    ports:
+      - "5173:80"
     depends_on:
       - backend
     networks:
@@ -47,12 +47,12 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       args:
-        REGISTRY: ${REGISTRY:-docker.io}
+        REGISTRY: ${REGISTRY:-docker.arvancloud.ir}
     image: jira-dashboard-backend:latest
     container_name: jira-dashboard-backend
     restart: always
-    expose:
-      - "3001"
+    ports:
+      - "3001:3001"
     env_file:
       - ./backend/.env
     volumes:
@@ -62,7 +62,7 @@ services:
 
 volumes:
   sqlite_data:
-  ssl_certs:       # نگهداری سرتیفیکیت بین restart‌ها
+  ssl_certs:
 
 networks:
   jira-net:
