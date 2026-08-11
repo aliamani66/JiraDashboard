@@ -1,5 +1,8 @@
 const axios = require('axios');
+const https = require('https');
 const jiraMapping = require('../jiraMapping');
+
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 let config;
 try {
@@ -58,11 +61,11 @@ async function jiraSearch(jql, fields = [], retries = 5) {
     try {
       if (isCloud) {
         const urlCloud = `${jiraConfig.baseUrl}/rest/api/3/search/jql`;
-        const response = await axios.post(urlCloud, { jql, fields: validFields }, { headers, timeout: 15000 });
+        const response = await axios.post(urlCloud, { jql, fields: validFields }, { headers, httpsAgent, timeout: 15000 });
         return response.data;
       } else {
         const urlServer = `${jiraConfig.baseUrl}/rest/api/2/search`;
-        const response = await axios.post(urlServer, { jql, fields: validFields }, { headers, timeout: 15000 });
+        const response = await axios.post(urlServer, { jql, fields: validFields }, { headers, httpsAgent, timeout: 15000 });
         return response.data;
       }
     } catch (err) {
@@ -72,6 +75,7 @@ async function jiraSearch(jql, fields = [], retries = 5) {
           const urlFallback = `${jiraConfig.baseUrl}/rest/api/2/search`;
           const response = await axios.get(urlFallback, {
             headers,
+            httpsAgent,
             params: { jql, fields: validFields.join(',') },
             timeout: 15000
           });
