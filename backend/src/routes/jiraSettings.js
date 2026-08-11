@@ -32,6 +32,9 @@ function parseEnv() {
 
 // Helper: write key-value object back to .env
 function writeEnv(updates) {
+  for (const [k, v] of Object.entries(updates)) {
+    process.env[k] = v;
+  }
   if (!fs.existsSync(envPath)) {
     const lines = Object.entries(updates).map(([k, v]) => `${k}=${v}`);
     fs.writeFileSync(envPath, lines.join('\n') + '\n', 'utf8');
@@ -230,25 +233,29 @@ router.post('/diagnose', async (req, res) => {
 
     let headers = { Authorization: basicAuth, 'Content-Type': 'application/json', 'Accept': 'application/json' };
 
+    const pKeyStr = projectKey.trim().toUpperCase();
+    const jqlFilter = (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') ? `project = "${pKeyStr}" ORDER BY created DESC` : `ORDER BY created DESC`;
+    const projectUrlPath = (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') ? `/${pKeyStr}` : '';
+
     let projRes;
     try {
-      projRes = await axios.get(`${baseUrl}/rest/api/2/project/${projectKey}`, { headers, httpsAgent, timeout: 10000 });
+      projRes = await axios.get(`${baseUrl}/rest/api/2/project${projectUrlPath}`, { headers, httpsAgent, timeout: 10000 });
     } catch (e) {
       if (e.response && e.response.status === 401) {
         // Retry with Bearer Auth
         headers.Authorization = bearerAuth;
         try {
-          projRes = await axios.get(`${baseUrl}/rest/api/2/project/${projectKey}`, { headers, httpsAgent, timeout: 10000 });
+          projRes = await axios.get(`${baseUrl}/rest/api/2/project${projectUrlPath}`, { headers, httpsAgent, timeout: 10000 });
         } catch (eBearer) {
           try {
-            projRes = await axios.get(`${baseUrl}/rest/api/3/project/${projectKey}`, { headers, httpsAgent, timeout: 10000 });
+            projRes = await axios.get(`${baseUrl}/rest/api/3/project${projectUrlPath}`, { headers, httpsAgent, timeout: 10000 });
           } catch (e3) {
             return res.status(401).json({ success: false, message: 'خطای 401 احراز هویت با جیرا: نام کاربری یا توکن معتبر نیست.' });
           }
         }
       } else {
         try {
-          projRes = await axios.get(`${baseUrl}/rest/api/3/project/${projectKey}`, { headers, httpsAgent, timeout: 10000 });
+          projRes = await axios.get(`${baseUrl}/rest/api/3/project${projectUrlPath}`, { headers, httpsAgent, timeout: 10000 });
         } catch (e3) {
           return res.status(400).json({
             success: false,
@@ -261,7 +268,7 @@ router.post('/diagnose', async (req, res) => {
     let searchRes;
     try {
       searchRes = await axios.post(`${baseUrl}/rest/api/2/search`, {
-        jql: `project = ${projectKey} ORDER BY created DESC`,
+        jql: jqlFilter,
         maxResults: 10,
         fields: ['*all']
       }, { headers, httpsAgent, timeout: 15000 });
@@ -270,13 +277,13 @@ router.post('/diagnose', async (req, res) => {
         searchRes = await axios.get(`${baseUrl}/rest/api/2/search`, {
           headers,
           httpsAgent,
-          params: { jql: `project = ${projectKey} ORDER BY created DESC`, maxResults: 10, fields: '*all' },
+          params: { jql: jqlFilter, maxResults: 10, fields: '*all' },
           timeout: 15000
         });
       } catch (e2) {
         try {
           searchRes = await axios.post(`${baseUrl}/rest/api/3/search/jql`, {
-            jql: `project = ${projectKey} ORDER BY created DESC`,
+            jql: jqlFilter,
             maxResults: 10,
             fields: ['*all']
           }, { headers, httpsAgent, timeout: 15000 });

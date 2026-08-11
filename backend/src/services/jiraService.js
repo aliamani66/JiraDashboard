@@ -120,10 +120,10 @@ function parseJiraDescription(desc) {
 async function fetchEpics() {
   if (!isConfigured) return [];
   try {
-    const projKeyStr = (jiraConfig.projectKey || '').trim();
+    const projKeyStr = (process.env.JIRA_PROJECT_KEY || jiraConfig.projectKey || '').trim();
     let projectFilter = '';
     if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
-      const projects = projKeyStr.split(',').map(p => p.trim()).filter(Boolean);
+      const projects = projKeyStr.split(',').map(p => `"${p.trim().toUpperCase()}"`).filter(p => p !== '""');
       if (projects.length > 1) {
         projectFilter = `AND project IN (${projects.join(',')})`;
       } else if (projects.length === 1) {
