@@ -1,10 +1,10 @@
 # Dependencies
 node_modules/
 frontend/node_modules/
-backend/node_modules/
+# backend/node_modules/ (مجاز جهت اجرای آفلاین داکر)
 
 # Production build
-frontend/dist/
+# frontend/dist/ (مجاز جهت اجرای آفلاین داکر)
 frontend/build/
 
 # Database & logs
