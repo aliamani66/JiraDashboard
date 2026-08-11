@@ -80,6 +80,18 @@ async function syncFromJira() {
     `);
 
     db.transaction(() => {
+      // Purge old mock/demo projects if real Jira epics exist
+      if (epics.length > 0) {
+        const realEpicIds = new Set(epics.map(e => e.id));
+        const existingProjects = db.prepare('SELECT id FROM projects').all();
+        for (const p of existingProjects) {
+          if (!realEpicIds.has(p.id)) {
+            db.prepare('DELETE FROM tasks WHERE project_id = ?').run(p.id);
+            db.prepare('DELETE FROM projects WHERE id = ?').run(p.id);
+          }
+        }
+      }
+
       for (const epic of epics) {
         epic.last_synced = syncTime;
         if (!epic.capabilities) epic.capabilities = '';

@@ -120,9 +120,17 @@ function parseJiraDescription(desc) {
 async function fetchEpics() {
   if (!isConfigured) return [];
   try {
-    const projects = (jiraConfig.projectKey || 'ORD').split(',').map(p => p.trim()).filter(Boolean);
-    const projectFilter = projects.length > 1 ? `project IN (${projects.join(',')})` : `project = ${projects[0]}`;
-    const jql = `issuetype=Epic AND ${projectFilter} ORDER BY rank ASC`;
+    const projKeyStr = (jiraConfig.projectKey || '').trim();
+    let projectFilter = '';
+    if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
+      const projects = projKeyStr.split(',').map(p => p.trim()).filter(Boolean);
+      if (projects.length > 1) {
+        projectFilter = `AND project IN (${projects.join(',')})`;
+      } else if (projects.length === 1) {
+        projectFilter = `AND project = ${projects[0]}`;
+      }
+    }
+    const jql = `issuetype=Epic ${projectFilter} ORDER BY created DESC`;
     const fields = [
       'summary', 
       'description', 
