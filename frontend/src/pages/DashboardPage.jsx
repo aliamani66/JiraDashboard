@@ -103,7 +103,7 @@ const DashboardPage = () => {
   const handleExportOverallReport = () => {
     const projectIds = filteredProjects.map(p => p.id).join(',');
     const token = localStorage.getItem('token') || '';
-    const url = `http://localhost:3001/api/reports/overall-html?project_ids=${encodeURIComponent(projectIds)}&token=${token}`;
+    const url = `/api/reports/overall-html?project_ids=${encodeURIComponent(projectIds)}&token=${token}`;
     window.open(url, '_blank');
   };
 

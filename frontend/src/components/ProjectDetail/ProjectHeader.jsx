@@ -81,7 +81,7 @@ const ProjectHeader = ({ project, capabilities = [] }) => {
 
           <button 
             className="ph-export-btn"
-            onClick={() => window.open(`http://localhost:3001/api/reports/project-html/${project.id}?token=${localStorage.getItem('token')}`, '_blank')}
+            onClick={() => window.open(`/api/reports/project-html/${project.id}?token=${localStorage.getItem('token')}`, '_blank')}
             title="دانلود / چاپ گزارش رسمی و نمودار گانت پروژه"
           >
             <Printer size={14} />

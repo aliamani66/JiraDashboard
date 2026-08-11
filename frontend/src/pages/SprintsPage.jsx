@@ -191,21 +191,21 @@ const SprintsPage = () => {
         <div className="sp-export-btns-group">
           <button 
             className="sp-export-btn" 
-            onClick={() => window.open(`http://localhost:3001/api/reports/sprints-html?sprint=${encodeURIComponent(selectedSprint)}&token=${localStorage.getItem('token')}`, '_blank')} 
-            title={`دانلود گزارش PDF اختصاصی ${selectedSprint}`}
+            onClick={() => window.open(`/api/reports/sprints-html?sprint=${encodeURIComponent(selectedSprint)}&token=${localStorage.getItem('token')}`, '_blank')} 
+            title="خروجی و چاپ گزارش رسمی تحویل‌دادنی‌ها (PDF Printable)"
           >
-            <Printer size={16} />
-            <span>گزارش PDF ({selectedSprint === 'all' ? 'کل اسپرینت‌ها' : selectedSprint})</span>
+            <Printer size={15} />
+            <span>چاپ گزارش اسپرینت ({selectedSprint})</span>
           </button>
 
           {selectedSprint !== 'all' && (
             <button 
               className="sp-export-btn secondary" 
-              onClick={() => window.open(`http://localhost:3001/api/reports/sprints-html?sprint=all&token=${localStorage.getItem('token')}`, '_blank')} 
-              title="دانلود گزارش PDF تجمیعی تمامی اسپرینت‌ها"
+              onClick={() => window.open(`/api/reports/sprints-html?sprint=all&token=${localStorage.getItem('token')}`, '_blank')} 
+              title="خروجی و چاپ گزارش تمام اسپرین‌ها"
             >
-              <Printer size={16} />
-              <span>گزارش کل اسپرینت‌ها</span>
+              <FileText size={15} />
+              <span>گزارش جامع تمام اسپرینت‌ها</span>
             </button>
           )}
         </div>

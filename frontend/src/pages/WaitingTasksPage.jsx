@@ -42,7 +42,7 @@ const WaitingTasksPage = () => {
 
         <button 
           className="wt-export-btn"
-          onClick={() => window.open(`http://localhost:3001/api/reports/waiting-html?token=${localStorage.getItem('token')}`, '_blank')}
+          onClick={() => window.open(`/api/reports/waiting-html?token=${localStorage.getItem('token')}`, '_blank')}
           title="دانلود و چاپ خروجی گزارش تسک‌های منتظر و آن‌هولد"
         >
           <Printer size={16} />
