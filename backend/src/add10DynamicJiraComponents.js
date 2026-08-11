@@ -2,7 +2,7 @@ const axios = require('axios');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const baseUrl = process.env.JIRA_BASE_URL || 'https://aliamani6.atlassian.net';
+const baseUrl = process.env.JIRA_BASE_URL || 'https://10.100.71.140:8443';
 const auth = 'Basic ' + Buffer.from(`${process.env.JIRA_USERNAME}:${process.env.JIRA_TOKEN}`).toString('base64');
 
 const client = axios.create({

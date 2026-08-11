@@ -5,7 +5,7 @@ import { ChevronLeft, Clock, ClipboardList, AlertCircle, Calendar, Flag, Externa
 import { useWaitingTasks } from '../hooks/useProjects';
 import './WaitingTasksPage.css';
 
-const JIRA_BASE_URL = 'https://aliamani6.atlassian.net';
+const JIRA_BASE_URL = 'https://10.100.71.140:8443';
 
 const priorityMap = {
   'High': { label: 'بالا', className: 'high' },

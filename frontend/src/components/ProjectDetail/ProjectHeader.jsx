@@ -3,7 +3,7 @@ import { Calendar, ExternalLink, Zap, Clock, CheckCircle2, Printer } from 'lucid
 import StatusBadge from '../common/StatusBadge';
 import './ProjectHeader.css';
 
-const JIRA_BASE_URL = 'https://aliamani6.atlassian.net';
+const JIRA_BASE_URL = 'https://10.100.71.140:8443';
 
 const categoryMap = {
   'devops': 'دواپس',

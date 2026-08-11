@@ -3,7 +3,7 @@ const axios = require('axios');
 const { initDb, getDb } = require('./db/database');
 const { syncJiraData } = require('./services/cacheService');
 
-const BASE_URL = process.env.JIRA_BASE_URL || 'https://aliamani6.atlassian.net';
+const BASE_URL = process.env.JIRA_BASE_URL || 'https://10.100.71.140:8443';
 const USERNAME = process.env.JIRA_USERNAME || 'aliamani66@gmail.com';
 const TOKEN = process.env.JIRA_TOKEN;
 const PROJECT_KEY = process.env.JIRA_PROJECT_KEY || 'ORD';

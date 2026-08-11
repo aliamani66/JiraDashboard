@@ -3,7 +3,7 @@ import { Target, Calendar, CheckCircle2, Circle, ExternalLink, Filter, Zap, Repe
 import StatusBadge from '../common/StatusBadge';
 import './SprintSection.css';
 
-const JIRA_BASE_URL = 'https://aliamani6.atlassian.net';
+const JIRA_BASE_URL = 'https://10.100.71.140:8443';
 
 const SprintSection = ({ tasks = [] }) => {
   const [selectedAssigneeFilter, setSelectedAssigneeFilter] = useState('all');

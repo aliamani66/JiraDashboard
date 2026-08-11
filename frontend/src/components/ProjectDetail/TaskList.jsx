@@ -4,7 +4,7 @@ import StatusBadge from '../common/StatusBadge';
 import './TaskList.css';
 import './TaskListFeatures.css';
 
-const JIRA_BASE_URL = 'https://aliamani6.atlassian.net';
+const JIRA_BASE_URL = 'https://10.100.71.140:8443';
 
 const priorityMap = {
   'High': { label: 'بالا', className: 'high' },

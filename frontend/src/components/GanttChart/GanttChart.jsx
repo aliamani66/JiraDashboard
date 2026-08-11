@@ -211,7 +211,7 @@ const GanttChart = ({ tasks }) => {
               >
                 <div className="gantt-task-name" title={`${task.id} - ${sprintBadge || ''} - ${taskName}`}>
                   <a 
-                    href={`https://aliamani6.atlassian.net/browse/${task.id}`} 
+                    href={`https://10.100.71.140:8443/browse/${task.id}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="task-jira-link"
@@ -254,7 +254,7 @@ const GanttChart = ({ tasks }) => {
                       <div className="gantt-tooltip">
                         <div className="tooltip-header">
                           <a 
-                            href={`https://aliamani6.atlassian.net/browse/${task.id}`} 
+                            href={`https://10.100.71.140:8443/browse/${task.id}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="task-jira-link"

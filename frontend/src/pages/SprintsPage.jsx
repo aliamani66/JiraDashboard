@@ -6,7 +6,7 @@ import { api } from '../services/api';
 import StatusBadge from '../components/common/StatusBadge';
 import './SprintsPage.css';
 
-const JIRA_BASE_URL = 'https://aliamani6.atlassian.net';
+const JIRA_BASE_URL = 'https://10.100.71.140:8443';
 
 const SprintsPage = () => {
   const navigate = useNavigate();
