@@ -316,14 +316,14 @@ const JiraSettingsPage = () => {
       {/* ── 1. CONNECTION ── */}
       <Section icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
         <div className="jsp-grid-2">
-          <Field label="آدرس پایه Jira (Base URL)" hint="مثال: https://company.atlassian.net یا https://jira.company.com">
-            <Input value={cfg.connection?.baseUrl} onChange={v => set('connection', 'baseUrl', v)} placeholder="https://company.atlassian.net" />
+          <Field label="آدرس پایه Jira (Base URL)" hint="مثال: https://10.100.71.140:8443 یا https://jira.company.com">
+            <Input value={cfg.connection?.baseUrl} onChange={v => set('connection', 'baseUrl', v)} placeholder="https://10.100.71.140:8443" />
           </Field>
-          <Field label="نام کاربری / ایمیل حساب Jira" hint="ایمیل حساب Atlassian یا نام کاربری">
-            <Input value={cfg.connection?.username} onChange={v => set('connection', 'username', v)} placeholder="you@company.com" />
+          <Field label="نام کاربری / ایمیل حساب Jira" hint="نام کاربری یا ایمیل حساب جیرا">
+            <Input value={cfg.connection?.username} onChange={v => set('connection', 'username', v)} placeholder="m.ghafoory" />
           </Field>
-          <Field label="API Token / کلمه عبور جیرا" hint="از صفحه Atlassian API Tokens یا کلمه عبور حساب دریافت کنید">
-            <Input value={cfg.connection?.token} onChange={v => set('connection', 'token', v)} placeholder="ATATT3xFfG..." password />
+          <Field label="API Token / کلمه عبور جیرا" hint="کلمه عبور یا توکن اختصاصی حساب جیرا">
+            <Input value={cfg.connection?.token} onChange={v => set('connection', 'token', v)} placeholder="NzIyMzUz..." password />
           </Field>
           <Field label="کلید پروژه اصلی (Project Key)" hint="مثال: ORD، OPS، DEV">
             <Input value={cfg.connection?.projectKey} onChange={v => set('connection', 'projectKey', v)} placeholder="ORD" mono />
@@ -401,10 +401,10 @@ const JiraSettingsPage = () => {
       <Section icon={GitBranch} title="اتصال به Confluence (مستندات)" color="#A78BFA" defaultOpen={false}>
         <div className="jsp-grid-2">
           <Field label="آدرس Confluence Base URL">
-            <Input value={cfg.confluence?.baseUrl} onChange={v => set('confluence', 'baseUrl', v)} placeholder="https://company.atlassian.net/wiki" />
+            <Input value={cfg.confluence?.baseUrl} onChange={v => set('confluence', 'baseUrl', v)} placeholder="https://10.100.71.140:8443/wiki" />
           </Field>
-          <Field label="ایمیل حساب Confluence">
-            <Input value={cfg.confluence?.username} onChange={v => set('confluence', 'username', v)} placeholder="you@company.com" />
+          <Field label="ایمیل / نام کاربری حساب Confluence">
+            <Input value={cfg.confluence?.username} onChange={v => set('confluence', 'username', v)} placeholder="m.ghafoory" />
           </Field>
           <Field label="کلید پیش‌فرض Space" hint="مثال: OPS، TECH، DEV">
             <Input value={cfg.confluence?.defaultSpaceKey} onChange={v => set('confluence', 'defaultSpaceKey', v)} placeholder="OPS" mono />
