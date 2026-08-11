@@ -16,7 +16,7 @@ module.exports = {
     baseUrl: process.env.JIRA_BASE_URL || defaultJiraUrl,
     username: process.env.JIRA_USERNAME || defaultJiraUser,
     token: process.env.JIRA_TOKEN || '',
-    projectKey: process.env.JIRA_PROJECT_KEY || 'ORD',
+    projectKey: process.env.JIRA_PROJECT_KEY || '',
     isConfigured: !!(process.env.JIRA_BASE_URL || defaultJiraUrl),
     mapping: jiraMapping
   },

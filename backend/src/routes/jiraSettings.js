@@ -72,7 +72,7 @@ router.get('/config', (req, res) => {
         baseUrl: env.JIRA_BASE_URL || process.env.JIRA_BASE_URL || '',
         username: env.JIRA_USERNAME || process.env.JIRA_USERNAME || '',
         token: env.JIRA_TOKEN ? '••••••••' : '',
-        projectKey: env.JIRA_PROJECT_KEY || process.env.JIRA_PROJECT_KEY || 'ORD',
+        projectKey: env.JIRA_PROJECT_KEY || process.env.JIRA_PROJECT_KEY || '',
         isConfigured: jiraService.isConfigured,
         syncIntervalMinutes: env.SYNC_INTERVAL_MINUTES || process.env.SYNC_INTERVAL_MINUTES || '60',
       },
@@ -192,12 +192,12 @@ router.put('/config', (req, res) => {
   }
 });
 
-// POST Reset Database directly from Jira Cloud live
+// POST Reset Database directly from Jira live
 router.post('/reset-db', async (req, res) => {
   try {
     const syncRes = await cacheService.syncFromJira();
     if (syncRes.success) {
-      res.json({ success: true, message: `دیتابیس با موفقیت و کاملاً زنده بر اساس داده‌های Jira Cloud همگام‌سازی شد (${syncRes.projectsSynced} پروژه و ${syncRes.tasksSynced} تسک).` });
+      res.json({ success: true, message: `دیتابیس با موفقیت بازسازی شد (${syncRes.projectsSynced} پروژه و ${syncRes.tasksSynced} تسک از جیرا دریافت شد).` });
     } else {
       res.status(500).json({ success: false, message: syncRes.message });
     }
@@ -216,7 +216,7 @@ router.post('/diagnose', async (req, res) => {
     if (!token || token === '••••••••') {
       token = env.JIRA_TOKEN || process.env.JIRA_TOKEN || '';
     }
-    const projectKey = req.body.projectKey || env.JIRA_PROJECT_KEY || process.env.JIRA_PROJECT_KEY || 'ORD';
+    const projectKey = req.body.projectKey || env.JIRA_PROJECT_KEY || process.env.JIRA_PROJECT_KEY || '';
 
     if (!baseUrl || !token) {
       return res.status(400).json({ success: false, message: 'آدرس Jira و توکن API الزامی است.' });

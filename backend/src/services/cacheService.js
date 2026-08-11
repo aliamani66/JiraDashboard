@@ -80,30 +80,15 @@ async function syncFromJira() {
     `);
 
     db.transaction(() => {
-      // Purge old mock/demo projects if real Jira epics exist
-      if (epics.length > 0) {
-        const realEpicIds = new Set(epics.map(e => e.id));
-        const existingProjects = db.prepare('SELECT id FROM projects').all();
-        for (const p of existingProjects) {
-          if (!realEpicIds.has(p.id)) {
-            db.prepare('DELETE FROM tasks WHERE project_id = ?').run(p.id);
-            db.prepare('DELETE FROM projects WHERE id = ?').run(p.id);
-          }
-        }
-      }
+      // FULL WIPE: Delete ALL existing projects and tasks before inserting fresh Jira data
+      db.prepare('DELETE FROM tasks').run();
+      db.prepare('DELETE FROM projects').run();
+      console.log('Cleared all old projects and tasks from database.');
 
       for (const epic of epics) {
         epic.last_synced = syncTime;
         if (!epic.capabilities) epic.capabilities = '';
         if (!epic.confluence_link) epic.confluence_link = null;
-
-        // Preserve existing non-empty description if Jira description is empty
-        if (!epic.description || epic.description.trim() === '') {
-          const existingProj = db.prepare('SELECT description FROM projects WHERE id = ?').get(epic.id);
-          if (existingProj && existingProj.description && existingProj.description.trim() !== '') {
-            epic.description = existingProj.description;
-          }
-        }
 
         insertProject.run(epic);
         projectsSynced++;

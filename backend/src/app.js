@@ -38,7 +38,7 @@ async function start() {
 
   // If Jira is configured, perform initial sync automatically
   if (jiraService.isConfigured) {
-    console.log('Jira configured. Running initial sync from Jira Cloud...');
+    console.log('Jira configured. Running initial sync from Jira...');
     await syncFromJira();
   }
 
