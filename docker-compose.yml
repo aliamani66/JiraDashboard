@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
 
-  # ─── Reverse Proxy (entry point) ────────────────────────────────────
+  # ─── Reverse Proxy (entry point: Port 8081 & 8443) ──────────────────
   nginx-proxy:
     build:
       context: ./nginx-proxy
@@ -13,7 +13,7 @@ services:
     container_name: jira-nginx-proxy
     restart: always
     ports:
-      - "8080:80"
+      - "8081:80"
       - "8443:443"
     volumes:
       - ssl_certs:/etc/nginx/ssl
