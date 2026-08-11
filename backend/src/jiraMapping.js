@@ -11,7 +11,7 @@ module.exports = {
 
   // 2. تنظیمات اتصال به Confluence (مستندات سازمان)
   confluence: {
-    baseUrl: process.env.CONFLUENCE_BASE_URL || 'https://confluence.example.com',
+    baseUrl: process.env.CONFLUENCE_BASE_URL || 'https://10.100.71.140:8443/wiki',
     username: process.env.CONFLUENCE_USERNAME || process.env.JIRA_USERNAME || '',
     token: process.env.CONFLUENCE_TOKEN || process.env.JIRA_TOKEN || '',
     // الگو ساخت لینک مستقیم به مستندات کانفلوئنس در صورت عدم وجود لینک صریح
