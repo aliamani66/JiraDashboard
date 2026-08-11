@@ -211,46 +211,77 @@ router.post('/diagnose', async (req, res) => {
     const env = parseEnv();
     const baseUrl = req.body.baseUrl || env.JIRA_BASE_URL || process.env.JIRA_BASE_URL || '';
     const username = req.body.username || env.JIRA_USERNAME || process.env.JIRA_USERNAME || '';
-    const token = req.body.token || env.JIRA_TOKEN || process.env.JIRA_TOKEN || '';
+    let token = req.body.token || env.JIRA_TOKEN || process.env.JIRA_TOKEN || '';
+    if (!token || token === '••••••••') {
+      token = env.JIRA_TOKEN || process.env.JIRA_TOKEN || '';
+    }
     const projectKey = req.body.projectKey || env.JIRA_PROJECT_KEY || process.env.JIRA_PROJECT_KEY || 'ORD';
 
     if (!baseUrl || !token) {
       return res.status(400).json({ success: false, message: 'آدرس Jira و توکن API الزامی است.' });
     }
 
-    const authHeader = 'Basic ' + Buffer.from(`${username}:${token}`).toString('base64');
-    const headers = { Authorization: authHeader, 'Content-Type': 'application/json' };
+    const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+
+    // Try Basic Auth first, fallback to Bearer Auth if 401
+    const basicAuth = 'Basic ' + Buffer.from(`${username}:${token}`).toString('base64');
+    const bearerAuth = 'Bearer ' + token;
+
+    let headers = { Authorization: basicAuth, 'Content-Type': 'application/json', 'Accept': 'application/json' };
 
     let projRes;
     try {
-      projRes = await axios.get(`${baseUrl}/rest/api/3/project/${projectKey}`, { headers, timeout: 10000 });
+      projRes = await axios.get(`${baseUrl}/rest/api/2/project/${projectKey}`, { headers, httpsAgent, timeout: 10000 });
     } catch (e) {
-      try {
-        projRes = await axios.get(`${baseUrl}/rest/api/2/project/${projectKey}`, { headers, timeout: 10000 });
-      } catch (e2) {
-        return res.status(400).json({
-          success: false,
-          message: `خطا در برقراری ارتباط با Jira API: ${e.response?.data?.message || e.message}`,
-        });
+      if (e.response && e.response.status === 401) {
+        // Retry with Bearer Auth
+        headers.Authorization = bearerAuth;
+        try {
+          projRes = await axios.get(`${baseUrl}/rest/api/2/project/${projectKey}`, { headers, httpsAgent, timeout: 10000 });
+        } catch (eBearer) {
+          try {
+            projRes = await axios.get(`${baseUrl}/rest/api/3/project/${projectKey}`, { headers, httpsAgent, timeout: 10000 });
+          } catch (e3) {
+            return res.status(401).json({ success: false, message: 'خطای 401 احراز هویت با جیرا: نام کاربری یا توکن معتبر نیست.' });
+          }
+        }
+      } else {
+        try {
+          projRes = await axios.get(`${baseUrl}/rest/api/3/project/${projectKey}`, { headers, httpsAgent, timeout: 10000 });
+        } catch (e3) {
+          return res.status(400).json({
+            success: false,
+            message: `خطا در برقراری ارتباط با Jira API: ${e.response?.data?.message || e.message}`,
+          });
+        }
       }
     }
 
     let searchRes;
     try {
-      searchRes = await axios.post(`${baseUrl}/rest/api/3/search/jql`, {
+      searchRes = await axios.post(`${baseUrl}/rest/api/2/search`, {
         jql: `project = ${projectKey} ORDER BY created DESC`,
         maxResults: 10,
         fields: ['*all']
-      }, { headers, timeout: 15000 });
+      }, { headers, httpsAgent, timeout: 15000 });
     } catch (e) {
       try {
         searchRes = await axios.get(`${baseUrl}/rest/api/2/search`, {
           headers,
+          httpsAgent,
           params: { jql: `project = ${projectKey} ORDER BY created DESC`, maxResults: 10, fields: '*all' },
           timeout: 15000
         });
       } catch (e2) {
-        return res.status(400).json({ success: false, message: `خطا در دریافت تسک‌های نمونه: ${e.message}` });
+        try {
+          searchRes = await axios.post(`${baseUrl}/rest/api/3/search/jql`, {
+            jql: `project = ${projectKey} ORDER BY created DESC`,
+            maxResults: 10,
+            fields: ['*all']
+          }, { headers, httpsAgent, timeout: 15000 });
+        } catch (e3) {
+          return res.status(400).json({ success: false, message: `خطا در دریافت تسک‌های نمونه: ${e.message}` });
+        }
       }
     }
 

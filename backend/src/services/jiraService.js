@@ -48,7 +48,7 @@ function extractDateField(issue, fieldName) {
 
 // Perform JQL Search with retry logic for network stability
 async function jiraSearch(jql, fields = [], retries = 5) {
-  const headers = { 
+  let headers = { 
     Authorization: getAuthHeader(),
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -69,6 +69,12 @@ async function jiraSearch(jql, fields = [], retries = 5) {
         return response.data;
       }
     } catch (err) {
+      if (err.response && err.response.status === 401 && !headers.Authorization.startsWith('Bearer')) {
+        console.log(`[JiraSearch 401 Auth Retry] Switching from Basic to Bearer Token...`);
+        headers.Authorization = `Bearer ${jiraConfig.token}`;
+        attempt--;
+        continue;
+      }
       console.log(`[JiraSearch Attempt ${attempt + 1}/${retries}] Error: ${err.code || err.message}`);
       if (attempt === retries - 1) {
         try {
