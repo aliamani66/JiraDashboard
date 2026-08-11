@@ -1,8 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { initDb } = require('./db/database');
+const { initDb, getDb } = require('./db/database');
 const { initCron, syncFromJira } = require('./services/cacheService');
+const { hashPassword } = require('./services/authService');
 const jiraService = require('./services/jiraService');
 
 const authRoutes = require('./routes/auth');
@@ -35,6 +36,17 @@ app.use((err, req, res, next) => {
 async function start() {
   await initDb();
   console.log('Database ready.');
+
+  // Always ensure admin user exists
+  const db = getDb();
+  const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+  if (!existingAdmin) {
+    const hashed = await hashPassword('admin123');
+    db.prepare('INSERT INTO users (username, password_hash, display_name, role) VALUES (?, ?, ?, ?)').run(
+      'admin', hashed, 'مدیر سیستم', 'admin'
+    );
+    console.log('Created admin user (admin / admin123).');
+  }
 
   // If Jira is configured, perform initial sync automatically
   if (jiraService.isConfigured) {
