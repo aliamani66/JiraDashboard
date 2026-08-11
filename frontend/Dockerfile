@@ -5,7 +5,7 @@ FROM ${REGISTRY}/node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm config set registry https://registry.npmmirror.com && npm install
 
 COPY . .
 ARG VITE_API_BASE=/api

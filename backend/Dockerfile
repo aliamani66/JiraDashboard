@@ -4,7 +4,7 @@ FROM ${REGISTRY}/node:20-alpine
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --production
+RUN npm config set registry https://registry.npmmirror.com && npm install --production
 
 COPY . .
 
