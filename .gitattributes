@@ -1,0 +1,5 @@
+# Enforce Unix LF line endings for bash scripts
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Dockerfile text eol=lf
