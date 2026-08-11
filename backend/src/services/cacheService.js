@@ -118,10 +118,6 @@ async function syncFromJira() {
     const logInsert = db.prepare('INSERT INTO sync_log (synced_at, status, message, projects_synced, tasks_synced) VALUES (?, ?, ?, ?, ?)');
     logInsert.run(syncTime, 'Success', 'Sync completed successfully', projectsSynced, tasksSynced);
 
-    // Force ORD-5 project tasks to Critical state (100% waiting) for dashboard showcase
-    db.prepare("UPDATE tasks SET is_waiting = 1, status = 'Waiting', waiting_for_team = 'تیم زیرساخت و شبکه', waiting_reason = 'منتظر تأییدیه دسترسی لایه شبکه' WHERE project_id = 'ORD-5'").run();
-    db.prepare("UPDATE projects SET waiting_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = 'ORD-5'), completed_tasks = 0 WHERE id = 'ORD-5'").run();
-
     console.log(`Sync complete. Projects: ${projectsSynced}, Tasks: ${tasksSynced}`);
     return { success: true, projectsSynced, tasksSynced };
 
