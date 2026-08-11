@@ -4,7 +4,10 @@ FROM ${REGISTRY}/node:20-alpine
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm config set registry https://registry.npmmirror.com && npm install --production
+RUN npm config set registry https://registry.npmmirror.com \
+    && npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 20000 \
+    && npm install --production --no-audit --no-fund
 
 COPY . .
 
