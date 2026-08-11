@@ -2,51 +2,27 @@ version: '3.8'
 
 services:
 
-  # ─── Reverse Proxy (Entry point: HTTP 80 & HTTPS 443) ───────────────
-  nginx-proxy:
-    image: jira-nginx-proxy:latest
-    container_name: jira-nginx-proxy
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ssl_certs:/etc/nginx/ssl
-    depends_on:
-      - frontend
-    networks:
-      - jira-net
-
-  # ─── Frontend ────────────────────────────────────────────────────────
-  frontend:
-    image: jira-dashboard-frontend:latest
-    container_name: jira-dashboard-frontend
-    restart: always
-    expose:
-      - "80"
-    depends_on:
-      - backend
-    networks:
-      - jira-net
-
-  # ─── Backend ─────────────────────────────────────────────────────────
+  # ─── Backend (Port 3001) ─────────────────────────────────────────────
   backend:
     image: jira-dashboard-backend:latest
     container_name: jira-dashboard-backend
     restart: always
-    expose:
-      - "3001"
+    ports:
+      - "3001:3001"
     env_file:
       - ./backend.env
     volumes:
       - sqlite_data:/app/data_volume
-    networks:
-      - jira-net
+
+  # ─── Frontend (Port 5173) ────────────────────────────────────────────
+  frontend:
+    image: jira-dashboard-frontend:latest
+    container_name: jira-dashboard-frontend
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
 
 volumes:
   sqlite_data:
-  ssl_certs:
-
-networks:
-  jira-net:
-    driver: bridge
