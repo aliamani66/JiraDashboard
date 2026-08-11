@@ -7,6 +7,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const defaultJiraUrl = 'https://10.100.71.140:8443';
 const defaultJiraUser = 'm.ghafoory';
 
+
 module.exports = {
   port: process.env.PORT || 3001,
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-key',
