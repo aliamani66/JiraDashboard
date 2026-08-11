@@ -32,34 +32,45 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Initialize Database then start server
 async function start() {
   await initDb();
   console.log('Database ready.');
 
-  // Always ensure admin user exists
-  const db = getDb();
-  const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
-  if (!existingAdmin) {
-    const hashed = await hashPassword('admin123');
-    db.prepare('INSERT INTO users (username, password_hash, display_name, role) VALUES (?, ?, ?, ?)').run(
-      'admin', hashed, 'مدیر سیستم', 'admin'
-    );
-    console.log('Created admin user (admin / admin123).');
+  // Always ensure admin user exists with full permissions
+  try {
+    const db = getDb();
+    try {
+      db.prepare("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '[\"dashboard\",\"overall_timeline\",\"waiting_tasks\",\"user_management\",\"jira_settings\"]'").run();
+    } catch (_) {}
+
+    const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+    if (!existingAdmin) {
+      const hashed = await hashPassword('admin123');
+      const allPerms = JSON.stringify(["dashboard", "overall_timeline", "waiting_tasks", "user_management", "jira_settings"]);
+      db.prepare('INSERT INTO users (username, password_hash, display_name, role, permissions) VALUES (?, ?, ?, ?, ?)').run(
+        'admin', hashed, 'مدیر سیستم', 'admin', allPerms
+      );
+      console.log('Created admin user (admin / admin123).');
+    }
+  } catch (adminErr) {
+    console.error('Error ensuring admin user:', adminErr.message);
   }
 
-  // If Jira is configured, perform initial sync automatically
+  // Start HTTP Server FIRST so API endpoints & login are immediately available
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+
+  // If Jira is configured, perform initial sync asynchronously in background without blocking login
   if (jiraService.isConfigured) {
-    console.log('Jira configured. Running initial sync from Jira...');
-    await syncFromJira();
+    console.log('Jira configured. Running initial background sync from Jira...');
+    syncFromJira().catch(syncErr => {
+      console.error('Initial background Jira sync failed (server remains running):', syncErr.message);
+    });
   }
 
   // Initialize Cache Sync Cron
   initCron();
-
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-  });
 }
 
 start().catch(err => {

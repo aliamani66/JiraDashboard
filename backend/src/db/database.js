@@ -2,7 +2,9 @@ const initSqlJs = require('sql.js');
 const fs = require('fs');
 const path = require('path');
 
-const dbPath = path.join(__dirname, '../../database.sqlite');
+const volumeDir = '/app/data_volume';
+const defaultDbPath = path.join(__dirname, '../../database.sqlite');
+const dbPath = fs.existsSync(volumeDir) ? path.join(volumeDir, 'database.sqlite') : defaultDbPath;
 const schemaPath = path.join(__dirname, 'schema.sql');
 
 let db = null;
