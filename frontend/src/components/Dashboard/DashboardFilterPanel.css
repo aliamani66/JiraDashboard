@@ -196,6 +196,80 @@
   gap: 0.55rem;
 }
 
+.mft-pills-wrap.scrollable {
+  max-height: 180px;
+  overflow-y: auto;
+  padding-left: 0.2rem;
+}
+
+.mft-pills-wrap.scrollable::-webkit-scrollbar {
+  width: 4px;
+}
+.mft-pills-wrap.scrollable::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+/* Mini Label Search Input */
+.mft-mini-search {
+  position: relative;
+  margin-bottom: 0.2rem;
+}
+.mft-mini-input {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0.3rem 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.mft-mini-input:focus {
+  border-color: #C084FC;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.25);
+}
+.mft-mini-clear {
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+/* Expand / Collapse Button */
+.mft-expand-btn {
+  padding: 0.35rem 0.85rem;
+  border-radius: 20px;
+  border: 1px dashed rgba(192, 132, 252, 0.5);
+  background: rgba(139, 92, 246, 0.12);
+  color: #C084FC;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.mft-expand-btn:hover {
+  background: rgba(139, 92, 246, 0.25);
+  border-color: #C084FC;
+  transform: translateY(-1px);
+}
+.mft-expand-btn.collapse {
+  border-style: solid;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+
 /* Base Pill Button */
 .mft-pill {
   padding: 0.4rem 0.9rem;

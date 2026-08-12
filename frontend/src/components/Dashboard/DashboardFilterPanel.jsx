@@ -40,6 +40,8 @@ const DashboardFilterPanel = ({
   filteredCount = 0,
   onResetAll
 }) => {
+  const [compSearch, setCompSearch] = React.useState('');
+  const [showAllComps, setShowAllComps] = React.useState(false);
 
   // Toggle helper for multi-select arrays
   const toggleSelection = (item, currentList, setList) => {
@@ -51,6 +53,26 @@ const DashboardFilterPanel = ({
   };
 
   const hasActiveFilters = statusFilters.length > 0 || quarterFilters.length > 0 || componentFilters.length > 0 || searchQuery.trim() !== '';
+
+  // Filter components by search and sort selected ones first
+  const filteredComponents = availableComponents.filter(c => {
+    if (!compSearch.trim()) return true;
+    const meta = getCompMeta(c);
+    return c.toLowerCase().includes(compSearch.toLowerCase()) || meta.label.toLowerCase().includes(compSearch.toLowerCase());
+  });
+
+  // Sort so currently selected components appear at the top
+  const sortedComponents = [...filteredComponents].sort((a, b) => {
+    const aSel = componentFilters.includes(a);
+    const bSel = componentFilters.includes(b);
+    if (aSel && !bSel) return -1;
+    if (!aSel && bSel) return 1;
+    return 0;
+  });
+
+  const COMP_LIMIT = 8;
+  const visibleComponents = showAllComps || compSearch.trim() !== '' ? sortedComponents : sortedComponents.slice(0, COMP_LIMIT);
+  const hiddenCount = sortedComponents.length - visibleComponents.length;
 
   return (
     <div className="glass-card main-filter-tile">
@@ -167,19 +189,35 @@ const DashboardFilterPanel = ({
         <div className="mft-subcard">
           <div className="mft-subcard-header">
             <Layers size={16} className="text-accent-purple" />
-            <span>۳. کامپوننت‌های عملیاتی (انتخاب چندتایی)</span>
+            <span>۳. کامپوننت‌ها و لیبل‌ها</span>
             {componentFilters.length > 0 && <span className="sub-count-pill">{componentFilters.length} انتخابی</span>}
           </div>
 
-          <div className="mft-pills-wrap">
+          {/* Quick Label Filter Input if > 6 components */}
+          {availableComponents.length > 6 && (
+            <div className="mft-mini-search">
+              <input
+                type="text"
+                placeholder="🔍 فیلتر سریع لیبل‌ها..."
+                value={compSearch}
+                onChange={e => setCompSearch(e.target.value)}
+                className="mft-mini-input"
+              />
+              {compSearch && (
+                <button className="mft-mini-clear" onClick={() => setCompSearch('')}>×</button>
+              )}
+            </div>
+          )}
+
+          <div className="mft-pills-wrap scrollable">
             <button
               className={`mft-pill ${componentFilters.length === 0 ? 'active-all' : ''}`}
               onClick={() => setComponentFilters([])}
             >
-              🌐 همه کامپوننت‌ها
+              🌐 همه لیبل‌ها
             </button>
 
-            {availableComponents.map(key => {
+            {visibleComponents.map(key => {
               const meta = getCompMeta(key);
               const isSelected = componentFilters.includes(key);
               return (
@@ -192,6 +230,24 @@ const DashboardFilterPanel = ({
                 </button>
               );
             })}
+
+            {!compSearch && hiddenCount > 0 && (
+              <button
+                className="mft-expand-btn"
+                onClick={() => setShowAllComps(true)}
+              >
+                + {hiddenCount} لیبل دیگر...
+              </button>
+            )}
+
+            {!compSearch && showAllComps && availableComponents.length > COMP_LIMIT && (
+              <button
+                className="mft-expand-btn collapse"
+                onClick={() => setShowAllComps(false)}
+              >
+                ▲ کمتر
+              </button>
+            )}
           </div>
         </div>
 
