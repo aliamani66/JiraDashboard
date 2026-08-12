@@ -692,9 +692,34 @@ router.get('/reports/sprints-html', (req, res) => {
       height: 100%;
       background: linear-gradient(90deg, #0284C7, #16A34A);
     }
+    @page {
+      size: A4 landscape;
+      margin: 8mm;
+    }
     @media print {
       .no-print-bar { display: none !important; }
-      body { padding: 0; }
+      body {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #FFFFFF !important;
+        font-size: 11px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .header-banner, .sprint-card, .kpi-box {
+        break-inside: avoid;
+        box-shadow: none !important;
+      }
+      .data-table {
+        width: 100% !important;
+        table-layout: auto !important;
+        font-size: 9.5px !important;
+      }
+      .data-table th, .data-table td {
+        padding: 4px 5px !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+      }
     }
   </style>
 </head>
@@ -1164,9 +1189,38 @@ router.get('/reports/project-html/:id', (req, res) => {
       height: 100%;
       background: linear-gradient(90deg, #0284C7, #16A34A);
     }
+    @page {
+      size: A4 landscape;
+      margin: 8mm;
+    }
     @media print {
       .no-print-bar { display: none !important; }
-      body { padding: 0; }
+      body {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #FFFFFF !important;
+        font-size: 11px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .header-banner, .gantt-section, .kpi-box, .data-table {
+        break-inside: avoid;
+        box-shadow: none !important;
+      }
+      .gantt-label { width: 200px !important; flex-shrink: 0 !important; }
+      .gantt-header-label { width: 200px !important; flex-shrink: 0 !important; }
+      .gantt-meta { width: 130px !important; flex-shrink: 0 !important; }
+      .gantt-header-meta { width: 130px !important; flex-shrink: 0 !important; }
+      .data-table {
+        width: 100% !important;
+        table-layout: auto !important;
+        font-size: 9.5px !important;
+      }
+      .data-table th, .data-table td {
+        padding: 4px 5px !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+      }
     }
   </style>
 </head>
