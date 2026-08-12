@@ -49,6 +49,7 @@ export const api = {
   deleteUser: (id) => fetchWithAuth(`/users/${id}`, { method: 'DELETE' }),
   getJiraConfig: () => fetchWithAuth('/jira/config'),
   saveJiraConfig: (cfg) => fetchWithAuth('/jira/config', { method: 'PUT', body: JSON.stringify(cfg) }),
+  fetchJiraProjects: () => fetchWithAuth('/jira/fetch-jira-projects'),
   runJiraDiagnostic: (params) => fetchWithAuth('/jira/diagnose', { method: 'POST', body: JSON.stringify(params || {}) }),
   resetDatabase: () => fetchWithAuth('/jira/reset-db', { method: 'POST' }),
   getAllSprints: () => fetchWithAuth('/all-sprints'),

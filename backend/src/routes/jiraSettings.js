@@ -200,6 +200,16 @@ router.put('/config', (req, res) => {
   }
 });
 
+// GET All Jira Projects from live Jira Server for multi-select combo
+router.get('/fetch-jira-projects', async (req, res) => {
+  try {
+    const projects = await jiraService.fetchAllJiraProjects();
+    res.json({ success: true, projects });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'عدم دریافت لیست پروژه‌ها از جیرا: ' + err.message });
+  }
+});
+
 // POST Reset Database directly from Jira live
 router.post('/reset-db', async (req, res) => {
   try {

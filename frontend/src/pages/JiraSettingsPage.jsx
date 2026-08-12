@@ -229,6 +229,8 @@ const JiraSettingsPage = () => {
   const [diagLoading, setDiagLoading] = useState(false);
   const [diagResult, setDiagResult] = useState(null);
   const [toast, setToast] = useState(null);
+  const [discoveredProjects, setDiscoveredProjects] = useState([]);
+  const [fetchingProjects, setFetchingProjects] = useState(false);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -248,6 +250,39 @@ const JiraSettingsPage = () => {
   }, []);
 
   useEffect(() => { fetchConfig(); }, [fetchConfig]);
+
+  const handleFetchProjects = async () => {
+    try {
+      setFetchingProjects(true);
+      showToast('در حال دریافت لیست پروژه‌های موجود در Jira...');
+      const res = await api.fetchJiraProjects();
+      if (res.projects && res.projects.length > 0) {
+        setDiscoveredProjects(res.projects);
+        showToast(`${res.projects.length} پروژه از سرور Jira به همراه نام کامل شناسایی گردید.`);
+      } else {
+        showToast('پروژه‌ای دریافت نشد. لطفاً آدرس و توکن جیرا را بررسی بفرمایید.', 'error');
+      }
+    } catch (e) {
+      showToast('خطا در دریافت پروژه‌ها از Jira: ' + (e.message || ''), 'error');
+    } finally {
+      setFetchingProjects(false);
+    }
+  };
+
+  const selectedProjectKeys = (cfg.connection?.projectKey || '')
+    .split(',')
+    .map(k => k.trim())
+    .filter(Boolean);
+
+  const toggleProjectKey = (keyToToggle) => {
+    let current = [...selectedProjectKeys];
+    if (current.includes(keyToToggle)) {
+      current = current.filter(k => k !== keyToToggle);
+    } else {
+      current.push(keyToToggle);
+    }
+    set('connection', 'projectKey', current.join(', '));
+  };
 
   const handleSave = async () => {
     try {
@@ -430,6 +465,87 @@ const JiraSettingsPage = () => {
           <Field label="فاصله سینک خودکار (دقیقه)" hint="هر چند دقیقه داده‌های جیرا سینک شود">
             <Input value={cfg.connection?.syncIntervalMinutes} onChange={v => set('connection', 'syncIntervalMinutes', v)} placeholder="60" mono />
           </Field>
+
+          {/* 🌟 Multi-Select Jira Project Discovery Combo */}
+          <div style={{ gridColumn: 'span 2', marginTop: '0.5rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--glass-border)', borderRadius: '14px', padding: '1.1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <strong style={{ color: '#38BDF8', fontSize: '0.94rem' }}>🌐 انتخاب چندتایی پروژه‌های Jira (Project Selector Combo):</strong>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  با زدن دکمه روبرو، لیست کامل پروژه‌های موجود در سرور جیرا دریافت می‌شود و می‌توانید چند پروژه را تیک بزنید.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="jsp-run-diag-btn secondary"
+                onClick={handleFetchProjects}
+                disabled={fetchingProjects}
+                style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem' }}
+              >
+                <RefreshCw size={14} className={fetchingProjects ? 'spin' : ''} />
+                {fetchingProjects ? 'در حال دریافت لیست...' : '🔍 دریافت لیست پروژه‌های Jira'}
+              </button>
+            </div>
+
+            {/* List of Discovered Projects Pills */}
+            {discoveredProjects.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '12px', border: '1px solid var(--glass-border)', maxHeight: '180px', overflowY: 'auto' }}>
+                {discoveredProjects.map(p => {
+                  const isSel = selectedProjectKeys.includes(p.key);
+                  return (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => toggleProjectKey(p.key)}
+                      style={{
+                        padding: '0.42rem 0.9rem',
+                        borderRadius: '20px',
+                        border: isSel ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.15)',
+                        background: isSel ? 'linear-gradient(135deg, rgba(14,165,233,0.35), rgba(59,130,246,0.35))' : 'rgba(255,255,255,0.05)',
+                        color: isSel ? '#FFFFFF' : 'var(--text-secondary)',
+                        fontWeight: isSel ? '800' : '500',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                        fontSize: '0.84rem',
+                        boxShadow: isSel ? '0 0 12px rgba(56,189,248,0.3)' : 'none',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {isSel ? '✅' : '➕'} <strong>{p.key}</strong> <small style={{ opacity: 0.85 }}>({p.name})</small>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.85rem', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.85rem', borderRadius: '8px' }}>
+                💡 برای دریافت لیست و کمبو باکس زنده تمام پروژه‌های سرور جیرا، دکمه <strong>«🔍 دریافت لیست پروژه‌های Jira»</strong> را کلیک بفرمایید.
+              </div>
+            )}
+
+            {/* Manual input field */}
+            <Field label="کلیدهای پروژه انتخاب‌شده جهت همگام‌سازی (Project Keys):" hint="می‌توانید به صورت دستی یا از لیست بالا انتخاب کنید (با ویرگول جدا می‌شوند)">
+              <Input value={cfg.connection?.projectKey} onChange={v => set('connection', 'projectKey', v)} placeholder="ORD, OPS, DEV" mono />
+            </Field>
+
+            {/* Selected Projects Summary Banner */}
+            {selectedProjectKeys.length > 0 && (
+              <div style={{ marginTop: '0.85rem', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: '10px', padding: '0.75rem 1.05rem', fontSize: '0.86rem', lineHeight: '1.6' }}>
+                <strong style={{ color: '#38BDF8' }}>📌 پروژه‌های انتخاب‌شده فعلی جهت همگام‌سازی:</strong>
+                <div style={{ marginTop: '0.35rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {selectedProjectKeys.map(k => {
+                    const found = discoveredProjects.find(p => p.key === k);
+                    return (
+                      <span key={k} style={{ background: 'rgba(14, 165, 233, 0.25)', border: '1px solid #38BDF8', color: '#FFFFFF', padding: '0.2rem 0.65rem', borderRadius: '12px', fontSize: '0.82rem', fontWeight: 'bold' }}>
+                        {k} {found ? `(${found.name})` : ''}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </Section>
 

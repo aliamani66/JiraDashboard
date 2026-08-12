@@ -516,6 +516,55 @@ async function fetchTasksForEpic(epicKey) {
   }
 }
 
+async function fetchAllJiraProjects() {
+  const { baseUrl, username, token } = getJiraConfig();
+  if (!baseUrl || !token) throw new Error('تنظیمات آدرس یا توکن جیرا وارد نشده است.');
+
+  const headersVariants = getAuthHeaderVariants(username, token);
+  let projectsList = [];
+
+  for (const h of headersVariants) {
+    try {
+      const res = await axios.get(`${baseUrl}/rest/api/2/project`, {
+        headers: { Authorization: h, Accept: 'application/json' },
+        httpsAgent,
+        timeout: 6000
+      });
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        projectsList = res.data.map(p => ({
+          key: p.key,
+          name: p.name || p.key,
+          id: p.id || p.key
+        }));
+        break;
+      }
+    } catch (_) {}
+  }
+
+  if (projectsList.length === 0) {
+    try {
+      const searchRes = await jiraSearch('ORDER BY created DESC', ['project'], { maxResults: 50, timeout: 6000 });
+      if (searchRes && searchRes.issues) {
+        const pMap = new Map();
+        for (const issue of searchRes.issues) {
+          if (issue.fields?.project) {
+            const p = issue.fields.project;
+            pMap.set(p.key, { key: p.key, name: p.name || p.key, id: p.id || p.key });
+          }
+        }
+        projectsList = Array.from(pMap.values());
+      }
+    } catch (_) {}
+  }
+
+  if (projectsList.length === 0) {
+    const currentKeys = (getJiraConfig().projectKey || 'ORD').split(',').map(k => k.trim());
+    projectsList = currentKeys.map(k => ({ key: k, name: `پروژه ${k}`, id: k }));
+  }
+
+  return projectsList;
+}
+
 module.exports = {
   get isConfigured() {
     return getJiraConfig().isConfigured;
@@ -523,5 +572,6 @@ module.exports = {
   getJiraConfig,
   jiraSearch,
   fetchEpics,
-  fetchTasksForEpic
+  fetchTasksForEpic,
+  fetchAllJiraProjects
 };
