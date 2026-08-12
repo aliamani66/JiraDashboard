@@ -66,58 +66,62 @@ function writeEnv(updates) {
   fs.writeFileSync(envPath, newLines.join('\n'), 'utf8');
 }
 
+function getFullConfigObject() {
+  const env = parseEnv();
+  return {
+    connection: {
+      baseUrl: env.JIRA_BASE_URL || process.env.JIRA_BASE_URL || '',
+      username: env.JIRA_USERNAME || process.env.JIRA_USERNAME || '',
+      token: (env.JIRA_TOKEN || process.env.JIRA_TOKEN) ? '••••••••' : '',
+      projectKey: env.JIRA_PROJECT_KEY || process.env.JIRA_PROJECT_KEY || '',
+      isConfigured: jiraService.isConfigured,
+      syncIntervalMinutes: env.SYNC_INTERVAL_MINUTES || process.env.SYNC_INTERVAL_MINUTES || '60',
+    },
+    apiEndpoints: {
+      apiVersion: env.JIRA_API_VERSION || process.env.JIRA_API_VERSION || 'auto',
+      searchEndpoint: env.JIRA_SEARCH_ENDPOINT || process.env.JIRA_SEARCH_ENDPOINT || '/rest/api/2/search',
+      projectEndpoint: env.JIRA_PROJECT_ENDPOINT || process.env.JIRA_PROJECT_ENDPOINT || '/rest/api/2/project',
+    },
+    serverAndDb: {
+      port: env.PORT || process.env.PORT || '3001',
+      jwtSecret: (env.JWT_SECRET || process.env.JWT_SECRET) ? '••••••••' : 'dev-secret-key',
+      dbDriver: 'SQLite 3 (database.sqlite)',
+      dbStatus: 'متصل و فعال',
+    },
+    confluence: {
+      baseUrl: env.CONFLUENCE_BASE_URL || process.env.CONFLUENCE_BASE_URL || '',
+      username: env.CONFLUENCE_USERNAME || process.env.CONFLUENCE_USERNAME || '',
+      defaultSpaceKey: env.CONFLUENCE_DEFAULT_SPACE || process.env.CONFLUENCE_DEFAULT_SPACE || 'OPS',
+    },
+    waitingStatuses: (env.JIRA_WAITING_STATUSES || process.env.JIRA_WAITING_STATUSES || 'OnHolding,Waiting,Blocked,On Hold').split(',').map(s => s.trim()),
+    statusMapping: jiraMapping.statusMapping || {},
+    customFields: {
+      sprintField: env.JIRA_SPRINT_FIELD !== undefined ? env.JIRA_SPRINT_FIELD : (process.env.JIRA_SPRINT_FIELD || 'customfield_10004'),
+      waitingTeamField: env.JIRA_WAITING_TEAM_FIELD !== undefined ? env.JIRA_WAITING_TEAM_FIELD : (process.env.JIRA_WAITING_TEAM_FIELD || ''),
+      waitingReasonField: env.JIRA_WAITING_REASON_FIELD !== undefined ? env.JIRA_WAITING_REASON_FIELD : (process.env.JIRA_WAITING_REASON_FIELD || ''),
+      confluenceLinkField: env.JIRA_CONFLUENCE_LINK_FIELD !== undefined ? env.JIRA_CONFLUENCE_LINK_FIELD : (process.env.JIRA_CONFLUENCE_LINK_FIELD || ''),
+      capabilitiesField: env.JIRA_CAPABILITIES_FIELD !== undefined ? env.JIRA_CAPABILITIES_FIELD : (process.env.JIRA_CAPABILITIES_FIELD || ''),
+      categoryField: env.JIRA_CATEGORY_FIELD !== undefined ? env.JIRA_CATEGORY_FIELD : (process.env.JIRA_CATEGORY_FIELD || ''),
+    },
+    dateMapping: {
+      epicStartDateField: env.JIRA_EPIC_START_DATE_FIELD || process.env.JIRA_EPIC_START_DATE_FIELD || 'created',
+      epicDueDateField: env.JIRA_EPIC_DUE_DATE_FIELD || process.env.JIRA_EPIC_DUE_DATE_FIELD || 'duedate',
+      taskStartDateField: env.JIRA_TASK_START_DATE_FIELD || process.env.JIRA_TASK_START_DATE_FIELD || '',
+      taskDueDateField: env.JIRA_TASK_DUE_DATE_FIELD || process.env.JIRA_TASK_DUE_DATE_FIELD || 'duedate',
+    },
+    labelPrefixes: {
+      waitingTeam: env.JIRA_WAIT_TEAM_PREFIX || process.env.JIRA_WAIT_TEAM_PREFIX || 'wait:',
+      waitingReason: env.JIRA_WAIT_REASON_PREFIX || process.env.JIRA_WAIT_REASON_PREFIX || 'reason:',
+      capability: env.JIRA_CAPABILITY_PREFIX || process.env.JIRA_CAPABILITY_PREFIX || 'cap:',
+    },
+    featuredComponents: (env.JIRA_FEATURED_COMPONENTS || process.env.JIRA_FEATURED_COMPONENTS || 'learning,meeting,support').split(',').map(s => s.trim()),
+  };
+}
+
 // GET full settings
 router.get('/config', (req, res) => {
   try {
-    const env = parseEnv();
-    res.json({
-      connection: {
-        baseUrl: env.JIRA_BASE_URL || process.env.JIRA_BASE_URL || '',
-        username: env.JIRA_USERNAME || process.env.JIRA_USERNAME || '',
-        token: (env.JIRA_TOKEN || process.env.JIRA_TOKEN) ? '••••••••' : '',
-        projectKey: env.JIRA_PROJECT_KEY || process.env.JIRA_PROJECT_KEY || '',
-        isConfigured: jiraService.isConfigured,
-        syncIntervalMinutes: env.SYNC_INTERVAL_MINUTES || process.env.SYNC_INTERVAL_MINUTES || '60',
-      },
-      apiEndpoints: {
-        apiVersion: env.JIRA_API_VERSION || process.env.JIRA_API_VERSION || 'auto', // 'v3', 'v2', 'auto'
-        searchEndpoint: env.JIRA_SEARCH_ENDPOINT || process.env.JIRA_SEARCH_ENDPOINT || '/rest/api/3/search/jql',
-        projectEndpoint: env.JIRA_PROJECT_ENDPOINT || process.env.JIRA_PROJECT_ENDPOINT || '/rest/api/3/project',
-      },
-      serverAndDb: {
-        port: env.PORT || process.env.PORT || '3001',
-        jwtSecret: (env.JWT_SECRET || process.env.JWT_SECRET) ? '••••••••' : 'dev-secret-key',
-        dbDriver: 'SQLite 3 (database.sqlite)',
-        dbStatus: 'متصل و فعال',
-      },
-      confluence: {
-        baseUrl: env.CONFLUENCE_BASE_URL || process.env.CONFLUENCE_BASE_URL || '',
-        username: env.CONFLUENCE_USERNAME || process.env.CONFLUENCE_USERNAME || '',
-        defaultSpaceKey: env.CONFLUENCE_DEFAULT_SPACE || process.env.CONFLUENCE_DEFAULT_SPACE || 'OPS',
-      },
-      waitingStatuses: (env.JIRA_WAITING_STATUSES || process.env.JIRA_WAITING_STATUSES || 'OnHolding,Waiting,Blocked,On Hold').split(',').map(s => s.trim()),
-      statusMapping: jiraMapping.statusMapping || {},
-      customFields: {
-        sprintField: env.JIRA_SPRINT_FIELD || process.env.JIRA_SPRINT_FIELD || 'customfield_10020',
-        waitingTeamField: env.JIRA_WAITING_TEAM_FIELD || process.env.JIRA_WAITING_TEAM_FIELD || '',
-        waitingReasonField: env.JIRA_WAITING_REASON_FIELD || process.env.JIRA_WAITING_REASON_FIELD || '',
-        confluenceLinkField: env.JIRA_CONFLUENCE_LINK_FIELD || process.env.JIRA_CONFLUENCE_LINK_FIELD || '',
-        capabilitiesField: env.JIRA_CAPABILITIES_FIELD || process.env.JIRA_CAPABILITIES_FIELD || '',
-        categoryField: env.JIRA_CATEGORY_FIELD || process.env.JIRA_CATEGORY_FIELD || '',
-      },
-      dateMapping: {
-        epicStartDateField: env.JIRA_EPIC_START_DATE_FIELD || process.env.JIRA_EPIC_START_DATE_FIELD || 'created',
-        epicDueDateField: env.JIRA_EPIC_DUE_DATE_FIELD || process.env.JIRA_EPIC_DUE_DATE_FIELD || 'duedate',
-        taskStartDateField: env.JIRA_TASK_START_DATE_FIELD || process.env.JIRA_TASK_START_DATE_FIELD || '',
-        taskDueDateField: env.JIRA_TASK_DUE_DATE_FIELD || process.env.JIRA_TASK_DUE_DATE_FIELD || 'duedate',
-      },
-      labelPrefixes: {
-        waitingTeam: env.JIRA_WAIT_TEAM_PREFIX || process.env.JIRA_WAIT_TEAM_PREFIX || 'wait:',
-        waitingReason: env.JIRA_WAIT_REASON_PREFIX || process.env.JIRA_WAIT_REASON_PREFIX || 'reason:',
-        capability: env.JIRA_CAPABILITY_PREFIX || process.env.JIRA_CAPABILITY_PREFIX || 'cap:',
-      },
-      featuredComponents: (env.JIRA_FEATURED_COMPONENTS || process.env.JIRA_FEATURED_COMPONENTS || 'learning,meeting,support').split(',').map(s => s.trim()),
-    });
+    res.json(getFullConfigObject());
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch Jira settings: ' + err.message });
   }
@@ -194,7 +198,11 @@ router.put('/config', (req, res) => {
     const cacheService = require('../services/cacheService');
     cacheService.syncFromJira().catch(e => console.error('Background sync after saving config failed:', e.message));
 
-    res.json({ message: 'تنظیمات با موفقیت ذخیره گردید و کلید جدید پروژه به صورت زنده اعمال شد.' });
+    res.json({
+      success: true,
+      message: 'تنظیمات با موفقیت ذخیره گردید و فیلدهای جدید اعمال گردید.',
+      config: getFullConfigObject()
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save settings: ' + err.message });
   }

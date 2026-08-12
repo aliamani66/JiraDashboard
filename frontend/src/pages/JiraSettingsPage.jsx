@@ -284,6 +284,11 @@ const JiraSettingsPage = () => {
         message: 'تنظیمات اتصال، کلید پروژه‌ها و نگاشت فیلدها در حال ثبت و اعمال زنده در حافظه سیستم می‌باشد...'
       });
       const res = await api.saveJiraConfig(cfg);
+      if (res && res.config) {
+        setCfg(res.config);
+      } else {
+        await fetchConfig();
+      }
       showToast(res.message || 'تنظیمات و کلید جدید پروژه با موفقیت ذخیره و به صورت زنده اعمال گردید.');
     } catch (e) {
       showToast('خطا در ذخیره تنظیمات: ' + (e.message || ''), 'error');
@@ -792,8 +797,8 @@ const JiraSettingsPage = () => {
       <Section icon={Cpu} title="فیلدهای کاستوم Jira (Custom Fields Mapping)" color="#EC4899">
         <p className="jsp-section-desc">شماره کاستوم‌فیلدهای اختصاصی جیرای سازمان را وارد کنید. پس از اجرای پایش زنده، شناسه‌های دقیق نمایش داده می‌شوند.</p>
         <div className="jsp-grid-2">
-          <Field label="فیلد Sprint" hint="معمولاً customfield_10020">
-            <Input value={cfg.customFields?.sprintField} onChange={v => set('customFields', 'sprintField', v)} placeholder="customfield_10020" mono />
+          <Field label="فیلد Sprint" hint="معمولاً customfield_10004 (یا customfield_10020)">
+            <Input value={cfg.customFields?.sprintField} onChange={v => set('customFields', 'sprintField', v)} placeholder="customfield_10004" mono />
           </Field>
           <Field label="فیلد تیم منتظر (Waiting Team)" hint="اختیاری - شناسه فیلد کاستوم">
             <Input value={cfg.customFields?.waitingTeamField} onChange={v => set('customFields', 'waitingTeamField', v)} placeholder="customfield_XXXXX" mono />
