@@ -166,6 +166,61 @@ async function initDb() {
   try { db.run("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN description TEXT"); } catch (_) {}
 
+  // Seed sample estimate revision history if table is empty
+  try {
+    const historyCount = db.exec("SELECT COUNT(*) as cnt FROM task_estimate_history");
+    const count = (historyCount && historyCount[0] && historyCount[0].values && historyCount[0].values[0]) ? historyCount[0].values[0][0] : 0;
+
+    if (count === 0) {
+      const taskRows = db.exec("SELECT id, estimate_hours FROM tasks LIMIT 15");
+      if (taskRows && taskRows[0] && taskRows[0].values) {
+        const rows = taskRows[0].values;
+        const now = new Date();
+
+        if (rows.length >= 1) {
+          const t1 = rows[0][0]; // Task 1 -> Increased estimate (+8h)
+          const currentEst = rows[0][1] || 15;
+          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
+            [t1, Math.max(1, currentEst - 8), Math.max(1, currentEst - 3), 5, new Date(now.getTime() - 86400000 * 5).toISOString()]);
+          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
+            [t1, Math.max(1, currentEst - 3), currentEst, 3, new Date(now.getTime() - 86400000 * 2).toISOString()]);
+        }
+
+        if (rows.length >= 2) {
+          const t2 = rows[1][0]; // Task 2 -> Decreased estimate (-4h)
+          const currentEst = rows[1][1] || 10;
+          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
+            [t2, currentEst + 4, currentEst, -4, new Date(now.getTime() - 86400000 * 4).toISOString()]);
+        }
+
+        if (rows.length >= 3) {
+          const t3 = rows[2][0]; // Task 3 -> Increased estimate (+10h)
+          const currentEst = rows[2][1] || 25;
+          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
+            [t3, Math.max(1, currentEst - 10), currentEst, 10, new Date(now.getTime() - 86400000 * 3).toISOString()]);
+        }
+
+        if (rows.length >= 4) {
+          const t4 = rows[3][0]; // Task 4 -> Decreased estimate (-10h)
+          const currentEst = rows[3][1] || 12;
+          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
+            [t4, currentEst + 10, currentEst + 4, -6, new Date(now.getTime() - 86400000 * 6).toISOString()]);
+          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
+            [t4, currentEst + 4, currentEst, -4, new Date(now.getTime() - 86400000 * 1).toISOString()]);
+        }
+
+        if (rows.length >= 5) {
+          const t5 = rows[4][0]; // Task 5 -> Increased estimate (+7h)
+          const currentEst = rows[4][1] || 18;
+          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
+            [t5, Math.max(1, currentEst - 7), currentEst, 7, new Date(now.getTime() - 86400000 * 2).toISOString()]);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to seed estimate history:', err);
+  }
+
   saveDb();
 
   dbWrapper = createDbWrapper();

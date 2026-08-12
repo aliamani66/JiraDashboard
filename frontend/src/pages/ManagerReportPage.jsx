@@ -380,11 +380,30 @@ const ManagerReportPage = () => {
               <tbody>
                 {filteredTasks.map(t => {
                   const issueBadges = [];
-                  if (t.is_orphan) issueBadges.push({ label: 'بدون اپیک', type: 'warning' });
-                  if (t.is_estimate_revised) issueBadges.push({ label: `تغییر استیمیت (${t.revision_count} بار)`, type: 'orange' });
-                  if (t.is_no_sprint) issueBadges.push({ label: 'بدون اسپرینت', type: 'info' });
-                  if (t.is_no_estimate) issueBadges.push({ label: 'بدون تخمین', type: 'danger' });
-                  if (t.is_no_due_date) issueBadges.push({ label: 'بدون سررسید', type: 'purple' });
+                  if (t.is_orphan) issueBadges.push({ label: '📂 بدون اپیک', type: 'warning' });
+                  
+                  if (t.is_estimate_revised) {
+                    if (t.total_delta > 0) {
+                      issueBadges.push({
+                        label: `📈 استیمیت ${Math.abs(t.total_delta)}h افزایش یافت (${t.initial_estimate}h ➔ ${t.estimate_hours}h - ${t.revision_count} بار ویرایش)`,
+                        type: 'danger'
+                      });
+                    } else if (t.total_delta < 0) {
+                      issueBadges.push({
+                        label: `📉 استیمیت ${Math.abs(t.total_delta)}h کاهش یافت (${t.initial_estimate}h ➔ ${t.estimate_hours}h - ${t.revision_count} بار ویرایش)`,
+                        type: 'green'
+                      });
+                    } else {
+                      issueBadges.push({
+                        label: `🔄 استیمیت دست‌خورده (${t.revision_count} بار ویرایش)`,
+                        type: 'orange'
+                      });
+                    }
+                  }
+
+                  if (t.is_no_sprint) issueBadges.push({ label: '🏃 بدون اسپرینت', type: 'info' });
+                  if (t.is_no_estimate) issueBadges.push({ label: '⏱️ بدون تخمین اولیه', type: 'danger' });
+                  if (t.is_no_due_date) issueBadges.push({ label: '📅 بدون تاریخ سررسید', type: 'purple' });
 
                   return (
                     <tr key={t.id}>

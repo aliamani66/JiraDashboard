@@ -308,6 +308,7 @@
 .mr-issue-badge.orange { background: rgba(249, 115, 22, 0.2); color: #F97316; }
 .mr-issue-badge.info { background: rgba(6, 182, 212, 0.2); color: #06B6D4; }
 .mr-issue-badge.danger { background: rgba(239, 68, 68, 0.2); color: #EF4444; }
+.mr-issue-badge.green { background: rgba(16, 185, 129, 0.2); color: #10B981; }
 .mr-issue-badge.purple { background: rgba(168, 85, 247, 0.2); color: #A855F7; }
 
 .mr-clear-btn {
