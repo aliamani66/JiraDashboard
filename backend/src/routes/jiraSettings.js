@@ -680,15 +680,23 @@ function cleanErrorMessage(e) {
 router.get('/db-stats', (req, res) => {
   try {
     const db = getDb();
-    const totalTasks = db.prepare('SELECT COUNT(*) as count FROM tasks').get()?.count || 0;
-    const totalProjects = db.prepare('SELECT COUNT(*) as count FROM projects').get()?.count || 0;
-    const doneTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'Done' OR status = 'Completed'").get()?.count || 0;
-    const waitingTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE is_waiting = 1 OR status = 'Waiting' OR status = 'OnHolding'").get()?.count || 0;
-    const inProgressTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'In Progress' OR status = 'in_progress'").get()?.count || 0;
+    let totalTasks = 0;
+    let totalProjects = 0;
+    let doneTasks = 0;
+    let waitingTasks = 0;
+    let inProgressTasks = 0;
+    let dbSizeMb = '0.00';
+    let lastSynced = null;
+    let componentsList = [];
+
+    try { totalTasks = db.prepare('SELECT COUNT(*) as count FROM tasks').get()?.count || 0; } catch (_) {}
+    try { totalProjects = db.prepare('SELECT COUNT(*) as count FROM projects').get()?.count || 0; } catch (_) {}
+    try { doneTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('done', 'completed')").get()?.count || 0; } catch (_) {}
+    try { waitingTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked')").get()?.count || 0; } catch (_) {}
+    try { inProgressTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('in progress', 'in_progress')").get()?.count || 0; } catch (_) {}
+
     const todoTasks = Math.max(0, totalTasks - doneTasks - waitingTasks - inProgressTasks);
 
-    // Get database file size in MB
-    let dbSizeMb = '0.00';
     try {
       const volumeDir = '/app/data_volume';
       const defaultDbPath = path.join(__dirname, '../../database.sqlite');
@@ -699,23 +707,28 @@ router.get('/db-stats', (req, res) => {
       }
     } catch (_) {}
 
-    // Extract distinct components from tasks in DB
-    const componentRows = db.prepare("SELECT component FROM tasks WHERE component IS NOT NULL AND component != ''").all();
-    const componentCountsMap = new Map();
+    try {
+      const lastSyncedRow = db.prepare("SELECT MAX(last_synced) as max_sync FROM tasks").get();
+      lastSynced = lastSyncedRow?.max_sync || null;
+    } catch (_) {}
 
-    for (const r of componentRows) {
-      if (r.component) {
-        // split by comma or vertical bar if multiple components stored
-        const parts = String(r.component).split(/[,|]/).map(c => c.trim()).filter(Boolean);
-        for (const p of parts) {
-          componentCountsMap.set(p, (componentCountsMap.get(p) || 0) + 1);
+    try {
+      const componentRows = db.prepare("SELECT component FROM tasks WHERE component IS NOT NULL AND component != ''").all();
+      const componentCountsMap = new Map();
+
+      for (const r of componentRows) {
+        if (r.component) {
+          const parts = String(r.component).split(/[,|]/).map(c => c.trim()).filter(Boolean);
+          for (const p of parts) {
+            componentCountsMap.set(p, (componentCountsMap.get(p) || 0) + 1);
+          }
         }
       }
-    }
 
-    const componentsList = Array.from(componentCountsMap.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
+      componentsList = Array.from(componentCountsMap.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+    } catch (_) {}
 
     res.json({
       success: true,
