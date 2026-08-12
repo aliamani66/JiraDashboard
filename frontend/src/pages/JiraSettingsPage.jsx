@@ -232,6 +232,7 @@ const JiraSettingsPage = () => {
   const [discoveredProjects, setDiscoveredProjects] = useState([]);
   const [fetchingProjects, setFetchingProjects] = useState(false);
   const [projectSearchTerm, setProjectSearchTerm] = useState('');
+  const [onlyActiveProjects, setOnlyActiveProjects] = useState(false);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -322,8 +323,6 @@ const JiraSettingsPage = () => {
     .split(',')
     .map(k => k.trim())
     .filter(Boolean);
-
-  const [onlyActiveProjects, setOnlyActiveProjects] = useState(false);
 
   const filteredDiscoveredProjects = discoveredProjects.filter(p => {
     if (onlyActiveProjects && (p.epicCount || 0) <= 0) return false;
