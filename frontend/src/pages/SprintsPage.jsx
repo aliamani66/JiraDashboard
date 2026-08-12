@@ -110,12 +110,28 @@ const SprintsPage = () => {
 
   const defaultSprintList = ['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4', 'Sprint 5', 'Sprint 6', 'Sprint 7', 'Sprint 8', 'Sprint 9', 'Sprint 10'];
 
+  // Extract unique Jira Project Keys (e.g. ORD, OPS, DEV)
+  const jiraProjectOptions = Array.from(
+    new Set(
+      (tasks || [])
+        .map(t => (t.project_key || (t.project_id ? String(t.project_id).split('-')[0] : '')))
+        .filter(Boolean)
+    )
+  ).sort();
+
   // Dynamically extract all unique sprint names from backend tasks with fallback
   const extractedSprints = Array.from(
     new Set(
       (tasks || [])
-        .map(t => (t && t.sprint_name ? String(t.sprint_name).trim() : ''))
-        .filter(Boolean)
+        .filter(t => {
+          if (!t || !t.sprint_name) return false;
+          if (projectFilter !== 'all') {
+            const jKey = t.project_key || (t.project_id ? String(t.project_id).split('-')[0] : '');
+            if (jKey !== projectFilter) return false;
+          }
+          return true;
+        })
+        .map(t => String(t.sprint_name).trim())
     )
   ).sort((a, b) => {
     const numA = parseInt(String(a).replace(/\D/g, '')) || 0;
@@ -132,17 +148,6 @@ const SprintsPage = () => {
     quickPills.unshift(selectedSprint);
   }
 
-  // Extract unique project options
-  const projectOptions = Array.from(
-    new Set(
-      (tasks || [])
-        .filter(t => t && t.project_id)
-        .map(t => JSON.stringify({ id: String(t.project_id), title: String(t.project_title || t.project_id) }))
-    )
-  ).map(s => {
-    try { return JSON.parse(s); } catch { return null; }
-  }).filter(Boolean);
-
   // Extract unique assignee / person options
   const assigneeOptions = Array.from(
     new Set(
@@ -156,11 +161,14 @@ const SprintsPage = () => {
   const filteredTasks = (tasks || []).filter(task => {
     if (!task) return false;
 
+    // Jira Project Filter
+    if (projectFilter !== 'all') {
+      const jKey = task.project_key || (task.project_id ? String(task.project_id).split('-')[0] : '');
+      if (jKey !== projectFilter) return false;
+    }
+
     // Sprint Filter
     if (selectedSprint !== 'all' && String(task.sprint_name || 'Sprint 10') !== selectedSprint) return false;
-
-    // Project Filter
-    if (projectFilter !== 'all' && String(task.project_id || '') !== projectFilter) return false;
 
     // Assignee / Person Filter
     if (assigneeFilter !== 'all' && String(task.assignee || 'تخصیص‌نیافته') !== assigneeFilter) return false;
@@ -445,17 +453,18 @@ const SprintsPage = () => {
         </div>
 
         <div className="sp-filter-item">
-          <Filter size={16} className="text-accent-cyan" />
-          <span className="sp-filter-label">پروژه:</span>
+          <FolderGit2 size={16} className="text-accent-purple" style={{ color: '#C084FC' }} />
+          <span className="sp-filter-label">پروژه Jira:</span>
           <select 
             value={projectFilter} 
             onChange={(e) => setProjectFilter(e.target.value)}
             className="sp-select"
+            style={{ fontWeight: 'bold', color: '#E9D5FF' }}
           >
-            <option value="all">همه پروژه‌ها ({projectOptions.length})</option>
-            {projectOptions.map((p, idx) => (
-              <option key={p?.id || `proj-${idx}`} value={p?.id || ''}>
-                {p?.id ? `${p.id}: ${p.title || p.id}` : (p?.title || 'نامشخص')}
+            <option value="all">🌐 همه پروژه‌های Jira ({jiraProjectOptions.length})</option>
+            {jiraProjectOptions.map(pKey => (
+              <option key={pKey} value={pKey}>
+                📂 پروژه {pKey}
               </option>
             ))}
           </select>

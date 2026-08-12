@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, Clock, ClipboardList, AlertCircle, Calendar, Flag, ExternalLink, Printer } from 'lucide-react';
+import { ChevronLeft, Clock, ClipboardList, AlertCircle, Calendar, Flag, ExternalLink, Printer, Search, FolderGit2 } from 'lucide-react';
 import { useWaitingTasks } from '../hooks/useProjects';
 import './WaitingTasksPage.css';
 
@@ -16,12 +16,47 @@ const priorityMap = {
 
 const WaitingTasksPage = () => {
   const { data, loading } = useWaitingTasks();
+  const [jiraProjectFilter, setJiraProjectFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   if (loading) {
     return <div className="page-loading">در حال دریافت اطلاعات تسک‌های منتظر...</div>;
   }
 
   const { totalWaiting = 0, byProject = [] } = data || {};
+
+  // Extract unique Jira Project Keys (e.g. ORD, OPS, DEV)
+  const jiraProjectsList = Array.from(
+    new Set(
+      byProject.map(p => {
+        const pId = p.projectId || p.project_id || '';
+        return pId ? pId.split('-')[0] : '';
+      }).filter(Boolean)
+    )
+  ).sort();
+
+  // Filter projects by Jira Project Key and search query
+  const filteredByProject = byProject.filter(project => {
+    const pId = project.projectId || project.project_id || '';
+    const pTitle = project.projectTitle || project.project_name || '';
+    const jKey = pId ? pId.split('-')[0] : '';
+
+    if (jiraProjectFilter !== 'all' && jKey !== jiraProjectFilter) return false;
+
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase().trim();
+      const matchId = pId.toLowerCase().includes(q);
+      const matchTitle = pTitle.toLowerCase().includes(q);
+      const matchTask = (project.tasks || []).some(t =>
+        (t.task_id || t.id || '').toLowerCase().includes(q) ||
+        (t.title || '').toLowerCase().includes(q) ||
+        (t.waiting_for_team || '').toLowerCase().includes(q)
+      );
+      if (!matchId && !matchTitle && !matchTask) return false;
+    }
+
+    return true;
+  });
 
   return (
     <motion.div 
@@ -50,13 +85,82 @@ const WaitingTasksPage = () => {
         </button>
       </div>
 
+      {/* Jira Project Filter & Search Bar */}
+      <div className="glass-card" style={{ padding: '0.85rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', borderRadius: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <FolderGit2 size={18} style={{ color: '#C084FC' }} />
+          <strong style={{ fontSize: '0.9rem', color: '#E9D5FF' }}>فیلتر بر اساس پروژه Jira:</strong>
+          
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+            <button
+              onClick={() => setJiraProjectFilter('all')}
+              style={{
+                padding: '0.35rem 0.85rem',
+                borderRadius: '16px',
+                border: jiraProjectFilter === 'all' ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.15)',
+                background: jiraProjectFilter === 'all' ? 'rgba(14,165,233,0.3)' : 'rgba(255,255,255,0.05)',
+                color: '#FFFFFF',
+                fontSize: '0.82rem',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              🌐 همه پروژه‌های Jira ({jiraProjectsList.length})
+            </button>
+
+            {jiraProjectsList.map(pKey => {
+              const isSel = jiraProjectFilter === pKey;
+              return (
+                <button
+                  key={pKey}
+                  onClick={() => setJiraProjectFilter(pKey)}
+                  style={{
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: '16px',
+                    border: isSel ? '1px solid #C084FC' : '1px solid rgba(255,255,255,0.15)',
+                    background: isSel ? 'linear-gradient(135deg, rgba(168,85,247,0.35), rgba(192,132,252,0.35))' : 'rgba(255,255,255,0.05)',
+                    color: '#FFFFFF',
+                    fontSize: '0.82rem',
+                    fontWeight: isSel ? '800' : '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  📂 پروژه {pKey}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Quick Search */}
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <Search size={15} style={{ position: 'absolute', right: '0.85rem', color: '#38BDF8', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="جستجوی عنوان تسک یا تیم وابسته..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+              borderRadius: '20px',
+              padding: '0.4rem 2.2rem 0.4rem 1rem',
+              color: '#FFFFFF',
+              fontSize: '0.84rem',
+              outline: 'none',
+              width: '240px'
+            }}
+          />
+        </div>
+      </div>
+
       <div className="projects-container">
-        {byProject.length === 0 ? (
+        {filteredByProject.length === 0 ? (
           <div className="glass-card empty-state">
-            تسکی در انتظار تیم‌های دیگر نیست.
+            تسکی در انتظار با فیلترهای انتخاب‌شده یافت نشد.
           </div>
         ) : (
-          byProject.map((project, idx) => {
+          filteredByProject.map((project, idx) => {
             const pId = project.projectId || project.project_id || `proj-${idx}`;
             const pTitle = project.projectTitle || project.project_name || pId || 'پروژه عملیاتی';
 
