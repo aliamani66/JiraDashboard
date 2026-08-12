@@ -48,10 +48,17 @@ const DashboardPage = () => {
     new Set(projects.flatMap(p => Object.keys(p.components_map || {})))
   );
 
-  // Collect all unique projects list for project filter tile
-  const availableProjects = Array.from(
-    new Map(projects.map(p => [p.id || p.key, { id: p.id || p.key, title: p.title || p.id, key: p.id || p.key }])).values()
-  );
+  // Collect all unique Jira Projects (e.g. ORD, OPS, DEV) with epic count
+  const jiraProjectMap = new Map();
+  projects.forEach(p => {
+    const jKey = p.project_key || (p.id ? p.id.split('-')[0] : 'اصلی');
+    if (!jiraProjectMap.has(jKey)) {
+      jiraProjectMap.set(jKey, { key: jKey, title: `پروژه ${jKey}`, count: 1 });
+    } else {
+      jiraProjectMap.get(jKey).count += 1;
+    }
+  });
+  const availableProjects = Array.from(jiraProjectMap.values());
 
   // Filter projects with multi-select logic
   const filteredProjects = projects.filter(p => {
@@ -96,10 +103,10 @@ const DashboardPage = () => {
       if (!hasComp) return false;
     }
 
-    // 4. Project Key Filter (Multi-select)
+    // 4. Jira Project Key Filter (Multi-select)
     if (projectFilters.length > 0) {
-      const pKey = p.id || p.key;
-      if (!projectFilters.includes(pKey)) return false;
+      const jKey = p.project_key || (p.id ? p.id.split('-')[0] : '');
+      if (!projectFilters.includes(jKey)) return false;
     }
 
     return true;

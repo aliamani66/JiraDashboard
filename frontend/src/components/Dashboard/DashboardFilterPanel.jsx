@@ -368,18 +368,18 @@ const DashboardFilterPanel = ({
               </button>
 
               {visibleProjects.map(p => {
-                const pKey = typeof p === 'object' ? (p.id || p.key) : String(p);
-                const pTitle = typeof p === 'object' ? (p.title || pKey) : pKey;
+                const pKey = typeof p === 'object' ? (p.key || p.id) : String(p);
+                const count = typeof p === 'object' ? p.count : null;
                 const isSelected = projectFilters.includes(pKey);
                 return (
                   <button
                     key={pKey}
                     className={`mft-pill project-item-pill ${isSelected ? 'active' : ''}`}
                     onClick={() => toggleSelection(pKey, projectFilters, setProjectFilters)}
-                    title={pTitle !== pKey ? `${pTitle} (${pKey})` : pKey}
+                    title={`فیلتر پروژه‌های وابسته به کلید ${pKey}`}
                     style={isSelected ? { background: 'linear-gradient(135deg, rgba(168,85,247,0.35), rgba(192,132,252,0.35))', borderColor: '#C084FC', color: '#FFFFFF', boxShadow: '0 0 12px rgba(192,132,252,0.35)' } : {}}
                   >
-                    📂 <strong>{pKey}</strong>
+                    📂 <strong>پروژه {pKey}</strong> {count ? <small style={{ opacity: 0.85, fontSize: '0.76rem' }}>({count} اپیک)</small> : null}
                   </button>
                 );
               })}
