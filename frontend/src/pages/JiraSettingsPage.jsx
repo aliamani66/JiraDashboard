@@ -233,6 +233,7 @@ const JiraSettingsPage = () => {
   const [fetchingProjects, setFetchingProjects] = useState(false);
   const [projectSearchTerm, setProjectSearchTerm] = useState('');
   const [onlyActiveProjects, setOnlyActiveProjects] = useState(false);
+  const [activeModal, setActiveModal] = useState(null);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -256,7 +257,10 @@ const JiraSettingsPage = () => {
   const handleFetchProjects = async () => {
     try {
       setFetchingProjects(true);
-      showToast('در حال دریافت لیست پروژه‌های موجود در Jira...');
+      setActiveModal({
+        title: '🌐 در حال دریافت لیست پروژه‌های Jira',
+        message: 'در حال دریافت تمام پروژه‌های موجود در سرور جیرا به همراه نام پروژه و تعداد اپیک‌ها...'
+      });
       const res = await api.fetchJiraProjects();
       if (res.projects && res.projects.length > 0) {
         setDiscoveredProjects(res.projects);
@@ -268,25 +272,34 @@ const JiraSettingsPage = () => {
       showToast('خطا در دریافت پروژه‌ها از Jira: ' + (e.message || ''), 'error');
     } finally {
       setFetchingProjects(false);
+      setActiveModal(null);
     }
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
+      setActiveModal({
+        title: '💾 در حال ذخیره تنظیمات و مپینگ Jira',
+        message: 'تنظیمات اتصال، کلید پروژه‌ها و نگاشت فیلدها در حال ثبت و اعمال زنده در حافظه سیستم می‌باشد...'
+      });
       const res = await api.saveJiraConfig(cfg);
       showToast(res.message || 'تنظیمات و کلید جدید پروژه با موفقیت ذخیره و به صورت زنده اعمال گردید.');
     } catch (e) {
       showToast('خطا در ذخیره تنظیمات: ' + (e.message || ''), 'error');
     } finally {
       setSaving(false);
+      setActiveModal(null);
     }
   };
 
   const handleSync = async () => {
     try {
       setSyncing(true);
-      showToast(`در حال ذخیره تنظیمات و دریافت داده‌های پروژه (${cfg?.connection?.projectKey || 'اصلی'})...`);
+      setActiveModal({
+        title: '🔄 در حال همگام‌سازی زنده با سرور Jira',
+        message: `دیتابیس در حال دریافت اپیک‌ها و تسک‌های جدید پروژه‌های انتخاب‌شده (${cfg?.connection?.projectKey || 'اصلی'}) مستقیم از سرور جیرا می‌باشد...`
+      });
       // Auto-save current config first so newly entered Project Key is immediately active
       await api.saveJiraConfig(cfg);
       // Execute live sync from Jira
@@ -295,6 +308,7 @@ const JiraSettingsPage = () => {
       setTimeout(() => window.location.reload(), 1500);
     } catch (e) {
       showToast('خطا در همگام‌سازی با Jira: ' + (e.message || ''), 'error');
+      setActiveModal(null);
     } finally {
       setSyncing(false);
     }
@@ -304,12 +318,17 @@ const JiraSettingsPage = () => {
     try {
       setDiagLoading(true);
       setDiagResult(null);
+      setActiveModal({
+        title: '🔍 پایش زنده ساختار API و ارتباط جیرا',
+        message: 'سیستم در حال تست اتصال به سرور جیرا، چک کردن توکن و پایش مپینگ فیلدهای پروژه می‌باشد...'
+      });
       const res = await api.runJiraDiagnostic(cfg?.connection || {});
       setDiagResult(res);
     } catch (e) {
       setDiagResult({ success: false, message: e.message });
     } finally {
       setDiagLoading(false);
+      setActiveModal(null);
     }
   };
 
@@ -353,6 +372,62 @@ const JiraSettingsPage = () => {
           >
             {toast.type === 'success' ? <CheckCircle2 size={17} /> : <AlertTriangle size={17} />}
             {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Active Operation Spinner Modal Overlay */}
+      <AnimatePresence>
+        {activeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(15, 23, 42, 0.82)',
+              backdropFilter: 'blur(10px)',
+              zIndex: 99999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.5rem'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: -20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: -20 }}
+              style={{
+                background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.98))',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(56, 189, 248, 0.3)',
+                borderRadius: '24px',
+                padding: '2.2rem 2.8rem',
+                maxWidth: '500px',
+                width: '100%',
+                textAlign: 'center',
+                color: '#FFFFFF'
+              }}
+            >
+              <div style={{ display: 'inline-flex', padding: '1.1rem', background: 'rgba(14, 165, 233, 0.15)', borderRadius: '50%', marginBottom: '1.35rem', border: '1px solid rgba(56, 189, 248, 0.35)' }}>
+                <RefreshCw size={38} className="spin text-accent-cyan" style={{ color: '#38BDF8' }} />
+              </div>
+              <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1.3rem', fontWeight: 800, color: '#F8FAFC' }}>
+                {activeModal.title}
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.92rem', color: '#94A3B8', lineHeight: '1.65' }}>
+                {activeModal.message}
+              </p>
+              <div style={{ marginTop: '1.6rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.45rem 1.1rem', borderRadius: '20px', fontSize: '0.82rem', color: '#38BDF8', fontWeight: 'bold' }}>
+                <span className="spin">⚡</span>
+                <span>در حال ارتباط و پردازش عملیات... لطفاً شکیبا باشید</span>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
