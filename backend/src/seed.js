@@ -165,9 +165,11 @@ async function seed() {
     VALUES (:id, :title, :description, :category, :status, :progress, :capabilities, :confluence_link, :start_date, :due_date)
   `);
 
+  const testCompsList = ['dev', 'infrastructure', 'monitoring', 'security', 'ai', 'database', 'architecture', 'testing', 'documentation', 'support', 'networking', 'devops', 'frontend', 'backend', 'ui-ux', 'cloud'];
+
   const insertTask = db.prepare(`
-    INSERT INTO tasks (id, project_id, title, status, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, sort_order)
-    VALUES (:id, :project_id, :title, :status, :estimate_hours, :spent_hours, :start_date, :due_date, :is_waiting, :waiting_for_team, :waiting_reason, :sprint_name, :sprint_start_date, :sprint_end_date, :priority, :sort_order)
+    INSERT INTO tasks (id, project_id, title, status, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, sort_order, component)
+    VALUES (:id, :project_id, :title, :status, :estimate_hours, :spent_hours, :start_date, :due_date, :is_waiting, :waiting_for_team, :waiting_reason, :sprint_name, :sprint_start_date, :sprint_end_date, :priority, :sort_order, :component)
   `);
 
   // Clear existing data
@@ -178,6 +180,8 @@ async function seed() {
   const sprint23End = new Date(Date.now() + 9 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const sprint22Start = new Date(Date.now() - 19 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const sprint22End = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  let taskGlobalIdx = 0;
 
   db.transaction(() => {
     projects.forEach((p, i) => {
@@ -196,6 +200,9 @@ async function seed() {
         let sprintStart = (j % 2 === 0) ? sprint23Start : sprint22Start;
         let sprintEnd = (j % 2 === 0) ? sprint23End : sprint22End;
 
+        const assignedComp = testCompsList[taskGlobalIdx % testCompsList.length];
+        taskGlobalIdx++;
+
         insertTask.run({
           id: `${p.id}-${j + 1}`,
           project_id: p.id,
@@ -212,7 +219,8 @@ async function seed() {
           sprint_start_date: sprintStart,
           sprint_end_date: sprintEnd,
           priority: t.priority,
-          sort_order: j
+          sort_order: j,
+          component: assignedComp
         });
       });
     });
