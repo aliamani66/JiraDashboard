@@ -97,8 +97,8 @@ async function jiraSearch(jql, fields = [], options = {}) {
   const isCloud = cfg.baseUrl && cfg.baseUrl.includes('.atlassian.net');
 
   const pageSize = options.maxResults || 500;
-  const timeout = options.timeout || 8000;
-  const retries = options.retries || 1;
+  const timeout = options.timeout || 30000;
+  const retries = options.retries || 2;
 
   let lastError = null;
 
@@ -109,10 +109,10 @@ async function jiraSearch(jql, fields = [], options = {}) {
       'Accept': 'application/json'
     };
 
+    let startAt = 0;
     let authSuccess = false;
     let allIssues = [];
     let totalCount = 0;
-    let startAt = 0;
 
     while (true) {
       let pageData = null;
@@ -122,7 +122,14 @@ async function jiraSearch(jql, fields = [], options = {}) {
           const endpoint = isCloud ? `${cfg.baseUrl}/rest/api/3/search/jql` : `${cfg.baseUrl}/rest/api/2/search`;
           const postBody = { jql, fields: validFields, maxResults: pageSize, startAt };
 
-          const response = await axios.post(endpoint, postBody, { headers, httpsAgent, timeout });
+          let response;
+          try {
+            response = await axios.post(endpoint, postBody, { headers, httpsAgent, timeout });
+          } catch (postErr) {
+            const getUrl = `${cfg.baseUrl}/rest/api/2/search?jql=${encodeURIComponent(jql)}&maxResults=${pageSize}&startAt=${startAt}`;
+            response = await axios.get(getUrl, { headers, httpsAgent, timeout });
+          }
+
           pageData = response.data;
           authSuccess = true;
           break;
