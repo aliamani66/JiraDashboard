@@ -235,6 +235,9 @@ const JiraSettingsPage = () => {
   const [onlyActiveProjects, setOnlyActiveProjects] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
 
+  const [monthlySyncing, setMonthlySyncing] = useState(false);
+  const [monthlyResults, setMonthlyResults] = useState(null);
+
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 5000);
@@ -344,6 +347,42 @@ const JiraSettingsPage = () => {
       });
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleMonthlySync = async () => {
+    try {
+      setMonthlySyncing(true);
+      setMonthlyResults(null);
+      setActiveModal({
+        status: 'loading',
+        title: '🗓️ در حال همگام‌سازی ۱۲ ماهه (یک سال گذشته)',
+        message: 'سیستم در حال ارسال ۱۲ کوئری مجزا به ازای هر ماه گذشته به سرور جیرا می‌باشد تا تمامی تسک‌های یک سال اخیر دریافت و گزارش تفکیکی آن آماده گردد...'
+      });
+      await api.saveJiraConfig(cfg);
+      const res = await api.syncMonthlyJiraConfig();
+      if (res && res.monthlyResults) {
+        setMonthlyResults(res);
+        setActiveModal({
+          status: 'success',
+          title: '✅ همگام‌سازی ۱۲ ماهه با موفقیت تکمیل شد',
+          message: `مجموع ${res.totalTasksSynced || 0} تسک از ۱۲ ماه گذشته دریافت و در جدول گزارش تفکیکی ثبت گردید.`
+        });
+      } else {
+        setActiveModal({
+          status: 'error',
+          title: '❌ خطا در همگام‌سازی ۱۲ ماهه',
+          message: res.message || 'پاسخی از سرور دریافت نشد.'
+        });
+      }
+    } catch (e) {
+      setActiveModal({
+        status: 'error',
+        title: '❌ خطا در همگام‌سازی ۱۲ ماهه',
+        message: e.message || 'همگام‌سازی ۱۲ ماه گذشته با خطا مواجه شد.'
+      });
+    } finally {
+      setMonthlySyncing(false);
     }
   };
 
@@ -532,9 +571,13 @@ const JiraSettingsPage = () => {
             <Zap size={16} className={diagLoading ? 'spin' : ''} />
             {diagLoading ? 'در حال پایش...' : '🔍 پایش زنده API'}
           </button>
+          <button className="jsp-run-diag-btn" style={{ background: '#8B5CF6' }} onClick={handleMonthlySync} disabled={monthlySyncing}>
+            <Calendar size={16} className={monthlySyncing ? 'spin' : ''} />
+            {monthlySyncing ? 'در حال دریافت ۱۲ ماه...' : '🗓️ همگام‌سازی ۱۲ ماه گذشته'}
+          </button>
           <button className="jsp-run-diag-btn" style={{ background: '#0EA5E9' }} onClick={handleSync} disabled={syncing}>
             <RefreshCw size={16} className={syncing ? 'spin' : ''} />
-            {syncing ? 'در حال دریافت...' : '🔄 همگام‌سازی با Jira'}
+            {syncing ? 'در حال دریافت...' : '🔄 همگام‌سازی سریع'}
           </button>
           <button className="jsp-run-diag-btn" onClick={handleSave} disabled={saving}>
             <Save size={16} className={saving ? 'spin' : ''} />
@@ -542,6 +585,67 @@ const JiraSettingsPage = () => {
           </button>
         </div>
       </div>
+
+      {/* ── 12-MONTH BATCH SYNC RESULTS ── */}
+      {monthlyResults && (
+        <motion.div className="glass-card jsp-diag-card" style={{ borderColor: 'rgba(139, 92, 246, 0.4)', background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.4), rgba(15, 23, 42, 0.85))' }} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="jsp-diag-header">
+            <div>
+              <h2 style={{ color: '#C084FC', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                <Calendar size={22} /> گزارش تفکیکی همگام‌سازی ۱۲ ماه گذشته (یک سال اخیر)
+              </h2>
+              <p className="jsp-diag-sub" style={{ marginTop: '0.45rem' }}>
+                تعداد کل تسک‌های دریافت‌شده: <strong style={{ color: '#38BDF8', fontSize: '1.05rem' }}>{monthlyResults.totalTasksSynced || 0} تسک</strong> | تعداد ماه بررسی‌شده: <strong>۱۲ ماه</strong>
+              </p>
+            </div>
+            <button className="jsp-delete-row" style={{ color: '#A78BFA', cursor: 'pointer' }} onClick={() => setMonthlyResults(null)} title="بستن این گزارش">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="jsp-diag-table-wrapper" style={{ marginTop: '1rem', maxHeight: '420px', overflowY: 'auto' }}>
+            <table className="jsp-diag-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '70px' }}>ردیف</th>
+                  <th>دوره زمانی (ماه)</th>
+                  <th>بازه تاریخ میلادی</th>
+                  <th>وضعیت همگام‌سازی</th>
+                  <th>تعداد تسک دریافت‌شده</th>
+                  <th>کوئری JQL اجراشده</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyResults.monthlyResults?.map((m) => (
+                  <tr key={m.monthIndex}>
+                    <td><strong>ماه {m.monthIndex}</strong></td>
+                    <td>
+                      <strong style={{ color: '#F8FAFC' }}>{m.jalaliName}</strong>
+                      <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>{m.gregorianName}</div>
+                    </td>
+                    <td><code className="mono-code" style={{ fontSize: '0.8rem' }}>{m.dateRange}</code></td>
+                    <td>
+                      <span className={`diag-status-pill ${m.status === 'success' ? 'matched' : m.status === 'empty' ? 'warning' : 'missing'}`}>
+                        {m.status === 'success' ? '✅ موفق' : m.status === 'empty' ? '⚠️ ۰ تسک (بدون نتیجه)' : '❌ خطا'}
+                      </span>
+                    </td>
+                    <td>
+                      <strong style={{ color: m.taskCount > 0 ? '#38BDF8' : '#64748B', fontSize: '0.95rem' }}>
+                        {m.taskCount} تسک
+                      </strong>
+                    </td>
+                    <td>
+                      <code className="diag-val-code accent" style={{ fontSize: '0.76rem', whiteSpace: 'nowrap', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block' }} title={m.jql}>
+                        {m.jql}
+                      </code>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      )}
 
       {/* ── DIAGNOSTIC RESULTS (TOP OF PAGE) ── */}
       {diagResult && (

@@ -165,6 +165,183 @@ function getLastSync() {
   }
 }
 
+const PERSIAN_MONTH_NAMES = [
+  'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+  'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+];
+
+function getJalaliMonthLabel(year, monthZeroIndexed) {
+  const gMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const gName = gMonthNames[monthZeroIndexed];
+  let jMonthIdx = (monthZeroIndexed + 9) % 12;
+  let jYear = monthZeroIndexed >= 2 ? year - 621 : year - 622;
+  return {
+    jalali: `${PERSIAN_MONTH_NAMES[jMonthIdx]} ${jYear}`,
+    gregorian: `${gName} ${year}`
+  };
+}
+
+async function syncMonthlyLastYearFromJira() {
+  if (!jiraService.isConfigured) {
+    return { success: false, message: 'Jira is not configured' };
+  }
+
+  const db = getDb();
+  const syncTime = new Date().toISOString();
+  const monthlyResults = [];
+  let totalTasksSynced = 0;
+  let projectsSynced = 0;
+
+  // 1. Fetch Epics first
+  let epics = [];
+  try {
+    epics = await jiraService.fetchEpics();
+    db.transaction(() => {
+      const insertProject = db.prepare(`
+        INSERT INTO projects (id, title, description, status, capabilities, category, confluence_link, start_date, due_date, last_synced)
+        VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @last_synced)
+        ON CONFLICT(id) DO UPDATE SET
+          title=excluded.title,
+          description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE projects.description END,
+          status=excluded.status,
+          last_synced=excluded.last_synced
+      `);
+      for (const epic of epics) {
+        epic.last_synced = syncTime;
+        insertProject.run(epic);
+        projectsSynced++;
+      }
+    })();
+  } catch (err) {
+    console.error('Fetching epics failed during monthly sync:', err);
+  }
+
+  // 2. Generate 12 month ranges (11 months ago to current month)
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  const monthRanges = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(currentYear, currentMonth - i, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+
+    const lastDay = new Date(y, m + 1, 0);
+
+    const startStr = `${y}-${String(m + 1).padStart(2, '0')}-01 00:00`;
+    const endStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')} 23:59`;
+
+    const monthInfo = getJalaliMonthLabel(y, m);
+
+    monthRanges.push({
+      monthIndex: 12 - i,
+      year: y,
+      month: m + 1,
+      monthKey: `${y}-${String(m + 1).padStart(2, '0')}`,
+      jalaliName: monthInfo.jalali,
+      gregorianName: monthInfo.gregorian,
+      startStr,
+      endStr
+    });
+  }
+
+  const insertTask = db.prepare(`
+    INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, last_synced)
+    VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @last_synced)
+    ON CONFLICT(id) DO UPDATE SET
+      title=excluded.title,
+      description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE tasks.description END,
+      status=excluded.status,
+      assignee=excluded.assignee,
+      estimate_hours=excluded.estimate_hours,
+      spent_hours=excluded.spent_hours,
+      start_date=excluded.start_date,
+      due_date=excluded.due_date,
+      is_waiting=excluded.is_waiting,
+      waiting_for_team=excluded.waiting_for_team,
+      waiting_reason=excluded.waiting_reason,
+      sprint_name=excluded.sprint_name,
+      sprint_start_date=excluded.sprint_start_date,
+      sprint_end_date=excluded.sprint_end_date,
+      priority=excluded.priority,
+      labels=excluded.labels,
+      component=excluded.component,
+      sort_order=excluded.sort_order,
+      is_subtask=excluded.is_subtask,
+      parent_task_id=excluded.parent_task_id,
+      last_synced=excluded.last_synced
+  `);
+
+  const cfg = jiraService.getJiraConfig();
+  const projKeys = cfg.projectKey ? cfg.projectKey.split(',').map(k => k.trim()).filter(Boolean) : [];
+  const projectJqlClause = projKeys.length > 0 ? `project IN (${projKeys.join(',')}) AND ` : '';
+
+  for (const mRange of monthRanges) {
+    const jql = `${projectJqlClause}created >= "${mRange.startStr}" AND created <= "${mRange.endStr}" ORDER BY created ASC`;
+    try {
+      const searchRes = await jiraService.jiraSearch(jql);
+      const rawIssues = searchRes.issues || [];
+      const parsedTasks = rawIssues.map((issue, idx) => jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue);
+
+      db.transaction(() => {
+        for (const task of parsedTasks) {
+          if (task && task.id) {
+            task.last_synced = syncTime;
+            insertTask.run(task);
+          }
+        }
+      })();
+
+      totalTasksSynced += parsedTasks.length;
+
+      monthlyResults.push({
+        monthIndex: mRange.monthIndex,
+        monthKey: mRange.monthKey,
+        jalaliName: mRange.jalaliName,
+        gregorianName: mRange.gregorianName,
+        dateRange: `${mRange.startStr.split(' ')[0]} تا ${mRange.endStr.split(' ')[0]}`,
+        jql,
+        taskCount: parsedTasks.length,
+        status: parsedTasks.length > 0 ? 'success' : 'empty',
+        message: parsedTasks.length > 0 ? `${parsedTasks.length} تسک دریافت شد` : '۰ تسک (بدون نتیجه)'
+      });
+
+    } catch (monthErr) {
+      console.error(`Monthly sync failed for month ${mRange.monthKey}:`, monthErr.message);
+      monthlyResults.push({
+        monthIndex: mRange.monthIndex,
+        monthKey: mRange.monthKey,
+        jalaliName: mRange.jalaliName,
+        gregorianName: mRange.gregorianName,
+        dateRange: `${mRange.startStr.split(' ')[0]} تا ${mRange.endStr.split(' ')[0]}`,
+        jql,
+        taskCount: 0,
+        status: 'error',
+        message: `خطا در همگام‌سازی: ${monthErr.message}`
+      });
+    }
+  }
+
+  // Update project stats
+  try {
+    const updateAllProjectStats = db.prepare(`
+      UPDATE projects SET
+        total_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0)),
+        completed_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (status = 'Done' OR status = 'Completed')),
+        waiting_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (is_waiting = 1 OR status = 'OnHolding' OR status = 'Waiting'))
+    `);
+    updateAllProjectStats.run();
+  } catch (_) {}
+
+  return {
+    success: true,
+    totalTasksSynced,
+    projectsSynced,
+    monthlyResults
+  };
+}
+
 function initCron() {
   if (jiraService.isConfigured) {
     cron.schedule(`*/${SYNC_INTERVAL} * * * *`, syncFromJira);
@@ -174,6 +351,7 @@ function initCron() {
 
 module.exports = {
   syncFromJira,
+  syncMonthlyLastYearFromJira,
   getLastSync,
   initCron
 };

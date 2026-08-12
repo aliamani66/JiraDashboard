@@ -252,6 +252,17 @@ router.put('/config', (req, res) => {
   }
 });
 
+// POST 12-Month Batch Sync with detailed monthly report
+router.post('/sync-monthly', async (req, res) => {
+  try {
+    const cacheService = require('../services/cacheService');
+    const result = await cacheService.syncMonthlyLastYearFromJira();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در همگام‌سازی ۱۲ ماهه: ' + err.message });
+  }
+});
+
 // GET All Jira Projects from live Jira Server for multi-select combo
 router.get('/fetch-jira-projects', async (req, res) => {
   try {

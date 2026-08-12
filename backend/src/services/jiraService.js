@@ -551,13 +551,195 @@ async function fetchTasksForEpic(epicKey) {
         component: component,
         sort_order: index,
         is_subtask: isSubtask,
-        parent_task_id: parentTaskId
       };
     });
   } catch (err) {
     console.error(`Error fetching tasks for epic ${epicKey}:`, err.message);
     throw err;
   }
+}
+function parseTaskIssue(issue, epicKeyOverride = null, index = 0) {
+  const cfg = getJiraConfig();
+  const mapping = cfg.mapping || jiraMapping;
+  const customFields = mapping.customFields || {};
+
+  let epicKey = epicKeyOverride;
+  if (!epicKey) {
+    if (issue.fields?.epic?.key) {
+      epicKey = issue.fields.epic.key;
+    } else if (issue.fields?.customfield_10014) {
+      epicKey = issue.fields.customfield_10014;
+    } else if (issue.fields?.parent && issue.fields.parent.fields?.issuetype?.name === 'Epic') {
+      epicKey = issue.fields.parent.key;
+    }
+  }
+
+  const rawStatus = issue.fields?.status?.name || 'To Do';
+  const mappedStatus = mapping.statusMapping[rawStatus] || rawStatus;
+
+  let isWaiting = mapping.waitingStatuses.some(ws => 
+    rawStatus.toLowerCase() === ws.toLowerCase()
+  ) ? 1 : 0;
+
+  const issueLinks = issue.fields?.issuelinks || [];
+  let linkedWaitingTeam = null;
+  let linkedWaitingReason = null;
+
+  for (const link of issueLinks) {
+    const linkType = link.type || {};
+    const inwardDesc = (linkType.inward || '').toLowerCase();
+    const outwardDesc = (linkType.outward || '').toLowerCase();
+    const blockingKeywords = ['is blocked by', 'depends on', 'is waited on by'];
+
+    const linkedIssue = link.inwardIssue || null;
+    if (linkedIssue && blockingKeywords.some(kw => inwardDesc.includes(kw))) {
+      isWaiting = 1;
+      if (linkedIssue.fields) {
+        if (linkedIssue.fields.assignee) {
+          linkedWaitingTeam = linkedWaitingTeam || linkedIssue.fields.assignee.displayName;
+        }
+        if (linkedIssue.fields.project) {
+          linkedWaitingTeam = linkedWaitingTeam || linkedIssue.fields.project.name;
+        }
+      }
+      linkedWaitingReason = `بلاک شده توسط ${linkedIssue.key}: ${linkedIssue.fields?.summary || ''}`;
+    }
+
+    const outLinkedIssue = link.outwardIssue || null;
+    if (outLinkedIssue && blockingKeywords.some(kw => outwardDesc.includes(kw))) {
+      isWaiting = 1;
+      if (outLinkedIssue.fields) {
+        if (outLinkedIssue.fields.assignee) {
+          linkedWaitingTeam = linkedWaitingTeam || outLinkedIssue.fields.assignee.displayName;
+        }
+        if (outLinkedIssue.fields.project) {
+          linkedWaitingTeam = linkedWaitingTeam || outLinkedIssue.fields.project.name;
+        }
+      }
+      linkedWaitingReason = `وابسته به ${outLinkedIssue.key}: ${outLinkedIssue.fields?.summary || ''}`;
+    }
+  }
+
+  let startDate = extractDateField(issue, mapping.dateMapping.taskStartDateField);
+  let dueDate = extractDateField(issue, mapping.dateMapping.taskDueDateField) || extractDateField(issue, 'duedate');
+
+  let sprintName = null;
+  let sprintStartDate = null;
+  let sprintEndDate = null;
+
+  const sprintFieldVal = (customFields.sprintField && issue.fields?.[customFields.sprintField])
+    || issue.fields?.sprint 
+    || issue.fields?.customfield_10004
+    || issue.fields?.customfield_10020;
+
+  if (sprintFieldVal) {
+    const sprint = Array.isArray(sprintFieldVal) ? sprintFieldVal[sprintFieldVal.length - 1] : sprintFieldVal;
+    if (sprint) {
+      if (typeof sprint === 'string') {
+        const nameMatch = sprint.match(/name=([^,\]]+)/);
+        if (nameMatch && nameMatch[1] && nameMatch[1] !== '<null>') {
+          sprintName = nameMatch[1].trim();
+        } else if (!sprint.includes('com.atlassian.')) {
+          sprintName = sprint.trim();
+        }
+      } else if (typeof sprint === 'object') {
+        sprintName = sprint.name || sprintName;
+        sprintStartDate = sprint.startDate ? sprint.startDate.split('T')[0] : sprintStartDate;
+        sprintEndDate = sprint.endDate ? sprint.endDate.split('T')[0] : sprintEndDate;
+      }
+    }
+  }
+
+  let rawWaitingTeam = customFields.waitingTeamField ? issue.fields?.[customFields.waitingTeamField] : null;
+  let waitingForTeam = null;
+  if (rawWaitingTeam) {
+    if (Array.isArray(rawWaitingTeam)) {
+      waitingForTeam = rawWaitingTeam.map(item => typeof item === 'object' ? (item.name || item.value || JSON.stringify(item)) : String(item)).join(', ');
+    } else if (typeof rawWaitingTeam === 'object') {
+      waitingForTeam = rawWaitingTeam.name || rawWaitingTeam.value || String(rawWaitingTeam);
+    } else {
+      waitingForTeam = String(rawWaitingTeam);
+    }
+  }
+  let waitingReason = customFields.waitingReasonField ? issue.fields?.[customFields.waitingReasonField] : null;
+
+  if (!waitingForTeam || !waitingReason) {
+    const labels = issue.fields?.labels || [];
+    const waitTeamPrefix = mapping.labelPrefixes.waitingTeam;
+    const waitReasonPrefix = mapping.labelPrefixes.waitingReason;
+
+    for (const label of labels) {
+      if (!waitingForTeam && label.startsWith(waitTeamPrefix)) {
+        waitingForTeam = label.replace(waitTeamPrefix, '').replace(/-/g, ' ');
+      }
+      if (!waitingReason && label.startsWith(waitReasonPrefix)) {
+        waitingReason = label.replace(waitReasonPrefix, '').replace(/-/g, ' ');
+      }
+    }
+  }
+
+  if (!waitingForTeam && linkedWaitingTeam) waitingForTeam = linkedWaitingTeam;
+  if (!waitingReason && linkedWaitingReason) waitingReason = linkedWaitingReason;
+
+  if (waitingForTeam || waitingReason) {
+    isWaiting = 1;
+  }
+
+  let finalStatus = mappedStatus;
+  if (isWaiting && mappedStatus !== 'Done') {
+    const labelsStr = JSON.stringify(issue.fields?.labels || []).toLowerCase();
+    const summaryStr = (issue.fields?.summary || '').toLowerCase();
+    if (labelsStr.includes('onhold') || summaryStr.includes('آن‌هولد') || summaryStr.includes('onholding')) {
+      finalStatus = 'OnHolding';
+    } else {
+      finalStatus = 'Waiting';
+    }
+  }
+
+  let component = 'dev';
+  const jiraComponents = issue.fields?.components || [];
+  const labelsArr = issue.fields?.labels || [];
+
+  if (jiraComponents.length > 0) {
+    component = (jiraComponents[0].name || '').toLowerCase().trim();
+  } else {
+    const compLabel = labelsArr.find(l => typeof l === 'string' && l.startsWith('comp:'));
+    if (compLabel) {
+      component = compLabel.replace('comp:', '').toLowerCase().trim();
+    } else {
+      component = 'dev';
+    }
+  }
+
+  const estSec = issue.fields?.aggregatetimeoriginalestimate || issue.fields?.timeoriginalestimate || 0;
+  const spentSec = issue.fields?.aggregatetimespent || issue.fields?.timespent || 0;
+  const isSubtask = issue.fields?.issuetype?.subtask ? 1 : 0;
+  const parentTaskId = issue.fields?.parent?.key || null;
+
+  return {
+    id: issue.key,
+    project_id: epicKey,
+    title: issue.fields?.summary || issue.key,
+    description: parseJiraDescription(issue.fields?.description),
+    status: finalStatus,
+    assignee: issue.fields?.assignee ? issue.fields.assignee.displayName : null,
+    estimate_hours: estSec ? Math.round((estSec / 3600) * 100) / 100 : 0,
+    spent_hours: spentSec ? Math.round((spentSec / 3600) * 100) / 100 : 0,
+    start_date: startDate,
+    due_date: dueDate,
+    is_waiting: isWaiting,
+    waiting_for_team: waitingForTeam,
+    waiting_reason: waitingReason,
+    sprint_name: sprintName,
+    sprint_start_date: sprintStartDate,
+    sprint_end_date: sprintEndDate,
+    priority: issue.fields?.priority ? issue.fields.priority.name : 'Medium',
+    labels: JSON.stringify(issue.fields?.labels || []),
+    component: component,
+    sort_order: index,
+    is_subtask: isSubtask,
+    parent_task_id: parentTaskId
+  };
 }
 
 async function fetchAllJiraProjects() {
@@ -649,5 +831,6 @@ module.exports = {
   jiraSearch,
   fetchEpics,
   fetchTasksForEpic,
-  fetchAllJiraProjects
+  fetchAllJiraProjects,
+  parseTaskIssue
 };
