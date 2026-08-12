@@ -113,15 +113,22 @@ async function syncFromJira() {
       `).run();
     } catch (_) {}
 
-    const logInsert = db.prepare('INSERT INTO sync_log (synced_at, status, message, projects_synced, tasks_synced) VALUES (?, ?, ?, ?, ?)');
-    logInsert.run(syncTime, 'Success', 'Full sync completed', projectsSynced, tasksSynced);
+    // Real DB counts for accuracy
+    const dbTotalTasks = db.prepare('SELECT COUNT(*) as c FROM tasks').get().c;
+    const dbRegularTasks = db.prepare('SELECT COUNT(*) as c FROM tasks WHERE is_subtask = 0 OR is_subtask IS NULL').get().c;
+    const dbSubtasks = db.prepare('SELECT COUNT(*) as c FROM tasks WHERE is_subtask = 1').get().c;
 
-    console.log(`Full sync complete. Epics: ${projectsSynced}, Tasks: ${tasksSynced}`);
+    const logInsert = db.prepare('INSERT INTO sync_log (synced_at, status, message, projects_synced, tasks_synced) VALUES (?, ?, ?, ?, ?)');
+    logInsert.run(syncTime, 'Success', 'Full sync completed', projectsSynced, dbTotalTasks);
+
+    console.log(`Full sync complete. Epics: ${projectsSynced}, Tasks fetched: ${tasksSynced}, DB total: ${dbTotalTasks} (regular: ${dbRegularTasks}, subtasks: ${dbSubtasks})`);
     return {
       success: true,
       projectsSynced,
-      tasksSynced,
-      message: `بازسازی کامل انجام شد (${projectsSynced} اپیک و ${tasksSynced} تسک از جیرا دریافت شد)`
+      tasksSynced: dbTotalTasks,
+      dbRegularTasks,
+      dbSubtasks,
+      message: `بازسازی کامل انجام شد (${projectsSynced} اپیک، ${dbRegularTasks} تسک + ${dbSubtasks} زیرتسک = ${dbTotalTasks} کل)`
     };
 
   } catch (err) {
