@@ -516,17 +516,17 @@ async function fetchTasksForEpic(epicKey) {
         }
       }
 
-      // Fully Dynamic Jira Component extraction (handles unlimited Jira components)
+      // Fully Dynamic Jira Component extraction (preserves all Jira components)
       let component = 'dev';
       const jiraComponents = issue.fields?.components || [];
       const labelsArr = issue.fields?.labels || [];
 
       if (jiraComponents.length > 0) {
-        component = (jiraComponents[0].name || '').toLowerCase().trim();
+        component = jiraComponents.map(c => (c.name || '').toLowerCase().trim()).filter(Boolean).join(', ');
       } else {
-        const compLabel = labelsArr.find(l => typeof l === 'string' && l.startsWith('comp:'));
-        if (compLabel) {
-          component = compLabel.replace('comp:', '').toLowerCase().trim();
+        const compLabels = labelsArr.filter(l => typeof l === 'string' && l.startsWith('comp:'));
+        if (compLabels.length > 0) {
+          component = compLabels.map(l => l.replace('comp:', '').toLowerCase().trim()).join(', ');
         } else {
           component = 'dev';
         }
@@ -709,11 +709,11 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0) {
   const labelsArr = issue.fields?.labels || [];
 
   if (jiraComponents.length > 0) {
-    component = (jiraComponents[0].name || '').toLowerCase().trim();
+    component = jiraComponents.map(c => (c.name || '').toLowerCase().trim()).filter(Boolean).join(', ');
   } else {
-    const compLabel = labelsArr.find(l => typeof l === 'string' && l.startsWith('comp:'));
-    if (compLabel) {
-      component = compLabel.replace('comp:', '').toLowerCase().trim();
+    const compLabels = labelsArr.filter(l => typeof l === 'string' && l.startsWith('comp:'));
+    if (compLabels.length > 0) {
+      component = compLabels.map(l => l.replace('comp:', '').toLowerCase().trim()).join(', ');
     } else {
       component = 'dev';
     }
