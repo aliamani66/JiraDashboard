@@ -551,6 +551,19 @@ const JiraSettingsPage = () => {
                           }}
                         >
                           {isSel ? '✅' : '➕'} <strong>{p.key}</strong> <small style={{ opacity: 0.85 }}>({p.name})</small>
+                          {p.epicCount !== undefined && (
+                            <span style={{
+                              background: isSel ? 'rgba(255, 255, 255, 0.25)' : 'rgba(56, 189, 248, 0.2)',
+                              color: isSel ? '#FFFFFF' : '#38BDF8',
+                              padding: '0.1rem 0.5rem',
+                              borderRadius: '10px',
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              marginRight: '0.2rem'
+                            }}>
+                              {p.epicCount} اپیک
+                            </span>
+                          )}
                         </button>
                       );
                     })
@@ -577,7 +590,7 @@ const JiraSettingsPage = () => {
                     const found = discoveredProjects.find(p => p.key === k);
                     return (
                       <span key={k} style={{ background: 'rgba(14, 165, 233, 0.25)', border: '1px solid #38BDF8', color: '#FFFFFF', padding: '0.2rem 0.65rem', borderRadius: '12px', fontSize: '0.82rem', fontWeight: 'bold' }}>
-                        {k} {found ? `(${found.name})` : ''}
+                        {k} {found ? `(${found.name}${found.epicCount !== undefined ? ` - ${found.epicCount} اپیک` : ''})` : ''}
                       </span>
                     );
                   })}

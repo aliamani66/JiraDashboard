@@ -547,6 +547,20 @@ async function fetchAllJiraProjects() {
   const { baseUrl, username, token } = getJiraConfig();
   if (!baseUrl || !token) throw new Error('تنظیمات آدرس یا توکن جیرا وارد نشده است.');
 
+  // Get local DB epic counts per project key
+  let epicCountsMap = new Map();
+  try {
+    const { getDb } = require('../db/database');
+    const db = getDb();
+    const rows = db.prepare('SELECT id FROM projects').all();
+    for (const row of rows) {
+      const pKey = row.id ? String(row.id).split('-')[0].toUpperCase() : '';
+      if (pKey) {
+        epicCountsMap.set(pKey, (epicCountsMap.get(pKey) || 0) + 1);
+      }
+    }
+  } catch (_) {}
+
   const headersVariants = getAuthHeaderVariants(username, token);
   let projectsList = [];
 
@@ -558,11 +572,15 @@ async function fetchAllJiraProjects() {
         timeout: 6000
       });
       if (Array.isArray(res.data) && res.data.length > 0) {
-        projectsList = res.data.map(p => ({
-          key: p.key,
-          name: p.name || p.key,
-          id: p.id || p.key
-        }));
+        projectsList = res.data.map(p => {
+          const keyUpper = p.key ? p.key.toUpperCase() : '';
+          return {
+            key: p.key,
+            name: p.name || p.key,
+            id: p.id || p.key,
+            epicCount: epicCountsMap.get(keyUpper) || 0
+          };
+        });
         break;
       }
     } catch (_) {}
@@ -576,7 +594,13 @@ async function fetchAllJiraProjects() {
         for (const issue of searchRes.issues) {
           if (issue.fields?.project) {
             const p = issue.fields.project;
-            pMap.set(p.key, { key: p.key, name: p.name || p.key, id: p.id || p.key });
+            const keyUpper = p.key ? p.key.toUpperCase() : '';
+            pMap.set(p.key, {
+              key: p.key,
+              name: p.name || p.key,
+              id: p.id || p.key,
+              epicCount: epicCountsMap.get(keyUpper) || 0
+            });
           }
         }
         projectsList = Array.from(pMap.values());
@@ -586,7 +610,15 @@ async function fetchAllJiraProjects() {
 
   if (projectsList.length === 0) {
     const currentKeys = (getJiraConfig().projectKey || 'ORD').split(',').map(k => k.trim());
-    projectsList = currentKeys.map(k => ({ key: k, name: `پروژه ${k}`, id: k }));
+    projectsList = currentKeys.map(k => {
+      const keyUpper = k.toUpperCase();
+      return {
+        key: k,
+        name: `پروژه ${k}`,
+        id: k,
+        epicCount: epicCountsMap.get(keyUpper) || 0
+      };
+    });
   }
 
   return projectsList;
