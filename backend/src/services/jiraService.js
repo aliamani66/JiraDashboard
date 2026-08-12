@@ -76,15 +76,15 @@ function extractDateField(issue, fieldName) {
   return null;
 }
 
-// Perform JQL Search with retry logic for network stability
+// Perform JQL Search with retry & automatic pagination logic to fetch ALL matching issues
 async function jiraSearch(jql, fields = [], options = {}) {
   const cfg = getJiraConfig();
   const authVariants = getAuthHeaderVariants(cfg.username, cfg.token);
   const validFields = fields.filter(Boolean);
   const isCloud = cfg.baseUrl && cfg.baseUrl.includes('.atlassian.net');
 
-  const maxResults = options.maxResults || undefined;
-  const timeout = options.timeout || 12000;
+  const pageSize = options.maxResults || 500;
+  const timeout = options.timeout || 15000;
   const retries = options.retries || 2;
 
   let lastError = null;
@@ -96,37 +96,48 @@ async function jiraSearch(jql, fields = [], options = {}) {
       'Accept': 'application/json'
     };
 
-    for (let attempt = 0; attempt < retries; attempt++) {
-      try {
-        const endpoint = isCloud ? `${cfg.baseUrl}/rest/api/3/search/jql` : `${cfg.baseUrl}/rest/api/2/search`;
-        const postBody = { jql, fields: validFields };
-        if (maxResults) postBody.maxResults = maxResults;
+    let authSuccess = false;
+    let allIssues = [];
+    let totalCount = 0;
+    let startAt = 0;
 
-        const response = await axios.post(endpoint, postBody, { headers, httpsAgent, timeout });
-        return response.data;
-      } catch (err) {
-        lastError = err;
-        if (err.response && (err.response.status === 401 || err.response.status === 403)) {
-          // Try GET fallback before switching auth variant
-          try {
-            const urlFallback = isCloud ? `${cfg.baseUrl}/rest/api/3/search/jql` : `${cfg.baseUrl}/rest/api/2/search`;
-            const getParams = { jql, fields: validFields.join(',') };
-            if (maxResults) getParams.maxResults = maxResults;
+    while (true) {
+      let pageData = null;
 
-            const getRes = await axios.get(urlFallback, {
-              headers,
-              httpsAgent,
-              params: getParams,
-              timeout
-            });
-            return getRes.data;
-          } catch (_) {}
-          // Switch to next auth format
+      for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+          const endpoint = isCloud ? `${cfg.baseUrl}/rest/api/3/search/jql` : `${cfg.baseUrl}/rest/api/2/search`;
+          const postBody = { jql, fields: validFields, maxResults: pageSize, startAt };
+
+          const response = await axios.post(endpoint, postBody, { headers, httpsAgent, timeout });
+          pageData = response.data;
+          authSuccess = true;
           break;
+        } catch (err) {
+          lastError = err;
+          if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+            break;
+          }
+          console.log(`[JiraSearch Attempt ${attempt + 1}/${retries}] Error: ${err.code || err.message}`);
+          await new Promise(r => setTimeout(r, 1000));
         }
-        console.log(`[JiraSearch Attempt ${attempt + 1}/${retries}] Error: ${err.code || err.message}`);
-        await new Promise(r => setTimeout(r, 1000));
       }
+
+      if (!authSuccess || !pageData) break;
+
+      const pageIssues = pageData.issues || [];
+      allIssues.push(...pageIssues);
+      totalCount = pageData.total || allIssues.length;
+
+      if (allIssues.length >= totalCount || pageIssues.length < pageSize || options.singlePage) {
+        return { total: totalCount, issues: allIssues };
+      }
+
+      startAt += pageIssues.length;
+    }
+
+    if (authSuccess) {
+      return { total: totalCount, issues: allIssues };
     }
   }
 
@@ -135,7 +146,7 @@ async function jiraSearch(jql, fields = [], options = {}) {
     if (fallbackJql && fallbackJql !== jql) {
       console.log(`[JiraSearch 403 Fallback] Retrying search without project filter: ${fallbackJql}`);
       try {
-        return await jiraSearch(fallbackJql, fields, 1);
+        return await jiraSearch(fallbackJql, fields, { ...options, retries: 1 });
       } catch (_) {}
     }
   }
