@@ -1,5 +1,4 @@
-import React from 'react';
-import { Filter, RotateCcw, Activity, Calendar, Layers, Search } from 'lucide-react';
+import { Filter, RotateCcw, Activity, Calendar, Layers, Search, FolderGit2 } from 'lucide-react';
 import './DashboardFilterPanel.css';
 
 const componentMetaMap = {
@@ -32,10 +31,13 @@ const DashboardFilterPanel = ({
   setQuarterFilters,
   componentFilters = [],
   setComponentFilters,
+  projectFilters = [],
+  setProjectFilters,
   searchQuery = '',
   setSearchQuery,
   quarters = [],
   availableComponents = [],
+  availableProjects = [],
   totalProjectsCount = 0,
   filteredCount = 0,
   onResetAll
@@ -46,6 +48,9 @@ const DashboardFilterPanel = ({
   const [quarterSearch, setQuarterSearch] = React.useState('');
   const [showAllQuarters, setShowAllQuarters] = React.useState(false);
 
+  const [projectSearch, setProjectSearch] = React.useState('');
+  const [showAllProjects, setShowAllProjects] = React.useState(false);
+
   // Toggle helper for multi-select arrays
   const toggleSelection = (item, currentList, setList) => {
     if (currentList.includes(item)) {
@@ -55,7 +60,7 @@ const DashboardFilterPanel = ({
     }
   };
 
-  const hasActiveFilters = statusFilters.length > 0 || quarterFilters.length > 0 || componentFilters.length > 0 || searchQuery.trim() !== '';
+  const hasActiveFilters = statusFilters.length > 0 || quarterFilters.length > 0 || componentFilters.length > 0 || projectFilters.length > 0 || searchQuery.trim() !== '';
 
   // Filter & sort Quarters
   const filteredQuarters = quarters.filter(q => {
@@ -93,6 +98,29 @@ const DashboardFilterPanel = ({
   const COMP_LIMIT = 8;
   const visibleComponents = showAllComps || compSearch.trim() !== '' ? sortedComponents : sortedComponents.slice(0, COMP_LIMIT);
   const hiddenCount = sortedComponents.length - visibleComponents.length;
+
+  // Filter & sort Projects
+  const filteredProjectsList = availableProjects.filter(p => {
+    if (!projectSearch.trim()) return true;
+    const term = projectSearch.toLowerCase().trim();
+    const pKey = typeof p === 'object' ? (p.id || p.key || '') : String(p);
+    const pTitle = typeof p === 'object' ? (p.title || '') : '';
+    return pKey.toLowerCase().includes(term) || pTitle.toLowerCase().includes(term);
+  });
+
+  const sortedProjectsList = [...filteredProjectsList].sort((a, b) => {
+    const aKey = typeof a === 'object' ? (a.id || a.key) : String(a);
+    const bKey = typeof b === 'object' ? (b.id || b.key) : String(b);
+    const aSel = projectFilters.includes(aKey);
+    const bSel = projectFilters.includes(bKey);
+    if (aSel && !bSel) return -1;
+    if (!aSel && bSel) return 1;
+    return 0;
+  });
+
+  const PROJ_LIMIT = 6;
+  const visibleProjects = showAllProjects || projectSearch.trim() !== '' ? sortedProjectsList : sortedProjectsList.slice(0, PROJ_LIMIT);
+  const hiddenProjectsCount = sortedProjectsList.length - visibleProjects.length;
 
   return (
     <div className="glass-card main-filter-tile">
@@ -304,6 +332,77 @@ const DashboardFilterPanel = ({
             )}
           </div>
         </div>
+
+        {/* ─── Sub-Tile 4: Project Key Filter (Multi-select) ──────────────────── */}
+        {availableProjects && availableProjects.length > 0 && (
+          <div className="mft-subcard">
+            <div className="mft-subcard-header">
+              <FolderGit2 size={16} className="text-accent-purple" style={{ color: '#C084FC' }} />
+              <span>۴. پروژه‌های عملیاتی (انتخاب چندتایی)</span>
+              {projectFilters.length > 0 && <span className="sub-count-pill" style={{ background: 'rgba(192, 132, 252, 0.25)', color: '#E9D5FF', border: '1px solid rgba(192, 132, 252, 0.4)' }}>{projectFilters.length} انتخابی</span>}
+            </div>
+
+            {/* Quick Project Search Input */}
+            {availableProjects.length > 4 && (
+              <div className="mft-mini-search">
+                <input
+                  type="text"
+                  placeholder="🔍 فیلتر سریع پروژه‌ها (نام یا شناسه)..."
+                  value={projectSearch}
+                  onChange={e => setProjectSearch(e.target.value)}
+                  className="mft-mini-input"
+                />
+                {projectSearch && (
+                  <button className="mft-mini-clear" onClick={() => setProjectSearch('')}>×</button>
+                )}
+              </div>
+            )}
+
+            <div className="mft-pills-wrap scrollable">
+              <button
+                className={`mft-pill ${projectFilters.length === 0 ? 'active-all' : ''}`}
+                onClick={() => setProjectFilters([])}
+              >
+                🌐 همه پروژه‌ها
+              </button>
+
+              {visibleProjects.map(p => {
+                const pKey = typeof p === 'object' ? (p.id || p.key) : String(p);
+                const pTitle = typeof p === 'object' ? (p.title || pKey) : pKey;
+                const isSelected = projectFilters.includes(pKey);
+                return (
+                  <button
+                    key={pKey}
+                    className={`mft-pill project-item-pill ${isSelected ? 'active' : ''}`}
+                    onClick={() => toggleSelection(pKey, projectFilters, setProjectFilters)}
+                    title={pTitle !== pKey ? `${pTitle} (${pKey})` : pKey}
+                    style={isSelected ? { background: 'linear-gradient(135deg, rgba(168,85,247,0.35), rgba(192,132,252,0.35))', borderColor: '#C084FC', color: '#FFFFFF', boxShadow: '0 0 12px rgba(192,132,252,0.35)' } : {}}
+                  >
+                    📂 <strong>{pKey}</strong>
+                  </button>
+                );
+              })}
+
+              {!projectSearch && hiddenProjectsCount > 0 && !showAllProjects && (
+                <button 
+                  className="mft-expand-btn"
+                  onClick={() => setShowAllProjects(true)}
+                >
+                  + {hiddenProjectsCount} پروژه دیگر...
+                </button>
+              )}
+
+              {!projectSearch && showAllProjects && sortedProjectsList.length > PROJ_LIMIT && (
+                <button 
+                  className="mft-expand-btn collapse"
+                  onClick={() => setShowAllProjects(false)}
+                >
+                  ▲ کمتر
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

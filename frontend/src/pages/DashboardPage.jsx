@@ -18,6 +18,7 @@ const DashboardPage = () => {
   const [statusFilters, setStatusFilters] = useState([]);
   const [quarterFilters, setQuarterFilters] = useState([]);
   const [componentFilters, setComponentFilters] = useState([]);
+  const [projectFilters, setProjectFilters] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   const perms = user?.permissions || [];
@@ -45,6 +46,11 @@ const DashboardPage = () => {
   // Collect all unique component keys dynamically across projects
   const availableComponents = Array.from(
     new Set(projects.flatMap(p => Object.keys(p.components_map || {})))
+  );
+
+  // Collect all unique projects list for project filter tile
+  const availableProjects = Array.from(
+    new Map(projects.map(p => [p.id || p.key, { id: p.id || p.key, title: p.title || p.id, key: p.id || p.key }])).values()
   );
 
   // Filter projects with multi-select logic
@@ -90,6 +96,12 @@ const DashboardPage = () => {
       if (!hasComp) return false;
     }
 
+    // 4. Project Key Filter (Multi-select)
+    if (projectFilters.length > 0) {
+      const pKey = p.id || p.key;
+      if (!projectFilters.includes(pKey)) return false;
+    }
+
     return true;
   });
 
@@ -97,6 +109,7 @@ const DashboardPage = () => {
     setStatusFilters([]);
     setQuarterFilters([]);
     setComponentFilters([]);
+    setProjectFilters([]);
     setSearchQuery('');
   };
 
@@ -136,7 +149,7 @@ const DashboardPage = () => {
         projects={projects} 
       />
 
-      {/* Unified Full-Width Glass Filter Tile with 3 Sub-Cards */}
+      {/* Unified Full-Width Glass Filter Tile */}
       <DashboardFilterPanel 
         statusFilters={statusFilters}
         setStatusFilters={setStatusFilters}
@@ -144,10 +157,13 @@ const DashboardPage = () => {
         setQuarterFilters={setQuarterFilters}
         componentFilters={componentFilters}
         setComponentFilters={setComponentFilters}
+        projectFilters={projectFilters}
+        setProjectFilters={setProjectFilters}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         quarters={quarters}
         availableComponents={availableComponents}
+        availableProjects={availableProjects}
         totalProjectsCount={projects.length}
         filteredCount={filteredProjects.length}
         onResetAll={handleResetAll}
