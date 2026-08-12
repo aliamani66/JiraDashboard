@@ -672,13 +672,30 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     return true;
   });
 
-  const parsedTasks = finalIssues.map((issue, idx) =>
-    jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue
-  );
+  const parsedTasks = finalIssues.map((issue, idx) => {
+    const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue;
+    if (parsed && !parsed.project_id) {
+      const projKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
+      // Find matching project in local DB or fallback to first project / projKey
+      const proj = db.prepare('SELECT id FROM projects WHERE UPPER(key) = ? OR UPPER(id) = ? LIMIT 1').get(projKey, projKey);
+      parsed.project_id = proj ? proj.id : projKey;
+    }
+    return parsed;
+  });
 
   db.transaction(() => {
     for (const task of parsedTasks) {
-      if (task && task.id) { task.last_synced = syncTime; insertTask.run(task); }
+      if (task && task.id) {
+        task.last_synced = syncTime;
+        // Ensure project exists so database relation does not fail silently
+        if (task.project_id) {
+          const projExists = db.prepare('SELECT id FROM projects WHERE id = ?').get(task.project_id);
+          if (!projExists) {
+            db.prepare('INSERT OR IGNORE INTO projects (id, name, key) VALUES (?, ?, ?)').run(task.project_id, `پروژه ${task.project_id}`, task.project_id);
+          }
+        }
+        insertTask.run(task);
+      }
     }
   })();
 
@@ -694,12 +711,12 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     success: true, monthIndex, monthLabel,
     dateRange: `${gregStartDateOnly} تا ${gregEndDateOnly}`,
     jql: confirmedJql,
-    winningVariant: 'میلادی بدون پروژه (تایید شده)',
+    winningVariant: 'کوئری #۳ (پروژه + تاریخ میلادی دقیق)',
     taskCount: parsedTasks.length,
     status: parsedTasks.length > 0 ? 'success' : 'empty',
-    message: parsedTasks.length > 0 ? `${parsedTasks.length} تسک دریافت و ذخیره شد` : '۰ تسک (بازه خالی است)',
+    message: parsedTasks.length > 0 ? `${parsedTasks.length} تسک دریافت و ذخیره شد` : '۰ تسک (در این بازه تسکی یافت نشد)',
     queryAuditResults: [{
-      variant: 1, name: '✅ میلادی بدون پروژه (تایید شده)',
+      variant: 3, name: '✅ کوئری #۳ (پروژه + تاریخ میلادی دقیق)',
       jql: confirmedJql, taskCount: parsedTasks.length,
       status: parsedTasks.length > 0 ? 'success' : 'zero'
     }]
