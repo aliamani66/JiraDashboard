@@ -285,13 +285,17 @@ function cleanErrorMessage(e) {
     }
 
     let searchData;
+    let lastExecutedJql = jqlFilter;
     const jqlAttempts = [jqlFilter, jqlFilterQuotes, 'ORDER BY created DESC'];
     let lastSearchErr = null;
 
     for (const q of jqlAttempts) {
       try {
         searchData = await jiraService.jiraSearch(q, ['*all'], { maxResults: 2, timeout: 6000, retries: 1 });
-        if (searchData && searchData.issues) break;
+        if (searchData && searchData.issues) {
+          lastExecutedJql = q;
+          break;
+        }
       } catch (e1) {
         lastSearchErr = e1;
       }
@@ -307,7 +311,20 @@ function cleanErrorMessage(e) {
 
     const issues = searchData.issues || [];
     if (issues.length === 0) {
-      return res.json({ success: true, projectName: projName, complianceScore: 60, message: 'پروژه متصل شد اما تسکی یافت نشد.', diagnostics: [] });
+      return res.json({
+        success: true,
+        projectName: projName,
+        complianceScore: 60,
+        message: 'پروژه متصل شد اما تسکی یافت نشد.',
+        requestDetails: {
+          baseUrl,
+          username,
+          projectKey: pKeyStr,
+          executedJql: lastExecutedJql,
+          endpoint: `${baseUrl}/rest/api/2/search`
+        },
+        diagnostics: []
+      });
     }
 
     let sampleWithComp = issues.find(i => i.fields?.components && i.fields.components.length > 0);
@@ -362,6 +379,13 @@ function cleanErrorMessage(e) {
       sampleIssueKey: firstIssue.key,
       totalIssuesFound: searchData.total || issues.length,
       complianceScore: 100,
+      requestDetails: {
+        baseUrl,
+        username,
+        projectKey: pKeyStr,
+        executedJql: lastExecutedJql,
+        endpoint: `${baseUrl}/rest/api/2/search`
+      },
       diagnostics: schemaReport,
       rawSampleKeys: customKeys,
     });

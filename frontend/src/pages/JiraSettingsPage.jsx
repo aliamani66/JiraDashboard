@@ -357,6 +357,19 @@ const JiraSettingsPage = () => {
             <div className="jsp-error-msg"><AlertTriangle size={16} /> {diagResult.message}</div>
           )}
 
+          {diagResult.requestDetails && (
+            <div className="jsp-req-details-box">
+              <h4>📋 اطلاعات کامل درخواست ارسالی به سرور Jira:</h4>
+              <div className="jsp-req-grid">
+                <div><span>آدرس سرور (Base URL):</span> <code>{diagResult.requestDetails.baseUrl}</code></div>
+                <div><span>نام کاربری:</span> <code>{diagResult.requestDetails.username || '—'}</code></div>
+                <div><span>کلید پروژه:</span> <code>{diagResult.requestDetails.projectKey}</code></div>
+                <div><span>کوئری JQL اجراشده:</span> <code className="accent">{diagResult.requestDetails.executedJql}</code></div>
+                <div><span>مسیر REST API:</span> <code>{diagResult.requestDetails.endpoint}</code></div>
+              </div>
+            </div>
+          )}
+
           {diagResult.diagnostics?.length > 0 && (
             <div className="jsp-diag-table-wrapper">
               <table className="jsp-diag-table">
