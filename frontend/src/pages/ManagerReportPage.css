@@ -561,28 +561,85 @@
 .mr-issue-badge.danger { background: rgba(239, 68, 68, 0.2); color: #EF4444; }
 .mr-issue-badge.purple { background: rgba(168, 85, 247, 0.2); color: #A855F7; }
 
-/* ─── Print Styles ───────────────────────────────────────────────────── */
+/* ─── Print Styles (Landscape Orientation) ────────────────────────────── */
 @media print {
-  body {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+  html, body {
     background: #FFFFFF !important;
     color: #000000 !important;
+    font-size: 10pt !important;
+    width: 100% !important;
   }
-  .sidebar, .topbar, .mr-header-actions, .mr-filter-panel {
+  .sidebar, .topbar, .mr-header-actions, .mr-filter-panel, .mr-print-btn, .back-btn {
     display: none !important;
   }
-  .layout-content {
-    margin-right: 0 !important;
+  .layout-content, .manager-report-page {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   .mr-header {
     border: none !important;
     background: none !important;
     box-shadow: none !important;
+    padding: 0 0 1rem 0 !important;
   }
   .mr-title {
     color: #000000 !important;
+    font-size: 1.5rem !important;
   }
-  .mr-audit-table th, .mr-audit-table td {
+  .mr-subtitle {
+    color: #333333 !important;
+  }
+  .glass-card {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    box-shadow: none !important;
     color: #000000 !important;
-    border-bottom: 1px solid #CCCCCC !important;
+  }
+  .mr-kpi-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 0.5rem !important;
+    page-break-inside: avoid;
+  }
+  .mr-kpi-card {
+    border: 1px solid #CBD5E1 !important;
+    background: #F8FAFC !important;
+    color: #000000 !important;
+    padding: 0.6rem 0.8rem !important;
+  }
+  .mr-kpi-title, .mr-kpi-subtitle {
+    color: #475569 !important;
+  }
+  .mr-kpi-value {
+    color: #0F172A !important;
+  }
+  .mr-audit-table {
+    font-size: 8.5pt !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  .mr-audit-table th {
+    background: #F1F5F9 !important;
+    color: #0F172A !important;
+    border-bottom: 2px solid #94A3B8 !important;
+    padding: 0.4rem 0.6rem !important;
+  }
+  .mr-audit-table td {
+    color: #1E293B !important;
+    border-bottom: 1px solid #E2E8F0 !important;
+    padding: 0.4rem 0.6rem !important;
+  }
+  .task-key-tag {
+    background: #E0F2FE !important;
+    border: 1px solid #38BDF8 !important;
+    color: #0284C7 !important;
+  }
+  .task-title-text {
+    color: #0F172A !important;
   }
 }
