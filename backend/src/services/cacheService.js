@@ -197,17 +197,33 @@ async function syncMonthlyLastYearFromJira() {
   const projKeys = cfg.projectKey ? cfg.projectKey.split(',').map(k => k.trim()).filter(Boolean) : [];
   const projectJqlClause = projKeys.length > 0 ? `project IN (${projKeys.join(',')}) AND ` : '';
 
+  const configuredProjKeySet = new Set((cfg.projectKey || '').split(',').map(k => k.trim().toUpperCase()).filter(Boolean));
+
   for (const mRange of monthRanges) {
     const jql = `${projectJqlClause}created >= "${mRange.startStr}" AND created <= "${mRange.endStr}" ORDER BY created ASC`;
     try {
       const searchRes = await jiraService.jiraSearch(jql);
       const rawIssues = searchRes.issues || [];
-      const parsedTasks = rawIssues.map((issue, idx) => jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue);
+
+      // Strict JS-level filter: only keep issues from configured project keys
+      const filteredIssues = configuredProjKeySet.size > 0
+        ? rawIssues.filter(issue => {
+            const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
+            return configuredProjKeySet.has(issueProjKey);
+          })
+        : rawIssues;
+
+      const parsedTasks = filteredIssues.map((issue, idx) => jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue);
 
       db.transaction(() => {
         for (const task of parsedTasks) {
           if (task && task.id) {
             task.last_synced = syncTime;
+            // Only insert if project exists in DB (no auto-create for unknown projects)
+            if (task.project_id) {
+              const projExists = db.prepare('SELECT id FROM projects WHERE id = ?').get(task.project_id);
+              if (!projExists) continue;
+            }
             insertTask.run(task);
           }
         }
@@ -604,11 +620,10 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       for (const task of parsedTasks) {
         if (task && task.id) {
           task.last_synced = syncTime;
+          // Only insert task if its project already exists in DB (no auto-create of unknown projects)
           if (task.project_id) {
             const projExists = db.prepare('SELECT id FROM projects WHERE id = ?').get(task.project_id);
-            if (!projExists) {
-              db.prepare('INSERT OR IGNORE INTO projects (id, title) VALUES (?, ?)').run(task.project_id, `پروژه ${task.project_id}`);
-            }
+            if (!projExists) continue; // Skip tasks from unauthorized projects
           }
           insertTask.run(task);
         }
