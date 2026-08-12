@@ -1503,9 +1503,34 @@ router.get('/reports/waiting-html', (req, res) => {
       display: inline-block;
     }
     .badge-waiting { background: #FFEDD5; color: #C2410C; border: 1px solid #FDBA74; }
+    @page {
+      size: A4 landscape;
+      margin: 8mm;
+    }
     @media print {
       .no-print-bar { display: none !important; }
-      body { padding: 0; }
+      body {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #FFFFFF !important;
+        font-size: 11px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .header-banner, .card-section, .kpi-box, .data-table {
+        break-inside: avoid;
+        box-shadow: none !important;
+      }
+      .data-table {
+        width: 100% !important;
+        table-layout: auto !important;
+        font-size: 9.5px !important;
+      }
+      .data-table th, .data-table td {
+        padding: 4px 5px !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+      }
     }
   </style>
 </head>
