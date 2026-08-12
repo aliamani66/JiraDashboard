@@ -6,6 +6,8 @@ import {
   ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap
 } from 'lucide-react';
 import { api } from '../services/api';
+import JalaliDatePicker from '../components/common/JalaliDatePicker';
+import { g2j, j2g, formatJalali, formatGregorian } from '../utils/jalali';
 import './JiraSettingsPage.css';
 
 // ─────────────────────────── HELPERS ────────────────────────────
@@ -239,9 +241,14 @@ const JiraSettingsPage = () => {
   const [monthlyResults, setMonthlyResults] = useState(null);
   const [syncProgress, setSyncProgress] = useState(null);
 
-  const [showRangeModal, setShowRangeModal] = useState(false);
-  const [rangeStartDate, setRangeStartDate] = useState('2025-01-01');
-  const [rangeEndDate, setRangeEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [rangeStartJalali, setRangeStartJalali] = useState(() => {
+    const now = new Date();
+    return g2j(now.getFullYear() - 1, now.getMonth() + 1, now.getDate());
+  });
+  const [rangeEndJalali, setRangeEndJalali] = useState(() => {
+    const now = new Date();
+    return g2j(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  });
 
   const applyDatePreset = (daysAgo, monthsAgo) => {
     const end = new Date();
@@ -251,8 +258,8 @@ const JiraSettingsPage = () => {
     } else if (monthsAgo) {
       start.setMonth(end.getMonth() - monthsAgo);
     }
-    setRangeEndDate(end.toISOString().split('T')[0]);
-    setRangeStartDate(start.toISOString().split('T')[0]);
+    setRangeEndJalali(g2j(end.getFullYear(), end.getMonth() + 1, end.getDate()));
+    setRangeStartJalali(g2j(start.getFullYear(), start.getMonth() + 1, start.getDate()));
   };
 
   const showToast = (msg, type = 'success') => {
@@ -503,14 +510,21 @@ const JiraSettingsPage = () => {
   };
 
   const handleRangeSync = async () => {
-    if (!rangeStartDate || !rangeEndDate) {
+    if (!rangeStartJalali || !rangeEndJalali) {
       showToast('لطفاً هر دو تاریخ شروع و پایان را انتخاب فرمایید.', 'error');
       return;
     }
-    setShowRangeModal(false);
 
-    const startDt = new Date(rangeStartDate);
-    const endDt = new Date(rangeEndDate);
+    const startG = j2g(rangeStartJalali.jy, rangeStartJalali.jm, rangeStartJalali.jd);
+    const endG = j2g(rangeEndJalali.jy, rangeEndJalali.jm, rangeEndJalali.jd);
+
+    const startDt = new Date(startG.gy, startG.gm - 1, startG.gd);
+    const endDt = new Date(endG.gy, endG.gm - 1, endG.gd);
+
+    if (startDt > endDt) {
+      showToast('تاریخ شروع نمی‌تواند پس از تاریخ پایان باشد.', 'error');
+      return;
+    }
 
     const monthRanges = [];
     let curr = new Date(startDt.getFullYear(), startDt.getMonth(), 1);
@@ -526,6 +540,13 @@ const JiraSettingsPage = () => {
 
       const startStr = `${chunkStart.getFullYear()}-${String(chunkStart.getMonth() + 1).padStart(2, '0')}-${String(chunkStart.getDate()).padStart(2, '0')} 00:00`;
       const endStr = `${chunkEnd.getFullYear()}-${String(chunkEnd.getMonth() + 1).padStart(2, '0')}-${String(chunkEnd.getDate()).padStart(2, '0')} 23:59`;
+
+      const startJal = g2j(chunkStart.getFullYear(), chunkStart.getMonth() + 1, chunkStart.getDate());
+      const endJal = g2j(chunkEnd.getFullYear(), chunkEnd.getMonth() + 1, chunkEnd.getDate());
+
+      const jalaliStartStr = `${startJal.jy}/${String(startJal.jm).padStart(2, '0')}/${String(startJal.jd).padStart(2, '0')} 00:00`;
+      const jalaliEndStr = `${endJal.jy}/${String(endJal.jm).padStart(2, '0')}/${String(endJal.jd).padStart(2, '0')} 23:59`;
+
       const monthInfo = getJalaliMonthLabel(y, m);
 
       monthRanges.push({
@@ -535,13 +556,15 @@ const JiraSettingsPage = () => {
         jalaliName: monthInfo.jalali,
         gregorianName: monthInfo.gregorian,
         startStr,
-        endStr
+        endStr,
+        jalaliStartStr,
+        jalaliEndStr
       });
 
       curr = new Date(y, m + 1, 1);
     }
 
-    await executeStepByStepSync(monthRanges, '📅 در حال همگام‌سازی بازه تاریخ انتخاب‌شده');
+    await executeStepByStepSync(monthRanges, '📅 در حال استخراج و همگام‌سازی بازه تاریخی');
   };
 
   const handleDiagnose = async () => {
@@ -837,49 +860,19 @@ const JiraSettingsPage = () => {
 
         {/* Inputs & Extract Button Row */}
         <div style={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1.25rem', background: 'rgba(0, 0, 0, 0.3)', padding: '1rem 1.25rem', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-          <div style={{ flex: '1 1 200px' }}>
-            <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 'bold', color: '#38BDF8', marginBottom: '0.45rem' }}>
-              🗓️ از تاریخ (روز / ماه / سال):
-            </label>
-            <input
-              type="date"
-              value={rangeStartDate}
-              onChange={e => setRangeStartDate(e.target.value)}
-              style={{
-                width: '100%',
-                background: 'rgba(15, 23, 42, 0.8)',
-                border: '1px solid rgba(56, 189, 248, 0.4)',
-                color: '#FFFFFF',
-                borderRadius: '12px',
-                padding: '0.65rem 0.95rem',
-                fontSize: '0.95rem',
-                outline: 'none',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
+          <div style={{ flex: '1 1 220px' }}>
+            <JalaliDatePicker
+              label="🗓️ از تاریخ (شمسی):"
+              value={rangeStartJalali}
+              onChange={setRangeStartJalali}
             />
           </div>
 
-          <div style={{ flex: '1 1 200px' }}>
-            <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 'bold', color: '#38BDF8', marginBottom: '0.45rem' }}>
-              🗓️ تا تاریخ (روز / ماه / سال):
-            </label>
-            <input
-              type="date"
-              value={rangeEndDate}
-              onChange={e => setRangeEndDate(e.target.value)}
-              style={{
-                width: '100%',
-                background: 'rgba(15, 23, 42, 0.8)',
-                border: '1px solid rgba(56, 189, 248, 0.4)',
-                color: '#FFFFFF',
-                borderRadius: '12px',
-                padding: '0.65rem 0.95rem',
-                fontSize: '0.95rem',
-                outline: 'none',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
+          <div style={{ flex: '1 1 220px' }}>
+            <JalaliDatePicker
+              label="🗓️ تا تاریخ (شمسی):"
+              value={rangeEndJalali}
+              onChange={setRangeEndJalali}
             />
           </div>
 

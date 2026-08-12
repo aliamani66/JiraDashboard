@@ -572,10 +572,24 @@ async function syncSingleMonthFromJira({ startStr, endStr, monthLabel, monthInde
   const projKeys = cfg.projectKey ? cfg.projectKey.split(',').map(k => k.trim()).filter(Boolean) : [];
   const projectJqlClause = projKeys.length > 0 ? `project IN (${projKeys.join(',')}) AND ` : '';
 
-  const jql = `${projectJqlClause}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC`;
+  // Support both Jalali and Gregorian formatted dates in JQL for Jira
+  let jql = `${projectJqlClause}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC`;
 
   try {
-    const searchRes = await jiraService.jiraSearch(jql);
+    let searchRes = await jiraService.jiraSearch(jql);
+    
+    // If standard query returned no issues and jalaliStartStr is provided, attempt Jalali JQL query
+    if ((!searchRes.issues || searchRes.issues.length === 0) && jalaliStartStr && jalaliEndStr) {
+      const jalaliJql = `${projectJqlClause}created >= "${jalaliStartStr}" AND created <= "${jalaliEndStr}" ORDER BY created ASC`;
+      try {
+        const fallbackRes = await jiraService.jiraSearch(jalaliJql);
+        if (fallbackRes.issues && fallbackRes.issues.length > 0) {
+          searchRes = fallbackRes;
+          jql = jalaliJql;
+        }
+      } catch (_) {}
+    }
+
     const rawIssues = searchRes.issues || [];
     const parsedTasks = rawIssues.map((issue, idx) => jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue);
 
