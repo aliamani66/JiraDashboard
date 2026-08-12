@@ -238,9 +238,9 @@ router.post('/diagnose', async (req, res) => {
 
     let headers = { Authorization: basicAuth, 'Content-Type': 'application/json', 'Accept': 'application/json' };
 
-    const pKeyStr = projectKey.trim().toUpperCase();
-    const cleanKey = /^[A-Z0-9_]+$/.test(pKeyStr) ? pKeyStr : `"${pKeyStr}"`;
-    const jqlFilter = (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') ? `project = ${cleanKey} ORDER BY created DESC` : `ORDER BY created DESC`;
+    const pKeyStr = projectKey.trim().toUpperCase().replace(/["']/g, '');
+    const jqlFilter = (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') ? `project = ${pKeyStr} ORDER BY created DESC` : `ORDER BY created DESC`;
+    const jqlFilterQuotes = (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') ? `project = "${pKeyStr}" ORDER BY created DESC` : `ORDER BY created DESC`;
     const projectUrlPath = (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') ? `/${pKeyStr}` : '';
 
 function cleanErrorMessage(e) {
@@ -285,52 +285,36 @@ function cleanErrorMessage(e) {
     }
 
     let searchRes;
-    try {
-      searchRes = await axios.post(`${baseUrl}/rest/api/2/search`, {
-        jql: jqlFilter,
-        maxResults: 10,
-        fields: ['*all']
-      }, { headers, httpsAgent, timeout: 10000 });
-    } catch (e) {
+    const jqlAttempts = [jqlFilter, jqlFilterQuotes, 'ORDER BY created DESC'];
+    let lastSearchErr = null;
+
+    for (const q of jqlAttempts) {
       try {
-        searchRes = await axios.get(`${baseUrl}/rest/api/2/search`, {
-          headers,
-          httpsAgent,
-          params: { jql: jqlFilter, maxResults: 10, fields: '*all' },
-          timeout: 10000
-        });
-      } catch (e2) {
+        searchRes = await axios.post(`${baseUrl}/rest/api/2/search`, { jql: q, maxResults: 10, fields: ['*all'] }, { headers, httpsAgent, timeout: 10000 });
+        if (searchRes.data) break;
+      } catch (e1) {
+        lastSearchErr = e1;
         try {
-          searchRes = await axios.post(`${baseUrl}/rest/api/3/search/jql`, {
-            jql: jqlFilter,
-            maxResults: 10,
-            fields: ['*all']
-          }, { headers, httpsAgent, timeout: 10000 });
-        } catch (e3) {
-          // If 403 Forbidden because project key is restricted or different, try fallback search
-          if ((e3.response && e3.response.status === 403) || (e && e.response && e.response.status === 403)) {
-            try {
-              searchRes = await axios.post(`${baseUrl}/rest/api/2/search`, {
-                jql: 'ORDER BY created DESC',
-                maxResults: 10,
-                fields: ['*all']
-              }, { headers, httpsAgent, timeout: 10000 });
-            } catch (fallbackErr) {
-              const errMsg = cleanErrorMessage(e3 || e);
-              return res.status(400).json({
-                success: false,
-                message: `حساب کاربری دسترسی به کلید پروژه "${pKeyStr}" را ندارد (خطای 403). لطفاً در جیرا دسترسی‌های حساب m.ghafoory را چک فرمایید یا در تنظیمات کلید پروژه را روی ALL قرار دهید: ${errMsg}`
-              });
-            }
-          } else {
-            const errMsg = cleanErrorMessage(e3 || e);
-            return res.status(400).json({
-              success: false,
-              message: `خطا در دریافت تسک‌ها از جیرا (${jqlFilter}): ${errMsg}`
-            });
+          searchRes = await axios.get(`${baseUrl}/rest/api/2/search`, { headers, httpsAgent, params: { jql: q, maxResults: 10, fields: '*all' }, timeout: 10000 });
+          if (searchRes.data) break;
+        } catch (e2) {
+          lastSearchErr = e2;
+          try {
+            searchRes = await axios.post(`${baseUrl}/rest/api/3/search/jql`, { jql: q, maxResults: 10, fields: ['*all'] }, { headers, httpsAgent, timeout: 10000 });
+            if (searchRes.data) break;
+          } catch (e3) {
+            lastSearchErr = e3;
           }
         }
       }
+    }
+
+    if (!searchRes || !searchRes.data) {
+      const errMsg = cleanErrorMessage(lastSearchErr);
+      return res.status(400).json({
+        success: false,
+        message: `عدم دریافت تسک‌ها از جیرا: ${errMsg}`
+      });
     }
 
     const issues = searchRes.data.issues || [];
