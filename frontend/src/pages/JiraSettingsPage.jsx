@@ -241,6 +241,8 @@ const JiraSettingsPage = () => {
   const [monthlyResults, setMonthlyResults] = useState(null);
   const [syncProgress, setSyncProgress] = useState(null);
   const [showRangeModal, setShowRangeModal] = useState(false);
+  const [jqlPreview, setJqlPreview] = useState(null);
+  const [jqlPreviewLoading, setJqlPreviewLoading] = useState(false);
 
   const [rangeStartJalali, setRangeStartJalali] = useState(() => {
     const now = new Date();
@@ -261,6 +263,30 @@ const JiraSettingsPage = () => {
     }
     setRangeEndJalali(g2j(end.getFullYear(), end.getMonth() + 1, end.getDate()));
     setRangeStartJalali(g2j(start.getFullYear(), start.getMonth() + 1, start.getDate()));
+    setJqlPreview(null);
+  };
+
+  const handlePreviewJql = async () => {
+    if (!rangeStartJalali || !rangeEndJalali) {
+      showToast('لطفاً تاریخ شروع و پایان را انتخاب کنید.', 'error');
+      return;
+    }
+    try {
+      setJqlPreviewLoading(true);
+      setJqlPreview(null);
+      const startG = j2g(rangeStartJalali.jy, rangeStartJalali.jm, rangeStartJalali.jd);
+      const endG = j2g(rangeEndJalali.jy, rangeEndJalali.jm, rangeEndJalali.jd);
+      const startStr = `${startG.gy}-${String(startG.gm).padStart(2,'0')}-${String(startG.gd).padStart(2,'0')} 00:00`;
+      const endStr = `${endG.gy}-${String(endG.gm).padStart(2,'0')}-${String(endG.gd).padStart(2,'0')} 23:59`;
+      const jalaliStartStr = `${rangeStartJalali.jy}/${String(rangeStartJalali.jm).padStart(2,'0')}/${String(rangeStartJalali.jd).padStart(2,'0')} 00:00`;
+      const jalaliEndStr = `${rangeEndJalali.jy}/${String(rangeEndJalali.jm).padStart(2,'0')}/${String(rangeEndJalali.jd).padStart(2,'0')} 23:59`;
+      const res = await api.previewJqlQueries({ startStr, endStr, jalaliStartStr, jalaliEndStr });
+      setJqlPreview(res);
+    } catch (e) {
+      showToast('خطا در دریافت پیش‌نمایش: ' + e.message, 'error');
+    } finally {
+      setJqlPreviewLoading(false);
+    }
   };
 
   const showToast = (msg, type = 'success') => {
@@ -923,50 +949,62 @@ const JiraSettingsPage = () => {
               </div>
 
               {/* Modal Action Buttons */}
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '1.25rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.25rem', flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  onClick={() => setShowRangeModal(false)}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    color: '#CBD5E1',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '12px',
-                    padding: '0.65rem 1.25rem',
-                    fontSize: '0.9rem',
-                    cursor: 'pointer'
-                  }}
+                  onClick={() => { setShowRangeModal(false); setJqlPreview(null); }}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#94A3B8', borderRadius: '12px', padding: '0.65rem 1.25rem', fontSize: '0.9rem', cursor: 'pointer' }}
                 >
-                  انصراف
+                  ✕ بستن
                 </button>
-
+                <button
+                  type="button"
+                  onClick={handlePreviewJql}
+                  disabled={jqlPreviewLoading}
+                  style={{ background: 'linear-gradient(135deg, #6366F1, #4F46E5)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.65rem 1.25rem', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  {jqlPreviewLoading ? '⏳ در حال جنریت...' : '🔎 نمایش کوئری‌های JQL'}
+                </button>
                 <button
                   type="button"
                   onClick={handleRangeSync}
                   disabled={monthlySyncing}
-                  style={{
-                    background: 'linear-gradient(135deg, #10B981, #059669)',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '12px',
-                    padding: '0.65rem 1.5rem',
-                    fontSize: '0.92rem',
-                    fontWeight: 'bold',
-                    cursor: monthlySyncing ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.6rem',
-                    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)'
-                  }}
+                  style={{ background: 'linear-gradient(135deg, #10B981, #059669)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.65rem 1.5rem', fontSize: '0.92rem', fontWeight: 'bold', cursor: monthlySyncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 4px 15px rgba(16,185,129,0.4)' }}
                 >
                   <RefreshCw size={18} className={monthlySyncing ? 'spin' : ''} />
-                  {monthlySyncing ? 'در حال استخراج...' : '🚀 شروع همگام‌سازی و استخراج از جیرا'}
+                  {monthlySyncing ? 'در حال استخراج...' : '🚀 شروع همگام‌سازی'}
                 </button>
               </div>
+
+              {/* JQL Preview Panel - shown below buttons inside modal */}
+              {jqlPreview && (
+                <div style={{ marginTop: '1.25rem', borderTop: '1px solid rgba(99,102,241,0.3)', paddingTop: '1rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.75rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    <span>🔗 <strong style={{ color: '#38BDF8' }}>سرور جیرا:</strong> {jqlPreview.jiraBaseUrl}</span>
+                    <span>📁 <strong style={{ color: '#38BDF8' }}>پروژه:</strong> {jqlPreview.projectKey}</span>
+                    <span>📅 <strong style={{ color: '#10B981' }}>بازه شمسی:</strong> {jqlPreview.jalaliRange}</span>
+                    <span>📅 <strong style={{ color: '#F59E0B' }}>بازه میلادی:</strong> {jqlPreview.gregorianRange}</span>
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '0 0 0.6rem' }}>کوئری‌های زیر دقیقاً همان‌هایی هستند که به جیرا ارسال می‌شوند. تأیید کنید که فرمت درست است:</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '260px', overflowY: 'auto' }}>
+                    {jqlPreview.queries.map(q => (
+                      <div key={q.id} style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '0.6rem 0.9rem' }}>
+                        <div style={{ fontSize: '0.74rem', color: '#A78BFA', fontWeight: 700, marginBottom: '0.3rem' }}>
+                          #{q.id} — {q.name}
+                        </div>
+                        <code style={{ fontSize: '0.8rem', color: '#6EE7B7', wordBreak: 'break-all', fontFamily: 'monospace', lineHeight: 1.6 }}>
+                          {q.jql}
+                        </code>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
 
       {/* ── 12-MONTH BATCH SYNC RESULTS ── */}
       {monthlyResults && (

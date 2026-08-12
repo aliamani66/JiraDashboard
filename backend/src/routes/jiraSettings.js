@@ -286,6 +286,100 @@ router.post('/sync-single-month', async (req, res) => {
   }
 });
 
+// POST Preview JQL queries that WOULD be sent to Jira (no actual Jira call)
+router.post('/preview-jql', (req, res) => {
+  try {
+    const { startStr, endStr, jalaliStartStr, jalaliEndStr } = req.body;
+    if (!startStr || !endStr) {
+      return res.status(400).json({ success: false, message: 'startStr و endStr الزامی هستند' });
+    }
+
+    const jiraService = require('../services/jiraService');
+    const cfg = jiraService.getJiraConfig();
+    const projKeyStr = cfg.projectKey || 'ORD';
+
+    // Build project clause exactly same as syncSingleMonthFromJira
+    let projectClause = '';
+    if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
+      const projects = projKeyStr.split(',').map(p => {
+        const clean = p.trim().toUpperCase();
+        return /^[A-Z0-9_]+$/.test(clean) ? clean : `"${clean}"`;
+      }).filter(Boolean);
+      if (projects.length > 1) {
+        projectClause = `project IN (${projects.join(',')})`;
+      } else if (projects.length === 1) {
+        projectClause = `project = ${projects[0]}`;
+      }
+    }
+    const projPrefix = projectClause ? `${projectClause} AND ` : '';
+
+    // Jalali conversion
+    function g2j(gy, gm, gd) {
+      const g_d_no = 365 * gy + Math.floor((gy + 3) / 4) - Math.floor((gy + 99) / 100) + Math.floor((gy + 399) / 400);
+      const j_d_no_base = 365 * 1348 + Math.floor((1348 + 3) / 4) - Math.floor((1348 + 99) / 100) + Math.floor((1348 + 399) / 400);
+      const gMonthDays = [0, 31, (gy % 4 === 0 && (gy % 100 !== 0 || gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+      let d_no = g_d_no + [0, 0, 31, 59 + (gy % 4 === 0 && (gy % 100 !== 0 || gy % 400 === 0) ? 1 : 0), 90, 120, 151, 181, 212, 243, 273, 304, 334][gm] + gd - j_d_no_base - 79;
+      let jy = 33 * Math.floor(d_no / 12053);
+      d_no %= 12053;
+      jy += 4 * Math.floor(d_no / 1461);
+      d_no %= 1461;
+      if (d_no >= 366) { jy += Math.floor((d_no - 1) / 365); d_no = (d_no - 1) % 365; }
+      let jm, jd;
+      const jMonthDays = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
+      for (jm = 0; jm < 11 && d_no >= jMonthDays[jm]; jm++) d_no -= jMonthDays[jm];
+      jd = d_no + 1; jm++;
+      return { jy, jm, jd };
+    }
+
+    let effectiveJalaliStart = jalaliStartStr;
+    let effectiveJalaliEnd = jalaliEndStr;
+
+    if (!effectiveJalaliStart && startStr) {
+      const p = startStr.split(' ')[0].split('-').map(Number);
+      if (p.length === 3) {
+        const j = g2j(p[0], p[1], p[2]);
+        effectiveJalaliStart = `${j.jy}/${String(j.jm).padStart(2, '0')}/${String(j.jd).padStart(2, '0')} 00:00`;
+      }
+    }
+    if (!effectiveJalaliEnd && endStr) {
+      const p = endStr.split(' ')[0].split('-').map(Number);
+      if (p.length === 3) {
+        const j = g2j(p[0], p[1], p[2]);
+        effectiveJalaliEnd = `${j.jy}/${String(j.jm).padStart(2, '0')}/${String(j.jd).padStart(2, '0')} 23:59`;
+      }
+    }
+
+    const jalaliSlash = effectiveJalaliStart ? effectiveJalaliStart.split(' ')[0] : '';
+    const jalaliSlashEnd = effectiveJalaliEnd ? effectiveJalaliEnd.split(' ')[0] : '';
+    const jalaliDash = jalaliSlash.replace(/\//g, '-');
+    const jalaliDashEnd = jalaliSlashEnd.replace(/\//g, '-');
+    const gregStart = startStr.split(' ')[0];
+    const gregEnd = endStr.split(' ')[0];
+
+    const queries = [
+      { id: 1, name: '🟢 شمسی دش (توصیه‌شده)', jql: jalaliDash ? `${projPrefix}created >= "${jalaliDash}" AND created <= "${jalaliDashEnd}" ORDER BY created ASC` : null },
+      { id: 2, name: '🟡 شمسی اسلش', jql: jalaliSlash ? `${projPrefix}created >= "${jalaliSlash}" AND created <= "${jalaliSlashEnd}" ORDER BY created ASC` : null },
+      { id: 3, name: '🔵 میلادی تاریخ تنها', jql: `${projPrefix}created >= "${gregStart}" AND created <= "${gregEnd}" ORDER BY created ASC` },
+      { id: 4, name: '🔵 میلادی با ساعت', jql: `${projPrefix}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC` },
+      { id: 5, name: '⚪ پروژه بدون فیلتر تاریخ', jql: projectClause ? `${projectClause} ORDER BY created DESC` : `ORDER BY created DESC` },
+      { id: 6, name: '⚪ کلیه تسک‌های سرور', jql: `ORDER BY created DESC` }
+    ].filter(q => q.jql);
+
+    res.json({
+      success: true,
+      jiraBaseUrl: cfg.baseUrl,
+      projectKey: projKeyStr,
+      projectClause,
+      gregorianRange: `${gregStart} تا ${gregEnd}`,
+      jalaliRange: `${jalaliDash} تا ${jalaliDashEnd}`,
+      queries
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
 // GET All Jira Projects from live Jira Server for multi-select combo
 router.get('/fetch-jira-projects', async (req, res) => {
   try {
