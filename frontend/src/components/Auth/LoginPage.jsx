@@ -47,7 +47,7 @@ const LoginPage = () => {
           <div className="login-logo">
             <TerminalSquare size={48} />
           </div>
-          <h2>داشبورد ویترین عملیات</h2>
+          <h2>داشبورد ویترین عملیات 1 🚀</h2>
           <p>سامانه مدیریت پروژه‌های تحقیق و توسعه</p>
         </div>
 
