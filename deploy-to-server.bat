@@ -37,8 +37,8 @@ if errorlevel 1 (
 )
 
 echo.
-echo 4. در حال استخراج و اجرای Docker Compose در مسیر /app/appserver/amani/JiraDashboard ...
-ssh %SERVER_SSH% "mkdir -p /app/appserver/amani/JiraDashboard && unzip -o /tmp/JiraDashboard.zip -d /app/appserver/amani/JiraDashboard && cd /app/appserver/amani/JiraDashboard && (docker compose up -d --build || docker-compose up -d --build)"
+echo 4. در حال استخراج و اجرای Docker Compose در مسیر /appserver/amani/JiraDashboard ...
+ssh %SERVER_SSH% "mkdir -p /appserver/amani/JiraDashboard && unzip -o /tmp/JiraDashboard.zip -d /appserver/amani/JiraDashboard && cd /appserver/amani/JiraDashboard && docker compose down && (docker compose up -d --build || docker-compose up -d --build)"
 
 if errorlevel 1 (
     echo ❌ خطا در اجرای دستورات روی سرور!
@@ -49,7 +49,7 @@ if errorlevel 1 (
 echo.
 echo ======================================================
 echo ✅ پروژه‌ با موفقیت روی سرور دیپلوی گردید!
-echo 📂 مسیر سرور: /app/appserver/amani/JiraDashboard
+echo 📂 مسیر سرور: /appserver/amani/JiraDashboard
 echo ======================================================
 echo.
 pause
