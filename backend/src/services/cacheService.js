@@ -509,7 +509,24 @@ async function syncDateRangeFromJira(startDateInput, endDateInput) {
   };
 }
 
-async function syncSingleMonthFromJira({ startStr, endStr, monthLabel, monthIndex }) {
+function g2j(gy, gm, gd) {
+  const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  let jy = (gy <= 1600) ? 0 : 979;
+  gy -= (gy <= 1600) ? 621 : 1600;
+  let gy2 = (gm > 2) ? (gy + 1) : gy;
+  let days = (365 * gy) + (Math.floor((gy2 + 3) / 4)) - (Math.floor((gy2 + 99) / 100)) + (Math.floor((gy2 + 399) / 400)) - 80 + gd + g_d_m[gm - 1];
+  jy += 33 * (Math.floor(days / 12053));
+  days %= 12053;
+  jy += 4 * (Math.floor(days / 1461));
+  days %= 1461;
+  jy += Math.floor((days - 1) / 365);
+  if (days > 0) days = (days - 1) % 365;
+  let jm = (days < 186) ? 1 + Math.floor(days / 31) : 7 + Math.floor((days - 186) / 30);
+  let jd = 1 + ((days < 186) ? (days % 31) : ((days - 186) % 30));
+  return { jy, jm, jd };
+}
+
+async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalaliEndStr, monthLabel, monthIndex }) {
   if (!jiraService.isConfigured) {
     return { success: false, message: 'Jira is not configured' };
   }
@@ -572,11 +589,60 @@ async function syncSingleMonthFromJira({ startStr, endStr, monthLabel, monthInde
   const projKeys = cfg.projectKey ? cfg.projectKey.split(',').map(k => k.trim()).filter(Boolean) : [];
   const projectJqlClause = projKeys.length > 0 ? `project IN (${projKeys.join(',')}) AND ` : '';
 
-  // Support both Jalali and Gregorian formatted dates in JQL for Jira
-  let jql = `${projectJqlClause}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC`;
+  let effectiveJalaliStart = jalaliStartStr;
+  let effectiveJalaliEnd = jalaliEndStr;
+
+  if (!effectiveJalaliStart && startStr) {
+    const sDateParts = startStr.split(' ')[0].split('-').map(Number);
+    if (sDateParts.length === 3) {
+      const jStart = g2j(sDateParts[0], sDateParts[1], sDateParts[2]);
+      effectiveJalaliStart = `${jStart.jy}/${String(jStart.jm).padStart(2, '0')}/${String(jStart.jd).padStart(2, '0')} 00:00`;
+    }
+  }
+
+  if (!effectiveJalaliEnd && endStr) {
+    const eDateParts = endStr.split(' ')[0].split('-').map(Number);
+    if (eDateParts.length === 3) {
+      const jEnd = g2j(eDateParts[0], eDateParts[1], eDateParts[2]);
+      effectiveJalaliEnd = `${jEnd.jy}/${String(jEnd.jm).padStart(2, '0')}/${String(jEnd.jd).padStart(2, '0')} 23:59`;
+    }
+  }
+
+  const jalaliSlashJql = effectiveJalaliStart && effectiveJalaliEnd ? `${projectJqlClause}created >= "${effectiveJalaliStart}" AND created <= "${effectiveJalaliEnd}" ORDER BY created ASC` : null;
+  const jalaliDashJql = effectiveJalaliStart && effectiveJalaliEnd ? `${projectJqlClause}created >= "${effectiveJalaliStart.replace(/\//g, '-')}" AND created <= "${effectiveJalaliEnd.replace(/\//g, '-')}" ORDER BY created ASC` : null;
+  const gregorianJql = `${projectJqlClause}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC`;
+
+  let searchRes = null;
+  let jql = jalaliSlashJql || gregorianJql;
 
   try {
-    let searchRes = await jiraService.jiraSearch(jql);
+    // 1. Try Jalali Slash JQL first (e.g. "1403/06/01 00:00")
+    if (jalaliSlashJql) {
+      try {
+        const res1 = await jiraService.jiraSearch(jalaliSlashJql);
+        if (res1 && res1.issues && res1.issues.length > 0) {
+          searchRes = res1;
+          jql = jalaliSlashJql;
+        }
+      } catch (_) {}
+    }
+
+    // 2. Try Jalali Dash JQL next (e.g. "1403-06-01 00:00")
+    if ((!searchRes || !searchRes.issues || searchRes.issues.length === 0) && jalaliDashJql) {
+      try {
+        const res2 = await jiraService.jiraSearch(jalaliDashJql);
+        if (res2 && res2.issues && res2.issues.length > 0) {
+          searchRes = res2;
+          jql = jalaliDashJql;
+        }
+      } catch (_) {}
+    }
+
+    // 3. Fallback to Gregorian JQL if Jalali returned no results
+    if (!searchRes || !searchRes.issues) {
+      jql = gregorianJql;
+      searchRes = await jiraService.jiraSearch(gregorianJql);
+    }
     
     // If standard query returned no issues and jalaliStartStr is provided, attempt Jalali JQL query
     if ((!searchRes.issues || searchRes.issues.length === 0) && jalaliStartStr && jalaliEndStr) {
