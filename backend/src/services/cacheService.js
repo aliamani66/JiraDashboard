@@ -632,16 +632,16 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   const gregStartSlashOnly = gregStartDateOnly.replace(/-/g, '/');
   const gregEndSlashOnly = gregEndDateOnly.replace(/-/g, '/');
 
-  // Build exact Quick Sync + Jalali Date query formats
+  // ✅ CONFIRMED WORKING: Gregorian date WITHOUT project filter (query #6 from test)
+  // Order: confirmed working first, then fallbacks
   const queriesToTry = [
-    { id: 1, name: 'شمسی دش (دقیقاً شبیه همگام‌سازی سریع + تاریخ)', jql: jalaliDashDateOnly ? `${projPrefix}created >= "${jalaliDashDateOnly}" AND created <= "${jalaliDashDateEndOnly}" ORDER BY created ASC` : null },
-    { id: 2, name: 'شمسی اسلش (1405/03/22)', jql: jalaliSlashDateOnly ? `${projPrefix}created >= "${jalaliSlashDateOnly}" AND created <= "${jalaliSlashDateEndOnly}" ORDER BY created ASC` : null },
-    { id: 3, name: 'میلادی تاریخ تنها (YYYY-MM-DD)', jql: `${projPrefix}created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC` },
-    { id: 4, name: 'میلادی با ساعت (YYYY-MM-DD HH:mm)', jql: `${projPrefix}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC` },
-    { id: 5, name: 'پروژه خالص شبیه همگام‌سازی سریع (بدون تاریخ)', jql: projectClause ? `${projectClause} ORDER BY created DESC` : `ORDER BY created DESC` },
-    { id: 6, name: 'بازه زمانی نسبی (created >= -365d)', jql: `${projPrefix}created >= -365d ORDER BY created DESC` },
-    { id: 7, name: 'استخراج کلیه تسک‌های سرور جیرا', jql: `ORDER BY created DESC` }
-  ].filter(q => q.jql);
+    { id: 1, name: '✅ میلادی بدون پروژه (تایید شده)', jql: `created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC` },
+    { id: 2, name: 'میلادی با ساعت بدون پروژه', jql: `created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC` },
+    { id: 3, name: 'میلادی با پروژه', jql: `${projPrefix}created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC` },
+    { id: 4, name: 'شمسی دش با پروژه', jql: jalaliDashDateOnly ? `${projPrefix}created >= "${jalaliDashDateOnly}" AND created <= "${jalaliDashDateEndOnly}" ORDER BY created ASC` : null },
+    { id: 5, name: 'شمسی دش بدون پروژه', jql: jalaliDashDateOnly ? `created >= "${jalaliDashDateOnly}" AND created <= "${jalaliDashDateEndOnly}" ORDER BY created ASC` : null },
+    { id: 6, name: 'همه تسک‌ها (بدون فیلتر)', jql: `ORDER BY created DESC` }
+  ].filter(q => q && q.jql);
 
   const queryAuditResults = [];
   let winningSearchRes = null;
