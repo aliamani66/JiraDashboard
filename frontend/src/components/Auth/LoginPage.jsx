@@ -17,22 +17,18 @@ const LoginPage = () => {
     setError('');
     setIsLoading(true);
     
-    // Simulate login if API fails since we are building UI
-    setTimeout(async () => {
-      try {
-        const result = await login(username, password);
-        if (result.success || username === 'admin') {
-           navigate('/');
-        } else {
-          setError(result.error || 'خطا در ورود');
-        }
-      } catch (err) {
-        // Fallback for UI demo
-        if (username === 'admin') navigate('/');
-        else setError('نام کاربری یا رمز عبور اشتباه است (راهنما: admin)');
+    try {
+      const result = await login(username, password);
+      if (result.success) {
+        navigate('/');
+      } else {
+        setError(result.error || 'نام کاربری یا رمز عبور اشتباه است');
       }
+    } catch (err) {
+      setError('خطا در برقراری ارتباط با سرور');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
