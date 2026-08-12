@@ -744,6 +744,25 @@ router.get('/db-stats', (req, res) => {
         .sort((a, b) => b.count - a.count);
     } catch (_) {}
 
+    let sprintsList = [];
+    try {
+      const sprintRows = db.prepare("SELECT sprint_name FROM tasks WHERE sprint_name IS NOT NULL AND sprint_name != ''").all();
+      const sprintCountsMap = new Map();
+      for (const r of sprintRows) {
+        if (r.sprint_name) {
+          const sName = String(r.sprint_name).trim();
+          sprintCountsMap.set(sName, (sprintCountsMap.get(sName) || 0) + 1);
+        }
+      }
+      sprintsList = Array.from(sprintCountsMap.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => {
+          const numA = parseInt(String(a.name).replace(/\D/g, '')) || 0;
+          const numB = parseInt(String(b.name).replace(/\D/g, '')) || 0;
+          return numA - numB;
+        });
+    } catch (_) {}
+
     res.json({
       success: true,
       totalTasks,
@@ -755,7 +774,9 @@ router.get('/db-stats', (req, res) => {
       dbSizeMb,
       lastSynced,
       totalComponents: componentsList.length,
-      componentsList
+      componentsList,
+      totalSprints: sprintsList.length,
+      sprintsList
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'خطا در دریافت آمار دیتابیس: ' + err.message });

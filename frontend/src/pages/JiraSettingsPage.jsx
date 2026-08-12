@@ -1538,7 +1538,38 @@ const JiraSettingsPage = () => {
                   </span>
                 ))
               ) : (
-                <span style={{ fontSize: '0.78rem', color: '#64748B' }}>کامپوننتی یافت نشد. با زدن دکمه همگام‌سازی یا استخراج بازه‌ای، کامپوننت‌های جیرا لود خواهند شد.</span>
+                <span style={{ fontSize: '0.78rem', color: '#64748B' }}>کامپوننتی یافت نشد.</span>
+              )}
+            </div>
+          </div>
+
+          {/* 🏃 SPRINTS BREAKDOWN */}
+          <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px dashed rgba(255, 255, 255, 0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                🏃 اسپرینت‌های استخراج‌شده و موجود در دیتابیس ({dbStats?.totalSprints || 0} اسپرینت):
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+              {dbStats?.sprintsList && dbStats.sprintsList.length > 0 ? (
+                dbStats.sprintsList.map(sp => (
+                  <span key={sp.name} style={{
+                    background: 'rgba(56, 189, 248, 0.12)',
+                    border: '1px solid rgba(56, 189, 248, 0.35)',
+                    color: '#38BDF8',
+                    padding: '0.25rem 0.65rem',
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem'
+                  }}>
+                    ⚡ {sp.name} <span style={{ background: 'rgba(56, 189, 248, 0.25)', padding: '0.1rem 0.4rem', borderRadius: '6px', fontSize: '0.7rem', color: '#FFFFFF' }}>{sp.count} تسک</span>
+                  </span>
+                ))
+              ) : (
+                <span style={{ fontSize: '0.78rem', color: '#64748B' }}>اسپرینتی در دیتابیس یافت نشد. با زدن دکمه استخراج دیتای جیرا، اسپرینت‌ها پر خواهند شد.</span>
               )}
             </div>
           </div>
