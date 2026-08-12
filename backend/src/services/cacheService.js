@@ -631,8 +631,10 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     const gregStartDateOnly = (startStr || '').split(' ')[0];
     const gregEndDateOnly = (endStr || '').split(' ')[0];
 
-    // ✅ کوئری تایید شده #3: project filter + تاریخ میلادی دقیق
-    const confirmedJql = `${projPrefix}created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
+    // ✅ EXACT MATCH to working test/preview query (#3): project IN (...) AND created >= "YYYY-MM-DD" AND created <= "YYYY-MM-DD" ORDER BY created ASC
+    const confirmedJql = projectClause
+      ? `${projectClause} AND created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`
+      : `created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
 
     const configuredProjKeys = new Set(
       projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)

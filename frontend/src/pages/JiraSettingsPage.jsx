@@ -1141,12 +1141,15 @@ const JiraSettingsPage = () => {
                         </strong>
                       </td>
                       <td>
-                        <code className="diag-val-code accent" style={{ fontSize: '0.78rem', color: '#38BDF8', wordBreak: 'break-all', display: 'inline-block', padding: '0.2rem 0.5rem', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '6px' }} title={m.jql}>
+                        <code className="diag-val-code accent" style={{ fontSize: '0.78rem', color: m.status === 'error' ? '#FCA5A5' : '#38BDF8', wordBreak: 'break-all', display: 'inline-block', padding: '0.2rem 0.5rem', background: m.status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(56, 189, 248, 0.1)', border: m.status === 'error' ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '6px' }} title={m.jql || m.message}>
                           {m.jql || 'مشخص نشده'}
                         </code>
+                        {m.status === 'error' && m.message && (
+                          <div style={{ fontSize: '0.72rem', color: '#FCA5A5', marginTop: '0.25rem' }}>{m.message}</div>
+                        )}
                       </td>
                     </tr>
-                    {/* 📊 7-VARIANT JQL QUERY AUDIT BADGES */}
+                    {/* 📊 JQL QUERY AUDIT BADGES */}
                     {m.queryAuditResults && m.queryAuditResults.length > 0 && (
                       <tr>
                         <td colSpan={6} style={{ padding: '0.5rem 1rem 0.85rem 1rem', background: 'rgba(15, 23, 42, 0.4)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
