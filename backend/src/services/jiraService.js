@@ -167,18 +167,6 @@ async function jiraSearch(jql, fields = [], options = {}) {
     if (authSuccess) {
       return { total: totalCount, issues: allIssues };
     }
-  }
-
-  if (lastError && lastError.response && lastError.response.status === 403 && jql.includes('project')) {
-    const fallbackJql = jql.replace(/AND\s+project\s*=\s*"[^"]+"/gi, '').replace(/project\s*=\s*"[^"]+"/gi, '').trim();
-    if (fallbackJql && fallbackJql !== jql) {
-      console.log(`[JiraSearch 403 Fallback] Retrying search without project filter: ${fallbackJql}`);
-      try {
-        return await jiraSearch(fallbackJql, fields, { ...options, retries: 1 });
-      } catch (_) {}
-    }
-  }
-
   if (lastError) throw lastError;
   throw new Error('Jira search failed due to authentication or network error');
 }
@@ -243,7 +231,18 @@ async function fetchEpics() {
     const data = await jiraSearch(jql, fields);
     const allIssues = data.issues || [];
 
-    return allIssues.map(issue => {
+    const configuredProjKeys = new Set(
+      (projKeyStr || '').split(',').map(k => k.trim().toUpperCase().replace(/["']/g, '')).filter(Boolean)
+    );
+
+    const filteredIssues = (configuredProjKeys.size > 0 && projKeyStr !== 'ALL' && projKeyStr !== '*')
+      ? allIssues.filter(issue => {
+          const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
+          return configuredProjKeys.has(issueProjKey);
+        })
+      : allIssues;
+
+    return filteredIssues.map(issue => {
       // 1. Extract Confluence Link (Custom Field, Description, or Config Fallback)
       let confluenceLink = null;
       if (customFields.confluenceLinkField && issue.fields?.[customFields.confluenceLinkField]) {
