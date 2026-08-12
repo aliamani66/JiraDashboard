@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 > nul
 echo ======================================================
-echo 🚀 Automated Server Deployment Script (Jira Dashboard)
+echo Automated Server Deployment Script (Jira Dashboard)
 echo ======================================================
 echo.
 
@@ -20,12 +20,12 @@ if exist "JiraDashboard.zip" del /f /q JiraDashboard.zip
 tar -czf JiraDashboard.tar.gz --exclude="node_modules" --exclude="frontend/node_modules" --exclude="backend/node_modules" --exclude=".git" --exclude="backend/database.sqlite" --exclude="frontend/dist" --exclude=".vscode" --exclude="deploy" --exclude="*.tar.gz" --exclude="*.zip" .
 
 if not exist "JiraDashboard.tar.gz" (
-    echo ❌ ERROR: Failed to create JiraDashboard.tar.gz archive!
+    echo [ERROR] Failed to create JiraDashboard.tar.gz archive!
     pause
     exit /b 1
 )
 
-echo ✅ Created JiraDashboard.tar.gz successfully.
+echo [OK] Created JiraDashboard.tar.gz successfully.
 echo.
 
 set SERVER_SSH=root@10.100.8.130
@@ -33,7 +33,7 @@ echo [3/4] Uploading JiraDashboard.tar.gz via SCP to %SERVER_SSH%...
 scp JiraDashboard.tar.gz %SERVER_SSH%:/tmp/JiraDashboard.tar.gz
 
 if errorlevel 1 (
-    echo ❌ ERROR: SCP file transfer failed!
+    echo [ERROR] SCP file transfer failed!
     pause
     exit /b 1
 )
@@ -43,15 +43,16 @@ echo [4/4] Extracting archive and executing Docker Compose on server...
 ssh %SERVER_SSH% "mkdir -p /appserver/amani/JiraDashboard && tar -xzf /tmp/JiraDashboard.tar.gz -C /appserver/amani/JiraDashboard && cd /appserver/amani/JiraDashboard && docker compose down && (docker compose up -d --build || docker-compose up -d --build)"
 
 if errorlevel 1 (
-    echo ❌ ERROR: Remote SSH command execution failed!
+    echo [ERROR] Remote SSH command execution failed!
     pause
     exit /b 1
 )
 
 echo.
 echo ======================================================
-echo ✅ SUCCESS: Deployment completed successfully!
-echo 📂 Server Target: /appserver/amani/JiraDashboard
+echo [SUCCESS] Deployment completed successfully!
+echo Server Target: /appserver/amani/JiraDashboard
 echo ======================================================
 echo.
 pause
+

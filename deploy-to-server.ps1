@@ -1,5 +1,5 @@
 # ======================================================
-# 🚀 Automated Server Deployment Script (Jira Dashboard)
+# Automated Server Deployment Script (Jira Dashboard)
 # ======================================================
 $ErrorActionPreference = "Stop"
 
@@ -10,7 +10,7 @@ if (Test-Path "JiraDashboard") { Set-Location "JiraDashboard" }
 if (Test-Path "ops-showcase-dashboard") { Set-Location "ops-showcase-dashboard" }
 
 Write-Host "======================================================" -ForegroundColor Cyan
-Write-Host "🚀 Automated Server Deployment Script (Jira Dashboard)" -ForegroundColor Cyan
+Write-Host "Automated Server Deployment Script (Jira Dashboard)" -ForegroundColor Cyan
 Write-Host "======================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -27,11 +27,11 @@ if (Test-Path "JiraDashboard.zip") { Remove-Item "JiraDashboard.zip" -Force }
 tar -czf JiraDashboard.tar.gz --exclude="node_modules" --exclude="frontend/node_modules" --exclude="backend/node_modules" --exclude=".git" --exclude="backend/database.sqlite" --exclude="frontend/dist" --exclude=".vscode" --exclude="deploy" --exclude="*.tar.gz" --exclude="*.zip" .
 
 if (-not (Test-Path "JiraDashboard.tar.gz")) {
-    Write-Host "❌ ERROR: Failed to create JiraDashboard.tar.gz archive!" -ForegroundColor Red
+    Write-Host "[ERROR] Failed to create JiraDashboard.tar.gz archive!" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "✅ Created JiraDashboard.tar.gz successfully." -ForegroundColor Green
+Write-Host "[OK] Created JiraDashboard.tar.gz successfully." -ForegroundColor Green
 
 # 3. Server target
 $serverSSH = "root@10.100.8.130"
@@ -49,6 +49,7 @@ ssh $serverSSH $remoteCmd
 
 Write-Host ""
 Write-Host "======================================================" -ForegroundColor Green
-Write-Host "✅ SUCCESS: Deployment completed successfully!" -ForegroundColor Green
-Write-Host "📂 Server Target: /appserver/amani/JiraDashboard" -ForegroundColor Green
+Write-Host "[SUCCESS] Deployment completed successfully!" -ForegroundColor Green
+Write-Host "Server Target: /appserver/amani/JiraDashboard" -ForegroundColor Green
 Write-Host "======================================================" -ForegroundColor Green
+
