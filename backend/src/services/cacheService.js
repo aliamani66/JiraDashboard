@@ -13,32 +13,57 @@ async function syncFromJira() {
     return { success: false, message: 'Jira not configured' };
   }
 
-  // Quick sync: Run exact Query #3 date range extraction via syncSingleMonthFromJira
+  const db = getDb();
+  let projectsSynced = 0;
+  let tasksSynced = 0;
+  const syncTime = new Date().toISOString();
+
   try {
-    console.log('Starting Quick Sync using exact Query #3 date range extraction...');
-    const endG = new Date();
-    const startG = new Date();
-    startG.setDate(endG.getDate() - 90);
+    console.log('Starting Epic extraction from Jira...');
+    const epics = await jiraService.fetchEpics();
+    console.log(`Fetched ${epics.length} epics from Jira.`);
+    
+    const insertProject = db.prepare(`
+      INSERT INTO projects (id, title, description, status, capabilities, category, confluence_link, start_date, due_date, last_synced)
+      VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @last_synced)
+      ON CONFLICT(id) DO UPDATE SET
+        title=excluded.title,
+        description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE projects.description END,
+        status=excluded.status,
+        capabilities=excluded.capabilities,
+        category=excluded.category,
+        confluence_link=excluded.confluence_link,
+        start_date=excluded.start_date,
+        due_date=excluded.due_date,
+        last_synced=excluded.last_synced
+    `);
 
-    const startStr = `${startG.getFullYear()}-${String(startG.getMonth() + 1).padStart(2, '0')}-${String(startG.getDate()).padStart(2, '0')} 00:00`;
-    const endStr = `${endG.getFullYear()}-${String(endG.getMonth() + 1).padStart(2, '0')}-${String(endG.getDate()).padStart(2, '0')} 23:59`;
+    db.transaction(() => {
+      for (const epic of epics) {
+        epic.last_synced = syncTime;
+        if (!epic.capabilities) epic.capabilities = '';
+        if (!epic.confluence_link) epic.confluence_link = null;
 
-    const res = await syncSingleMonthFromJira({
-      monthIndex: 1,
-      startStr,
-      endStr,
-      monthLabel: 'همگام‌سازی سریع'
-    });
+        insertProject.run(epic);
+        projectsSynced++;
+      }
+    })();
 
-    console.log('Quick Sync complete:', res);
+    const logInsert = db.prepare('INSERT INTO sync_log (synced_at, status, message, projects_synced, tasks_synced) VALUES (?, ?, ?, ?, ?)');
+    logInsert.run(syncTime, 'Success', 'Epic extraction completed successfully', projectsSynced, tasksSynced);
+
+    console.log(`Epic extraction complete. Epics/Projects: ${projectsSynced}`);
     return {
       success: true,
-      projectsSynced: res.taskCount || 1,
-      tasksSynced: res.taskCount || 0,
-      message: res.message || `همگام‌سازی سریع انجام شد (${res.taskCount || 0} تسک لود گردید)`
+      projectsSynced,
+      tasksSynced,
+      message: `استخراج اپیک‌ها با موفقیت انجام شد (${projectsSynced} اپیک/پروژه ثبت گردید)`
     };
+
   } catch (err) {
-    console.error('Quick Sync failed:', err);
+    console.error('Epic extraction failed:', err);
+    const logInsert = db.prepare('INSERT INTO sync_log (synced_at, status, message) VALUES (?, ?, ?)');
+    logInsert.run(syncTime, 'Failed', err.message);
     return { success: false, message: err.message };
   }
 }

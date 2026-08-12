@@ -946,7 +946,7 @@ const JiraSettingsPage = () => {
           </button>
           <button className="jsp-run-diag-btn" style={{ background: '#0EA5E9' }} onClick={handleSync} disabled={syncing}>
             <RefreshCw size={16} className={syncing ? 'spin' : ''} />
-            {syncing ? 'در حال همگام‌سازی...' : 'همگام‌سازی سریع (تسک‌های جاری)'}
+            {syncing ? 'در حال استخراج...' : '📦 استخراج اپیک‌ها (Epics)'}
           </button>
           <button className="jsp-run-diag-btn" onClick={handleSave} disabled={saving}>
             <Save size={16} className={saving ? 'spin' : ''} />
