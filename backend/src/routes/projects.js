@@ -318,10 +318,15 @@ router.get('/reports/manager-audit', (req, res) => {
       };
     });
 
+    const tasksWithIssuesCount = auditedTasks.filter(t => t.is_orphan || t.is_no_sprint || t.is_no_estimate || t.is_no_due_date || t.is_estimate_revised).length;
+    const totalIssueOccurrences = orphanCount + noSprintCount + noEstimateCount + noDueDateCount + estimateRevisionCount;
+
     res.json({
       success: true,
       stats: {
         totalTasks: auditedTasks.length,
+        tasksWithIssuesCount,
+        totalIssueOccurrences,
         orphanCount,
         orphanSpentHours: Math.round(orphanSpentHours * 100) / 100,
         noSprintCount,

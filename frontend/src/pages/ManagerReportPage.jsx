@@ -57,7 +57,10 @@ const ManagerReportPage = () => {
   // Filter tasks based on audit type, project key, and search query
   const filteredTasks = useMemo(() => {
     return (data.tasks || []).filter(t => {
+      const hasAnyIssue = t.is_orphan || t.is_no_sprint || t.is_no_estimate || t.is_no_due_date || t.is_estimate_revised;
+
       // 1. Audit Type Filter
+      if (auditTypeFilter === 'all' && !hasAnyIssue) return false;
       if (auditTypeFilter === 'orphan' && !t.is_orphan) return false;
       if (auditTypeFilter === 'no_sprint' && !t.is_no_sprint) return false;
       if (auditTypeFilter === 'no_estimate' && !t.is_no_estimate) return false;
@@ -92,15 +95,16 @@ const ManagerReportPage = () => {
     let noEstimateCount = 0;
     let noDueDateCount = 0;
     let revisedCount = 0;
+    let totalIssueOccurrences = 0;
 
     filteredTasks.forEach(t => {
       spentSum += (t.spent_hours || 0);
       estSum += (t.estimate_hours || 0);
-      if (t.is_orphan) orphanCount++;
-      if (t.is_no_sprint) noSprintCount++;
-      if (t.is_no_estimate) noEstimateCount++;
-      if (t.is_no_due_date) noDueDateCount++;
-      if (t.is_estimate_revised) revisedCount++;
+      if (t.is_orphan) { orphanCount++; totalIssueOccurrences++; }
+      if (t.is_no_sprint) { noSprintCount++; totalIssueOccurrences++; }
+      if (t.is_no_estimate) { noEstimateCount++; totalIssueOccurrences++; }
+      if (t.is_no_due_date) { noDueDateCount++; totalIssueOccurrences++; }
+      if (t.is_estimate_revised) { revisedCount++; totalIssueOccurrences++; }
     });
 
     return {
@@ -111,7 +115,8 @@ const ManagerReportPage = () => {
       noSprintCount,
       noEstimateCount,
       noDueDateCount,
-      revisedCount
+      revisedCount,
+      totalIssueOccurrences
     };
   }, [filteredTasks]);
 
@@ -260,7 +265,7 @@ const ManagerReportPage = () => {
                 className={`mr-pill ${auditTypeFilter === 'all' ? 'active' : ''}`}
                 onClick={() => setAuditTypeFilter('all')}
               >
-                🌐 همه اختلالات ({data.tasks?.length || 0})
+                🌐 همه اختلالات ({stats.totalIssueOccurrences || 0} مورد در {stats.tasksWithIssuesCount || 0} تسک)
               </button>
               <button
                 className={`mr-pill ${auditTypeFilter === 'orphan' ? 'active warning' : ''}`}
@@ -338,7 +343,7 @@ const ManagerReportPage = () => {
             </div>
 
             <div className="mr-summary-tag">
-              نمایش <strong>{filteredTasks.length}</strong> از <strong>{data.tasks?.length || 0}</strong> تسک | مجموع کارکرد: <strong>{filteredMetrics.spentSum} ساعت</strong>
+              نمایش <strong>{filteredTasks.length}</strong> تسک دارای اختلال | مجموع اختلالات: <strong>{filteredMetrics.totalIssueOccurrences} مورد</strong> | مجموع کارکرد: <strong>{filteredMetrics.spentSum} ساعت</strong>
             </div>
           </div>
 
