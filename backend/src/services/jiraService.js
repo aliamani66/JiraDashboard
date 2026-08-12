@@ -511,6 +511,7 @@ module.exports = {
     return getJiraConfig().isConfigured;
   },
   getJiraConfig,
+  jiraSearch,
   fetchEpics,
   fetchTasksForEpic
 };
