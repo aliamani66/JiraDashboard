@@ -23,8 +23,8 @@ if not exist "JiraDashboard.zip" (
 echo ✅ فایل JiraDashboard.zip با موفقیت ساخته شد.
 echo.
 
-set /p SERVER_SSH="لطفاً کاربر و آدرس IP سرور را وارد کنید [پیش‌فرض: root@10.100.71.140]: "
-if "%SERVER_SSH%"=="" set SERVER_SSH=root@10.100.71.140
+set /p SERVER_SSH="لطفاً کاربر و آدرس IP سرور را وارد کنید [پیش‌فرض: root@10.100.8.130]: "
+if "%SERVER_SSH%"=="" set SERVER_SSH=root@10.100.8.130
 
 echo.
 echo 3. در حال انتقال فایل با SCP به سرور (%SERVER_SSH%)...
@@ -37,8 +37,8 @@ if errorlevel 1 (
 )
 
 echo.
-echo 4. در حال استخراج و اجرای Docker Compose در مسیر /app/appserver/JiraDashboard ...
-ssh %SERVER_SSH% "mkdir -p /app/appserver/JiraDashboard && unzip -o /tmp/JiraDashboard.zip -d /app/appserver/JiraDashboard && cd /app/appserver/JiraDashboard && (docker compose up -d --build || docker-compose up -d --build)"
+echo 4. در حال استخراج و اجرای Docker Compose در مسیر /app/appserver/amani/JiraDashboard ...
+ssh %SERVER_SSH% "mkdir -p /app/appserver/amani/JiraDashboard && unzip -o /tmp/JiraDashboard.zip -d /app/appserver/amani/JiraDashboard && cd /app/appserver/amani/JiraDashboard && (docker compose up -d --build || docker-compose up -d --build)"
 
 if errorlevel 1 (
     echo ❌ خطا در اجرای دستورات روی سرور!
@@ -49,7 +49,7 @@ if errorlevel 1 (
 echo.
 echo ======================================================
 echo ✅ پروژه‌ با موفقیت روی سرور دیپلوی گردید!
-echo 📂 مسیر سرور: /app/appserver/JiraDashboard
+echo 📂 مسیر سرور: /app/appserver/amani/JiraDashboard
 echo ======================================================
 echo.
 pause

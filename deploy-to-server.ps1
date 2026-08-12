@@ -28,9 +28,9 @@ Write-Host "✅ فایل JiraDashboard.zip با موفقیت ساخته شد." -
 
 # 3. Server info
 Write-Host ""
-$serverSSH = Read-Host "لطفاً کاربر و آدرس IP سرور را وارد کنید [پیش‌فرض: root@10.100.71.140]"
+$serverSSH = Read-Host "لطفاً کاربر و آدرس IP سرور را وارد کنید [پیش‌فرض: root@10.100.8.130]"
 if ([string]::IsNullOrWhiteSpace($serverSSH)) {
-    $serverSSH = "root@10.100.71.140"
+    $serverSSH = "root@10.100.8.130"
 }
 
 # 4. SCP transfer
@@ -40,12 +40,12 @@ scp JiraDashboard.zip "${serverSSH}:/tmp/JiraDashboard.zip"
 
 # 5. Remote Unzip & Docker Build
 Write-Host ""
-Write-Host "4. در حال استخراج و اجرای Docker Compose در مسیر /app/appserver/JiraDashboard ..." -ForegroundColor Yellow
-$remoteCmd = "mkdir -p /app/appserver/JiraDashboard && unzip -o /tmp/JiraDashboard.zip -d /app/appserver/JiraDashboard && cd /app/appserver/JiraDashboard && (docker compose up -d --build || docker-compose up -d --build)"
+Write-Host "4. در حال استخراج و اجرای Docker Compose در مسیر /app/appserver/amani/JiraDashboard ..." -ForegroundColor Yellow
+$remoteCmd = "mkdir -p /app/appserver/amani/JiraDashboard && unzip -o /tmp/JiraDashboard.zip -d /app/appserver/amani/JiraDashboard && cd /app/appserver/amani/JiraDashboard && (docker compose up -d --build || docker-compose up -d --build)"
 ssh $serverSSH $remoteCmd
 
 Write-Host ""
 Write-Host "======================================================" -ForegroundColor Green
 Write-Host "✅ پروژه با موفقیت روی سرور دیپلوی شد!" -ForegroundColor Green
-Write-Host "📂 مسیر سرور: /app/appserver/JiraDashboard" -ForegroundColor Green
+Write-Host "📂 مسیر سرور: /app/appserver/amani/JiraDashboard" -ForegroundColor Green
 Write-Host "======================================================" -ForegroundColor Green
