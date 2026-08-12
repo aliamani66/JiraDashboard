@@ -272,33 +272,15 @@ function cleanErrorMessage(e) {
   return `${cleanMsg}${statusDesc}`;
 }
 
-    let projRes;
+    let projName = pKeyStr || 'ORD';
     try {
-      projRes = await axios.get(`${baseUrl}/rest/api/2/project${projectUrlPath}`, { headers, httpsAgent, timeout: 10000 });
-    } catch (e) {
-      if (e.response && e.response.status === 401) {
-        // Retry with Bearer Auth
-        headers.Authorization = bearerAuth;
-        try {
-          projRes = await axios.get(`${baseUrl}/rest/api/2/project${projectUrlPath}`, { headers, httpsAgent, timeout: 10000 });
-        } catch (eBearer) {
-          try {
-            projRes = await axios.get(`${baseUrl}/rest/api/3/project${projectUrlPath}`, { headers, httpsAgent, timeout: 10000 });
-          } catch (e3) {
-            return res.status(401).json({ success: false, message: 'خطای 401 احراز هویت با جیرا: نام کاربری یا توکن معتبر نیست.' });
-          }
-        }
-      } else {
-        try {
-          projRes = await axios.get(`${baseUrl}/rest/api/3/project${projectUrlPath}`, { headers, httpsAgent, timeout: 5000 });
-        } catch (e3) {
-          const errMsg = cleanErrorMessage(e3 || e);
-          return res.status(400).json({
-            success: false,
-            message: `عدم برقراری ارتباط با سرور جیرا (${baseUrl}): ${errMsg}`
-          });
-        }
-      }
+      const projRes = await axios.get(`${baseUrl}/rest/api/2/project${projectUrlPath}`, { headers, httpsAgent, timeout: 5000 });
+      if (projRes.data && projRes.data.name) projName = projRes.data.name;
+    } catch (_) {
+      try {
+        const projRes3 = await axios.get(`${baseUrl}/rest/api/3/project${projectUrlPath}`, { headers, httpsAgent, timeout: 5000 });
+        if (projRes3.data && projRes3.data.name) projName = projRes3.data.name;
+      } catch (_) {}
     }
 
     let searchRes;
@@ -335,7 +317,7 @@ function cleanErrorMessage(e) {
 
     const issues = searchRes.data.issues || [];
     if (issues.length === 0) {
-      return res.json({ success: true, projectName: projRes.data.name, complianceScore: 60, message: 'پروژه متصل شد اما تسکی یافت نشد.', diagnostics: [] });
+      return res.json({ success: true, projectName: projName, complianceScore: 60, message: 'پروژه متصل شد اما تسکی یافت نشد.', diagnostics: [] });
     }
 
     let sampleWithComp = issues.find(i => i.fields?.components && i.fields.components.length > 0);
@@ -386,7 +368,7 @@ function cleanErrorMessage(e) {
 
     res.json({
       success: true,
-      projectName: projRes.data.name,
+      projectName: projName,
       sampleIssueKey: firstIssue.key,
       totalIssuesFound: searchRes.data.total || issues.length,
       complianceScore: 100,
