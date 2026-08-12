@@ -627,100 +627,106 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   const jalaliDashDateOnly = jalaliSlashDateOnly ? jalaliSlashDateOnly.replace(/\//g, '-') : '';
   const jalaliDashDateEndOnly = jalaliSlashDateEndOnly ? jalaliSlashDateEndOnly.replace(/\//g, '-') : '';
 
-  const gregStartDateOnly = startStr.split(' ')[0];
-  const gregEndDateOnly = endStr.split(' ')[0];
-
-  // ✅ کوئری تایید شده #3: project filter + تاریخ میلادی دقیق
-  const confirmedJql = `${projPrefix}created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
-
-  const configuredProjKeys = new Set(
-    projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
-  );
-
-  let searchRes = null;
-  let taskCount = 0;
-  let statusResult = 'empty';
-  let errorCode = null;
-  let errorMessage = null;
-
   try {
-    searchRes = await jiraService.jiraSearch(confirmedJql);
-  } catch (err) {
-    errorCode = err.code || (err.response ? `HTTP_${err.response.status}` : 'TIMEOUT_OR_NETWORK');
-    const detailMsg = err.response?.data?.errorMessages?.join(', ') || err.message;
+    const gregStartDateOnly = (startStr || '').split(' ')[0];
+    const gregEndDateOnly = (endStr || '').split(' ')[0];
+
+    // ✅ کوئری تایید شده #3: project filter + تاریخ میلادی دقیق
+    const confirmedJql = `${projPrefix}created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
+
+    const configuredProjKeys = new Set(
+      projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
+    );
+
+    let searchRes = null;
+    try {
+      searchRes = await jiraService.jiraSearch(confirmedJql);
+    } catch (err) {
+      const errCode = err.code || (err.response ? `HTTP_${err.response.status}` : 'TIMEOUT_OR_NETWORK');
+      const detailMsg = err.response?.data?.errorMessages?.join(', ') || err.message;
+      return {
+        success: false, monthIndex, monthLabel,
+        dateRange: `${gregStartDateOnly} تا ${gregEndDateOnly}`,
+        jql: confirmedJql, taskCount: 0, status: 'error',
+        errorCode: errCode, message: `🔴 خطا (${errCode}): ${detailMsg}`,
+        queryAuditResults: [{ variant: 3, name: 'کوئری #۳ (پروژه + تاریخ میلادی)', jql: confirmedJql, taskCount: 0, status: 'error', error: detailMsg }]
+      };
+    }
+
+    const startDt = new Date(startStr);
+    const endDt = new Date(endStr);
+    const rawIssues = (searchRes && searchRes.issues) ? searchRes.issues : [];
+
+    // Filter in JS: by configured project keys + exact date range
+    const finalIssues = rawIssues.filter(issue => {
+      const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
+      if (configuredProjKeys.size > 0 && issueProjKey && !configuredProjKeys.has(issueProjKey)) return false;
+      if (issue.fields?.created) {
+        const cDate = new Date(issue.fields.created);
+        if (cDate < startDt || cDate > endDt) return false;
+      }
+      return true;
+    });
+
+    const parsedTasks = finalIssues.map((issue, idx) => {
+      const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue;
+      if (parsed && !parsed.project_id) {
+        const projKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
+        const proj = db.prepare('SELECT id FROM projects WHERE UPPER(key) = ? OR UPPER(id) = ? LIMIT 1').get(projKey, projKey);
+        parsed.project_id = proj ? proj.id : projKey;
+      }
+      return parsed;
+    });
+
+    db.transaction(() => {
+      for (const task of parsedTasks) {
+        if (task && task.id) {
+          task.last_synced = syncTime;
+          if (task.project_id) {
+            const projExists = db.prepare('SELECT id FROM projects WHERE id = ?').get(task.project_id);
+            if (!projExists) {
+              db.prepare('INSERT OR IGNORE INTO projects (id, name, key) VALUES (?, ?, ?)').run(task.project_id, `پروژه ${task.project_id}`, task.project_id);
+            }
+          }
+          insertTask.run(task);
+        }
+      }
+    })();
+
+    try {
+      db.prepare(`UPDATE projects SET
+        total_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0)),
+        completed_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (status = 'Done' OR status = 'Completed')),
+        waiting_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (is_waiting = 1 OR status = 'OnHolding' OR status = 'Waiting'))
+      `).run();
+    } catch (_) {}
+
+    return {
+      success: true, monthIndex, monthLabel,
+      dateRange: `${gregStartDateOnly} تا ${gregEndDateOnly}`,
+      jql: confirmedJql,
+      winningVariant: 'کوئری #۳ (پروژه + تاریخ میلادی دقیق)',
+      taskCount: parsedTasks.length,
+      status: parsedTasks.length > 0 ? 'success' : 'empty',
+      message: parsedTasks.length > 0 ? `${parsedTasks.length} تسک دریافت و ذخیره شد` : '۰ تسک (در این بازه تسکی یافت نشد)',
+      queryAuditResults: [{
+        variant: 3, name: '✅ کوئری #۳ (پروژه + تاریخ میلادی دقیق)',
+        jql: confirmedJql, taskCount: parsedTasks.length,
+        status: parsedTasks.length > 0 ? 'success' : 'zero'
+      }]
+    };
+  } catch (outerErr) {
+    const fallbackJql = `${projPrefix}created >= "${(startStr||'').split(' ')[0]}" AND created <= "${(endStr||'').split(' ')[0]}" ORDER BY created ASC`;
     return {
       success: false, monthIndex, monthLabel,
-      dateRange: `${gregStartDateOnly} تا ${gregEndDateOnly}`,
-      jql: confirmedJql, taskCount: 0, status: 'error',
-      errorCode, message: `🔴 خطا (${errorCode}): ${detailMsg}`,
-      queryAuditResults: [{ variant: 1, name: 'میلادی بدون پروژه', jql: confirmedJql, taskCount: 0, status: 'error', error: detailMsg }]
+      dateRange: `${(startStr||'').split(' ')[0]} تا ${(endStr||'').split(' ')[0]}`,
+      jql: fallbackJql,
+      taskCount: 0, status: 'error',
+      errorCode: 'PROCESSING_ERROR',
+      message: `🔴 خطا در پردازش ماه: ${outerErr.message}`,
+      queryAuditResults: [{ variant: 3, name: 'کوئری #۳', jql: fallbackJql, taskCount: 0, status: 'error', error: outerErr.message }]
     };
   }
-
-  const startDt = new Date(startStr);
-  const endDt = new Date(endStr);
-  const rawIssues = (searchRes && searchRes.issues) ? searchRes.issues : [];
-
-  // Filter in JS: by configured project keys + exact date range
-  const finalIssues = rawIssues.filter(issue => {
-    const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
-    if (configuredProjKeys.size > 0 && issueProjKey && !configuredProjKeys.has(issueProjKey)) return false;
-    if (issue.fields?.created) {
-      const cDate = new Date(issue.fields.created);
-      if (cDate < startDt || cDate > endDt) return false;
-    }
-    return true;
-  });
-
-  const parsedTasks = finalIssues.map((issue, idx) => {
-    const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue;
-    if (parsed && !parsed.project_id) {
-      const projKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
-      // Find matching project in local DB or fallback to first project / projKey
-      const proj = db.prepare('SELECT id FROM projects WHERE UPPER(key) = ? OR UPPER(id) = ? LIMIT 1').get(projKey, projKey);
-      parsed.project_id = proj ? proj.id : projKey;
-    }
-    return parsed;
-  });
-
-  db.transaction(() => {
-    for (const task of parsedTasks) {
-      if (task && task.id) {
-        task.last_synced = syncTime;
-        // Ensure project exists so database relation does not fail silently
-        if (task.project_id) {
-          const projExists = db.prepare('SELECT id FROM projects WHERE id = ?').get(task.project_id);
-          if (!projExists) {
-            db.prepare('INSERT OR IGNORE INTO projects (id, name, key) VALUES (?, ?, ?)').run(task.project_id, `پروژه ${task.project_id}`, task.project_id);
-          }
-        }
-        insertTask.run(task);
-      }
-    }
-  })();
-
-  try {
-    db.prepare(`UPDATE projects SET
-      total_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0)),
-      completed_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (status = 'Done' OR status = 'Completed')),
-      waiting_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (is_waiting = 1 OR status = 'OnHolding' OR status = 'Waiting'))
-    `).run();
-  } catch (_) {}
-
-  return {
-    success: true, monthIndex, monthLabel,
-    dateRange: `${gregStartDateOnly} تا ${gregEndDateOnly}`,
-    jql: confirmedJql,
-    winningVariant: 'کوئری #۳ (پروژه + تاریخ میلادی دقیق)',
-    taskCount: parsedTasks.length,
-    status: parsedTasks.length > 0 ? 'success' : 'empty',
-    message: parsedTasks.length > 0 ? `${parsedTasks.length} تسک دریافت و ذخیره شد` : '۰ تسک (در این بازه تسکی یافت نشد)',
-    queryAuditResults: [{
-      variant: 3, name: '✅ کوئری #۳ (پروژه + تاریخ میلادی دقیق)',
-      jql: confirmedJql, taskCount: parsedTasks.length,
-      status: parsedTasks.length > 0 ? 'success' : 'zero'
-    }]
-  };
 }
 
 function initCron() {
