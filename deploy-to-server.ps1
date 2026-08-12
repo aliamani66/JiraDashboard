@@ -24,7 +24,7 @@ Write-Host "[2/4] Creating clean tar.gz deployment package (JiraDashboard.tar.gz
 if (Test-Path "JiraDashboard.tar.gz") { Remove-Item "JiraDashboard.tar.gz" -Force }
 if (Test-Path "JiraDashboard.zip") { Remove-Item "JiraDashboard.zip" -Force }
 
-tar -czf JiraDashboard.tar.gz --exclude="node_modules" --exclude="frontend/node_modules" --exclude="backend/node_modules" --exclude=".git" --exclude="backend/database.sqlite" --exclude="frontend/dist" --exclude=".vscode" --exclude="deploy" --exclude="*.tar.gz" --exclude="*.zip" .
+tar -czf JiraDashboard.tar.gz --exclude="node_modules" --exclude="frontend/node_modules" --exclude="backend/node_modules" --exclude=".git" --exclude="backend/database.sqlite" --exclude=".vscode" --exclude="deploy" --exclude="*.tar.gz" --exclude="*.zip" .
 
 if (-not (Test-Path "JiraDashboard.tar.gz")) {
     Write-Host "[ERROR] Failed to create JiraDashboard.tar.gz archive!" -ForegroundColor Red
