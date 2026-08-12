@@ -162,7 +162,11 @@ select option {
 }
 
 body {
-  font-family: 'Vazirmatn', 'Inter', sans-serif;
+  font-family: 'Vazirmatn', 'Shabnam', 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01" on, "cv01" on;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   direction: rtl;
