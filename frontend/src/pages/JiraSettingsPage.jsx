@@ -258,21 +258,33 @@ const JiraSettingsPage = () => {
     try {
       setFetchingProjects(true);
       setActiveModal({
+        status: 'loading',
         title: '🌐 در حال دریافت لیست پروژه‌های Jira',
         message: 'در حال دریافت تمام پروژه‌های موجود در سرور جیرا به همراه نام پروژه و تعداد اپیک‌ها...'
       });
       const res = await api.fetchJiraProjects();
       if (res.projects && res.projects.length > 0) {
         setDiscoveredProjects(res.projects);
-        showToast(`${res.projects.length} پروژه از سرور Jira به همراه نام کامل شناسایی گردید.`);
+        setActiveModal({
+          status: 'success',
+          title: '✅ دریافت لیست پروژه‌ها با موفقیت انجام شد',
+          message: `${res.projects.length} پروژه از سرور Jira شناسایی گردید و در کمبو قرار گرفت.`
+        });
       } else {
-        showToast('پروژه‌ای دریافت نشد. لطفاً آدرس و توکن جیرا را بررسی بفرمایید.', 'error');
+        setActiveModal({
+          status: 'error',
+          title: '❌ عدم دریافت لیست پروژه‌ها',
+          message: 'پروژه‌ای از جیرا دریافت نشد. لطفاً آدرس و توکن اتصال جیرا را بررسی بفرمایید.'
+        });
       }
     } catch (e) {
-      showToast('خطا در دریافت پروژه‌ها از Jira: ' + (e.message || ''), 'error');
+      setActiveModal({
+        status: 'error',
+        title: '❌ خطا در دریافت پروژه‌ها از Jira',
+        message: e.message || 'ارتباط با سرور جیرا برقرار نشد.'
+      });
     } finally {
       setFetchingProjects(false);
-      setActiveModal(null);
     }
   };
 
@@ -280,6 +292,7 @@ const JiraSettingsPage = () => {
     try {
       setSaving(true);
       setActiveModal({
+        status: 'loading',
         title: '💾 در حال ذخیره تنظیمات و مپینگ Jira',
         message: 'تنظیمات اتصال، کلید پروژه‌ها و نگاشت فیلدها در حال ثبت و اعمال زنده در حافظه سیستم می‌باشد...'
       });
@@ -289,12 +302,19 @@ const JiraSettingsPage = () => {
       } else {
         await fetchConfig();
       }
-      showToast(res.message || 'تنظیمات و کلید جدید پروژه با موفقیت ذخیره و به صورت زنده اعمال گردید.');
+      setActiveModal({
+        status: 'success',
+        title: '✅ ذخیره موفقیت‌آمیز تنظیمات',
+        message: res.message || 'تنظیمات و کلید جدید پروژه با موفقیت ذخیره و به صورت زنده اعمال گردید.'
+      });
     } catch (e) {
-      showToast('خطا در ذخیره تنظیمات: ' + (e.message || ''), 'error');
+      setActiveModal({
+        status: 'error',
+        title: '❌ خطا در ذخیره تنظیمات',
+        message: e.message || 'ذخیره تنظیمات با خطا مواجه شد.'
+      });
     } finally {
       setSaving(false);
-      setActiveModal(null);
     }
   };
 
@@ -302,6 +322,7 @@ const JiraSettingsPage = () => {
     try {
       setSyncing(true);
       setActiveModal({
+        status: 'loading',
         title: '🔄 در حال همگام‌سازی زنده با سرور Jira',
         message: `دیتابیس در حال دریافت اپیک‌ها و تسک‌های جدید پروژه‌های انتخاب‌شده (${cfg?.connection?.projectKey || 'اصلی'}) مستقیم از سرور جیرا می‌باشد...`
       });
@@ -309,11 +330,18 @@ const JiraSettingsPage = () => {
       await api.saveJiraConfig(cfg);
       // Execute live sync from Jira
       const res = await api.resetDatabase();
-      showToast(res.message || 'همگام‌سازی با موفقیت انجام گردید.');
-      setTimeout(() => window.location.reload(), 1500);
+      setActiveModal({
+        status: 'success',
+        title: '✅ همگام‌سازی با موفقیت انجام شد',
+        message: res.message || 'دیتابیس با داده‌های زنده Jira همگام شد. با زدن دکمه تأیید، صفحه بازنشانی می‌شود.',
+        onConfirm: () => window.location.reload()
+      });
     } catch (e) {
-      showToast('خطا در همگام‌سازی با Jira: ' + (e.message || ''), 'error');
-      setActiveModal(null);
+      setActiveModal({
+        status: 'error',
+        title: '❌ خطا در همگام‌سازی با Jira',
+        message: e.message || 'همگام‌سازی با خطا مواجه شد.'
+      });
     } finally {
       setSyncing(false);
     }
@@ -324,16 +352,34 @@ const JiraSettingsPage = () => {
       setDiagLoading(true);
       setDiagResult(null);
       setActiveModal({
+        status: 'loading',
         title: '🔍 پایش زنده ساختار API و ارتباط جیرا',
         message: 'سیستم در حال تست اتصال به سرور جیرا، چک کردن توکن و پایش مپینگ فیلدهای پروژه می‌باشد...'
       });
       const res = await api.runJiraDiagnostic(cfg?.connection || {});
       setDiagResult(res);
+      if (res && res.success) {
+        setActiveModal({
+          status: 'success',
+          title: '✅ پایش زنده با موفقیت انجام شد',
+          message: `ارتباط با پروژه ${res.projectName || 'Jira'} برقرار گردید. میزان تطابق ساختاری: %${res.complianceScore || 100}`
+        });
+      } else {
+        setActiveModal({
+          status: 'error',
+          title: '⚠️ نتیجه پایش زنده API',
+          message: res.message || 'خطا در برقراری ارتباط با Jira.'
+        });
+      }
     } catch (e) {
       setDiagResult({ success: false, message: e.message });
+      setActiveModal({
+        status: 'error',
+        title: '❌ خطا در اجرای پایش زنده',
+        message: e.message || 'اجرای پایش با خطا مواجه شد.'
+      });
     } finally {
       setDiagLoading(false);
-      setActiveModal(null);
     }
   };
 
@@ -394,8 +440,8 @@ const JiraSettingsPage = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              background: 'rgba(15, 23, 42, 0.82)',
-              backdropFilter: 'blur(10px)',
+              background: 'rgba(15, 23, 42, 0.85)',
+              backdropFilter: 'blur(12px)',
               zIndex: 99999,
               display: 'flex',
               alignItems: 'center',
@@ -408,30 +454,68 @@ const JiraSettingsPage = () => {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: -20 }}
               style={{
-                background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.98))',
-                border: '1px solid rgba(56, 189, 248, 0.4)',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(56, 189, 248, 0.3)',
+                background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99))',
+                border: activeModal.status === 'error' ? '1px solid #EF4444' : activeModal.status === 'success' ? '1px solid #10B981' : '1px solid rgba(56, 189, 248, 0.4)',
+                boxShadow: activeModal.status === 'error' ? '0 20px 60px rgba(239,68,68,0.25), 0 0 35px rgba(239,68,68,0.2)' : activeModal.status === 'success' ? '0 20px 60px rgba(16,185,129,0.25), 0 0 35px rgba(16,185,129,0.2)' : '0 20px 60px rgba(0,0,0,0.7), 0 0 35px rgba(56,189,248,0.3)',
                 borderRadius: '24px',
                 padding: '2.2rem 2.8rem',
-                maxWidth: '500px',
+                maxWidth: '520px',
                 width: '100%',
                 textAlign: 'center',
                 color: '#FFFFFF'
               }}
             >
-              <div style={{ display: 'inline-flex', padding: '1.1rem', background: 'rgba(14, 165, 233, 0.15)', borderRadius: '50%', marginBottom: '1.35rem', border: '1px solid rgba(56, 189, 248, 0.35)' }}>
-                <RefreshCw size={38} className="spin text-accent-cyan" style={{ color: '#38BDF8' }} />
+              {/* Icon Section */}
+              <div style={{ display: 'inline-flex', padding: '1.1rem', background: activeModal.status === 'error' ? 'rgba(239, 68, 68, 0.15)' : activeModal.status === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(14, 165, 233, 0.15)', borderRadius: '50%', marginBottom: '1.35rem', border: activeModal.status === 'error' ? '1px solid rgba(239, 68, 68, 0.4)' : activeModal.status === 'success' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(56, 189, 248, 0.35)' }}>
+                {activeModal.status === 'error' ? (
+                  <AlertTriangle size={42} style={{ color: '#EF4444' }} />
+                ) : activeModal.status === 'success' ? (
+                  <CheckCircle2 size={42} style={{ color: '#10B981' }} />
+                ) : (
+                  <RefreshCw size={38} className="spin text-accent-cyan" style={{ color: '#38BDF8' }} />
+                )}
               </div>
-              <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1.3rem', fontWeight: 800, color: '#F8FAFC' }}>
+
+              {/* Title & Message */}
+              <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1.35rem', fontWeight: 800, color: activeModal.status === 'error' ? '#FCA5A5' : activeModal.status === 'success' ? '#6EE7B7' : '#F8FAFC' }}>
                 {activeModal.title}
               </h3>
-              <p style={{ margin: 0, fontSize: '0.92rem', color: '#94A3B8', lineHeight: '1.65' }}>
+
+              <p style={{ margin: 0, fontSize: '0.94rem', color: '#CBD5E1', lineHeight: '1.65' }}>
                 {activeModal.message}
               </p>
-              <div style={{ marginTop: '1.6rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.45rem 1.1rem', borderRadius: '20px', fontSize: '0.82rem', color: '#38BDF8', fontWeight: 'bold' }}>
-                <span className="spin">⚡</span>
-                <span>در حال ارتباط و پردازش عملیات... لطفاً شکیبا باشید</span>
-              </div>
+
+              {/* Loading Indicator OR Confirm Button */}
+              {activeModal.status === 'loading' ? (
+                <div style={{ marginTop: '1.6rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.45rem 1.1rem', borderRadius: '20px', fontSize: '0.82rem', color: '#38BDF8', fontWeight: 'bold' }}>
+                  <span className="spin">⚡</span>
+                  <span>در حال ارتباط و پردازش عملیات... لطفاً شکیبا باشید</span>
+                </div>
+              ) : (
+                <div style={{ marginTop: '1.8rem' }}>
+                  <button
+                    onClick={() => {
+                      const cb = activeModal.onConfirm;
+                      setActiveModal(null);
+                      if (cb) cb();
+                    }}
+                    style={{
+                      background: activeModal.status === 'error' ? 'linear-gradient(135deg, #EF4444, #DC2626)' : 'linear-gradient(135deg, #10B981, #059669)',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      padding: '0.65rem 2.2rem',
+                      borderRadius: '14px',
+                      fontSize: '0.94rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      boxShadow: activeModal.status === 'error' ? '0 4px 15px rgba(239, 68, 68, 0.4)' : '0 4px 15px rgba(16, 185, 129, 0.4)',
+                      transition: 'transform 0.2s ease, opacity 0.2s ease'
+                    }}
+                  >
+                    تأیید و متوجه شدم
+                  </button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}
