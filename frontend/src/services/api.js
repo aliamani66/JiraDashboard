@@ -23,7 +23,13 @@ async function fetchWithAuth(url, options = {}) {
 }
 
 export const api = {
-  login: (username, password) => fetch(API_BASE + '/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username, password}) }).then(r=>r.json()),
+  login: (username, password) => fetch(API_BASE + '/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username, password}) }).then(async r => {
+    const data = await r.json();
+    if (!r.ok || !data.token) {
+      throw new Error(data.error || 'نام کاربری یا رمز عبور اشتباه است');
+    }
+    return data;
+  }),
   getMe: () => fetchWithAuth('/auth/me'),
   getProjects: () => fetchWithAuth('/projects'),
   getProject: (id) => fetchWithAuth(`/projects/${id}`),

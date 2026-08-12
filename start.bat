@@ -9,33 +9,25 @@ cd /d "%~dp0"
 
 echo 1. بررسی و نصب پیش‌نیازهای Backend...
 cd backend
-if not exist "node_modules" (
-    echo در حال نصب پکیج‌های backend...
-    call npm install
-)
-
-if not exist "database.sqlite" (
-    echo در حال ساخت دیتابیس اولیه...
-    call node src/seed.js
-)
+if not exist "node_modules" call npm install
+if not exist "database.sqlite" call node src/seed.js
 
 echo.
 echo 2. اجرای سرور Backend روی پورت 3001...
 start "Backend Server (Port 3001)" cmd /k "node src/app.js"
 
-cd ..
+cd "%~dp0"
 
 echo.
 echo 3. بررسی و نصب پیش‌نیازهای Frontend...
 cd frontend
-if not exist "node_modules" (
-    echo در حال نصب پکیج‌های فرانت‌اند...
-    call npm install
-)
+if not exist "node_modules" call npm install
 
 echo.
 echo 4. اجرای فرانت‌اند Vite روی پورت 5173...
-start "Frontend Server (Port 5173)" cmd /k "npx vite --host"
+start "Frontend Server (Port 5173)" cmd /k "npm run dev"
+
+cd "%~dp0"
 
 echo.
 echo ===================================================

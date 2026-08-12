@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flame, Calendar, Clock, ExternalLink, User, Layers, ArrowLeft, Filter, Search, CheckCircle2, Printer } from 'lucide-react';
+import { Flame, Calendar, Clock, ExternalLink, User, Layers, ArrowLeft, Filter, Search, CheckCircle2, Printer, FileText } from 'lucide-react';
 import { api } from '../services/api';
 import StatusBadge from '../components/common/StatusBadge';
 import './SprintsPage.css';
 
+// Jira Base Server URL configuration for quick links
 const JIRA_BASE_URL = 'https://10.100.71.140:8443';
 
 const SprintsPage = () => {
