@@ -130,18 +130,11 @@ const SprintsPage = () => {
     new Set([...jiraConfiguredKeys, ...dbProjKeys, ...taskProjKeys])
   ).sort();
 
-  // Dynamically extract all unique sprint names from backend tasks with fallback
+  // Dynamically extract all unique sprint names from ALL tasks so all sprints are always visible
   const extractedSprints = Array.from(
     new Set(
       (tasks || [])
-        .filter(t => {
-          if (!t || !t.sprint_name) return false;
-          if (projectFilter !== 'all') {
-            const jKey = t.project_key || (t.project_id ? String(t.project_id).split('-')[0] : '');
-            if (jKey !== projectFilter) return false;
-          }
-          return true;
-        })
+        .filter(t => t && t.sprint_name)
         .map(t => String(t.sprint_name).trim())
     )
   ).sort((a, b) => {
