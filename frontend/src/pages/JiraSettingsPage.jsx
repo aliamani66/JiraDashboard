@@ -262,7 +262,6 @@ const JiraSettingsPage = () => {
   };
 
   const handleSync = async () => {
-    if (!window.confirm('آیا مایلید دیتابیس با آخرین پروژه و تسک‌های Jira همگام‌سازی شود؟')) return;
     try {
       setSyncing(true);
       showToast('در حال همگام‌سازی و دریافت اطلاعات از Jira...');
