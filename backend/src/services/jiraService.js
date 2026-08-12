@@ -46,10 +46,11 @@ function getAuthHeaderVariants(username, token) {
     if (trimmedToken.startsWith('Basic ') || trimmedToken.startsWith('Bearer ')) {
       list.push(trimmedToken);
     } else {
+      // Prioritize Bearer Auth for Jira Personal Access Tokens (PAT)
+      list.push('Bearer ' + trimmedToken);
       if (trimmedUser) {
         list.push('Basic ' + Buffer.from(`${trimmedUser}:${trimmedToken}`).toString('base64'));
       }
-      list.push('Bearer ' + trimmedToken);
       list.push('Basic ' + trimmedToken);
     }
   }
