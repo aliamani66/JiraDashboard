@@ -92,7 +92,8 @@ function extractDateField(issue, fieldName) {
 async function jiraSearch(jql, fields = [], options = {}) {
   const cfg = getJiraConfig();
   const authVariants = getAuthHeaderVariants(cfg.username, cfg.token);
-  const validFields = fields.filter(Boolean);
+  const standardFields = ['summary', 'description', 'status', 'assignee', 'created', 'duedate', 'project', 'priority', 'labels', 'components', 'issuelinks', 'parent', 'issuetype', 'timeoriginalestimate', 'timespent', 'aggregatetimeoriginalestimate', 'aggregatetimespent'];
+  const validFields = (fields && fields.length > 0) ? fields.filter(Boolean) : standardFields;
   const isCloud = cfg.baseUrl && cfg.baseUrl.includes('.atlassian.net');
 
   const pageSize = options.maxResults || 500;
