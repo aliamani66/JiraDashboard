@@ -608,52 +608,44 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     }
   }
 
-  const jalaliSlashJql = effectiveJalaliStart && effectiveJalaliEnd ? `${projectJqlClause}created >= "${effectiveJalaliStart}" AND created <= "${effectiveJalaliEnd}" ORDER BY created ASC` : null;
-  const jalaliDashJql = effectiveJalaliStart && effectiveJalaliEnd ? `${projectJqlClause}created >= "${effectiveJalaliStart.replace(/\//g, '-')}" AND created <= "${effectiveJalaliEnd.replace(/\//g, '-')}" ORDER BY created ASC` : null;
-  const gregorianJql = `${projectJqlClause}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC`;
+  const jalaliSlashWithTime = effectiveJalaliStart && effectiveJalaliEnd ? `${projectJqlClause}created >= "${effectiveJalaliStart}" AND created <= "${effectiveJalaliEnd}" ORDER BY created ASC` : null;
+  const jalaliDashWithTime = effectiveJalaliStart && effectiveJalaliEnd ? `${projectJqlClause}created >= "${effectiveJalaliStart.replace(/\//g, '-')}" AND created <= "${effectiveJalaliEnd.replace(/\//g, '-')}" ORDER BY created ASC` : null;
+  
+  const startOnlyDateSlash = effectiveJalaliStart ? effectiveJalaliStart.split(' ')[0] : '';
+  const endOnlyDateSlash = effectiveJalaliEnd ? effectiveJalaliEnd.split(' ')[0] : '';
+  const jalaliSlashDateOnly = startOnlyDateSlash && endOnlyDateSlash ? `${projectJqlClause}created >= "${startOnlyDateSlash}" AND created <= "${endOnlyDateSlash}" ORDER BY created ASC` : null;
+  const jalaliDashDateOnly = startOnlyDateSlash && endOnlyDateSlash ? `${projectJqlClause}created >= "${startOnlyDateSlash.replace(/\//g, '-')}" AND created <= "${endOnlyDateSlash.replace(/\//g, '-')}" ORDER BY created ASC` : null;
+
+  const jalaliQueries = [
+    jalaliSlashWithTime,
+    jalaliDashWithTime,
+    jalaliSlashDateOnly,
+    jalaliDashDateOnly
+  ].filter(Boolean);
 
   let searchRes = null;
-  let jql = jalaliSlashJql || gregorianJql;
+  let jql = jalaliSlashWithTime || `${projectJqlClause}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC`;
+  let lastError = null;
 
   try {
-    // 1. Try Jalali Slash JQL first (e.g. "1403/06/01 00:00")
-    if (jalaliSlashJql) {
+    for (const query of jalaliQueries) {
       try {
-        const res1 = await jiraService.jiraSearch(jalaliSlashJql);
-        if (res1 && res1.issues && res1.issues.length > 0) {
-          searchRes = res1;
-          jql = jalaliSlashJql;
+        jql = query;
+        const res = await jiraService.jiraSearch(query);
+        if (res && Array.isArray(res.issues)) {
+          searchRes = res;
+          if (res.issues.length > 0) {
+            break; // Stop immediately when issues are returned!
+          }
         }
-      } catch (_) {}
+      } catch (err) {
+        lastError = err;
+      }
     }
 
-    // 2. Try Jalali Dash JQL next (e.g. "1403-06-01 00:00")
-    if ((!searchRes || !searchRes.issues || searchRes.issues.length === 0) && jalaliDashJql) {
-      try {
-        const res2 = await jiraService.jiraSearch(jalaliDashJql);
-        if (res2 && res2.issues && res2.issues.length > 0) {
-          searchRes = res2;
-          jql = jalaliDashJql;
-        }
-      } catch (_) {}
-    }
-
-    // 3. Fallback to Gregorian JQL if Jalali returned no results
-    if (!searchRes || !searchRes.issues) {
-      jql = gregorianJql;
-      searchRes = await jiraService.jiraSearch(gregorianJql);
-    }
-    
-    // If standard query returned no issues and jalaliStartStr is provided, attempt Jalali JQL query
-    if ((!searchRes.issues || searchRes.issues.length === 0) && jalaliStartStr && jalaliEndStr) {
-      const jalaliJql = `${projectJqlClause}created >= "${jalaliStartStr}" AND created <= "${jalaliEndStr}" ORDER BY created ASC`;
-      try {
-        const fallbackRes = await jiraService.jiraSearch(jalaliJql);
-        if (fallbackRes.issues && fallbackRes.issues.length > 0) {
-          searchRes = fallbackRes;
-          jql = jalaliJql;
-        }
-      } catch (_) {}
+    if (!searchRes) {
+      if (lastError) throw lastError;
+      searchRes = { issues: [] };
     }
 
     const rawIssues = searchRes.issues || [];
