@@ -43,6 +43,9 @@ const DashboardFilterPanel = ({
   const [compSearch, setCompSearch] = React.useState('');
   const [showAllComps, setShowAllComps] = React.useState(false);
 
+  const [quarterSearch, setQuarterSearch] = React.useState('');
+  const [showAllQuarters, setShowAllQuarters] = React.useState(false);
+
   // Toggle helper for multi-select arrays
   const toggleSelection = (item, currentList, setList) => {
     if (currentList.includes(item)) {
@@ -54,14 +57,31 @@ const DashboardFilterPanel = ({
 
   const hasActiveFilters = statusFilters.length > 0 || quarterFilters.length > 0 || componentFilters.length > 0 || searchQuery.trim() !== '';
 
-  // Filter components by search and sort selected ones first
+  // Filter & sort Quarters
+  const filteredQuarters = quarters.filter(q => {
+    if (!quarterSearch.trim()) return true;
+    return q.toLowerCase().includes(quarterSearch.toLowerCase().trim());
+  });
+
+  const sortedQuarters = [...filteredQuarters].sort((a, b) => {
+    const aSel = quarterFilters.includes(a);
+    const bSel = quarterFilters.includes(b);
+    if (aSel && !bSel) return -1;
+    if (!aSel && bSel) return 1;
+    return 0;
+  });
+
+  const Q_LIMIT = 6;
+  const visibleQuarters = showAllQuarters || quarterSearch.trim() !== '' ? sortedQuarters : sortedQuarters.slice(0, Q_LIMIT);
+  const hiddenQuartersCount = sortedQuarters.length - visibleQuarters.length;
+
+  // Filter & sort Components / Labels
   const filteredComponents = availableComponents.filter(c => {
     if (!compSearch.trim()) return true;
     const meta = getCompMeta(c);
     return c.toLowerCase().includes(compSearch.toLowerCase()) || meta.label.toLowerCase().includes(compSearch.toLowerCase());
   });
 
-  // Sort so currently selected components appear at the top
   const sortedComponents = [...filteredComponents].sort((a, b) => {
     const aSel = componentFilters.includes(a);
     const bSel = componentFilters.includes(b);
@@ -162,7 +182,23 @@ const DashboardFilterPanel = ({
             {quarterFilters.length > 0 && <span className="sub-count-pill">{quarterFilters.length} انتخابی</span>}
           </div>
 
-          <div className="mft-pills-wrap">
+          {/* Quick Quarter Filter Input if > 6 quarters */}
+          {quarters.length > 6 && (
+            <div className="mft-mini-search">
+              <input
+                type="text"
+                placeholder="🔍 فیلتر سریع فصل‌ها (مثال: 1404 یا Q1)..."
+                value={quarterSearch}
+                onChange={e => setQuarterSearch(e.target.value)}
+                className="mft-mini-input"
+              />
+              {quarterSearch && (
+                <button className="mft-mini-clear" onClick={() => setQuarterSearch('')}>×</button>
+              )}
+            </div>
+          )}
+
+          <div className="mft-pills-wrap scrollable">
             <button
               className={`mft-pill ${quarterFilters.length === 0 ? 'active-all' : ''}`}
               onClick={() => setQuarterFilters([])}
@@ -170,7 +206,7 @@ const DashboardFilterPanel = ({
               🌐 همه فصل‌ها
             </button>
 
-            {quarters.map(q => {
+            {visibleQuarters.map(q => {
               const isSelected = quarterFilters.includes(q);
               return (
                 <button
@@ -182,6 +218,24 @@ const DashboardFilterPanel = ({
                 </button>
               );
             })}
+
+            {!quarterSearch && hiddenQuartersCount > 0 && (
+              <button
+                className="mft-expand-btn"
+                onClick={() => setShowAllQuarters(true)}
+              >
+                + {hiddenQuartersCount} فصل دیگر...
+              </button>
+            )}
+
+            {!quarterSearch && showAllQuarters && quarters.length > Q_LIMIT && (
+              <button
+                className="mft-expand-btn collapse"
+                onClick={() => setShowAllQuarters(false)}
+              >
+                ▲ کمتر
+              </button>
+            )}
           </div>
         </div>
 
