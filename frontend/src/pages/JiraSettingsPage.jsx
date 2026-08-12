@@ -560,6 +560,53 @@ const JiraSettingsPage = () => {
     showToast(`✅ همگام‌سازی با موفقیت انجام شد. مجموع ${totalTasksSynced} تسک از ${monthRanges.length} ماه ثبت گردید.`, 'success');
   };
 
+  const handleFullSiteRebuild = async () => {
+    if (!window.confirm('🚨 آیا از بازسازی کامل دیتابیس و سایت مطمئن هستید؟\n\nاین عملیات ابتدا تمام دیتابیس را پاک می‌کند، سپس اپیک‌ها را استخراج کرده و اطلاعات ۱۲ ماه گذشته را ماه به ماه با کوئری‌های دقیق لود و مپ خواهد کرد.')) {
+      return;
+    }
+    try {
+      showToast('🗑️ در حال پاکسازی و خالی کردن دیتابیس...');
+      await api.clearDatabase();
+      fetchDbStats();
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+
+      const monthRanges = [];
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(currentYear, currentMonth - i, 1);
+        const y = d.getFullYear();
+        const m = d.getMonth();
+        const lastDay = new Date(y, m + 1, 0);
+
+        const startStr = `${y}-${String(m + 1).padStart(2, '0')}-01 00:00`;
+        const endStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')} 23:59`;
+        const monthInfo = getJalaliMonthLabel(y, m);
+        const jStart = g2j(y, m + 1, 1);
+        const jEnd = g2j(y, m + 1, lastDay.getDate());
+        const jalaliStartStr = `${jStart.jy}/${String(jStart.jm).padStart(2,'0')}/${String(jStart.jd).padStart(2,'0')} 00:00`;
+        const jalaliEndStr = `${jEnd.jy}/${String(jEnd.jm).padStart(2,'0')}/${String(jEnd.jd).padStart(2,'0')} 23:59`;
+
+        monthRanges.push({
+          monthIndex: 12 - i,
+          year: y,
+          month: m + 1,
+          jalaliName: monthInfo.jalali,
+          gregorianName: monthInfo.gregorian,
+          startStr,
+          endStr,
+          jalaliStartStr,
+          jalaliEndStr
+        });
+      }
+
+      await executeStepByStepSync(monthRanges, '🔥 در حال بازسازی کامل سایت و استخراج ۱۲ ماه گذشته');
+    } catch (e) {
+      showToast('خطا در بازسازی کامل سایت: ' + e.message, 'error');
+    }
+  };
+
   const handleMonthlySync = async () => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -931,6 +978,15 @@ const JiraSettingsPage = () => {
           <p className="jsp-subtitle">مدیریت کامل تمام مپینگ‌ها، فیلدهای کاستوم، وضعیت‌ها، برچسب‌ها و استخراج پیشرفته اطلاعات جیرا</p>
         </div>
         <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
+          <button
+            className="jsp-run-diag-btn"
+            style={{ background: 'linear-gradient(135deg, #EF4444, #8B5CF6)', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)' }}
+            onClick={handleFullSiteRebuild}
+            disabled={monthlySyncing}
+          >
+            <RefreshCw size={16} className={monthlySyncing ? 'spin' : ''} />
+            {monthlySyncing ? 'در حال بازسازی...' : '🔥 بازسازی کامل دیتابیس و سایت'}
+          </button>
           <button
             className="jsp-run-diag-btn"
             style={{ background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.35)' }}
