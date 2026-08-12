@@ -587,7 +587,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 
   const cfg = jiraService.getJiraConfig();
   const projKeys = cfg.projectKey ? cfg.projectKey.split(',').map(k => k.trim().toUpperCase()).filter(Boolean) : [];
-  const projectJqlClause = projKeys.length > 0 ? `project IN (${projKeys.map(k => `"${k}"`).join(',')}) AND ` : '';
+  const projectInNoQuotes = projKeys.length > 0 ? `project IN (${projKeys.join(',')}) AND ` : '';
+  const projectEqNoQuotes = projKeys.length === 1 ? `project = ${projKeys[0]} AND ` : projectInNoQuotes;
 
   let effectiveJalaliStart = jalaliStartStr;
   let effectiveJalaliEnd = jalaliEndStr;
@@ -608,26 +609,19 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     }
   }
 
-  const gregorianWithTime = `${projectJqlClause}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC`;
-  const gregorianDateOnly = `${projectJqlClause}created >= "${startStr.split(' ')[0]}" AND created <= "${endStr.split(' ')[0]}" ORDER BY created ASC`;
-  const gregorianSlashDateOnly = `${projectJqlClause}created >= "${startStr.split(' ')[0].replace(/-/g, '/')}" AND created <= "${endStr.split(' ')[0].replace(/-/g, '/')}" ORDER BY created ASC`;
+  const gregorianWithTime = `${projectInNoQuotes}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC`;
+  const gregorianDateOnly = `${projectEqNoQuotes}created >= "${startStr.split(' ')[0]}" AND created <= "${endStr.split(' ')[0]}" ORDER BY created ASC`;
+  const pureProjectJql = projKeys.length > 0 ? `project IN (${projKeys.join(',')}) ORDER BY created DESC` : `ORDER BY created DESC`;
 
-  const jalaliSlashWithTime = effectiveJalaliStart && effectiveJalaliEnd ? `${projectJqlClause}created >= "${effectiveJalaliStart}" AND created <= "${effectiveJalaliEnd}" ORDER BY created ASC` : null;
-  const jalaliDashWithTime = effectiveJalaliStart && effectiveJalaliEnd ? `${projectJqlClause}created >= "${effectiveJalaliStart.replace(/\//g, '-')}" AND created <= "${effectiveJalaliEnd.replace(/\//g, '-')}" ORDER BY created ASC` : null;
-  
-  const startOnlyDateSlash = effectiveJalaliStart ? effectiveJalaliStart.split(' ')[0] : '';
-  const endOnlyDateSlash = effectiveJalaliEnd ? effectiveJalaliEnd.split(' ')[0] : '';
-  const jalaliSlashDateOnly = startOnlyDateSlash && endOnlyDateSlash ? `${projectJqlClause}created >= "${startOnlyDateSlash}" AND created <= "${endOnlyDateSlash}" ORDER BY created ASC` : null;
-  const jalaliDashDateOnly = startOnlyDateSlash && endOnlyDateSlash ? `${projectJqlClause}created >= "${startOnlyDateSlash.replace(/\//g, '-')}" AND created <= "${endOnlyDateSlash.replace(/\//g, '-')}" ORDER BY created ASC` : null;
+  const jalaliSlashDateOnly = effectiveJalaliStart && effectiveJalaliEnd ? `${projectInNoQuotes}created >= "${effectiveJalaliStart.split(' ')[0]}" AND created <= "${effectiveJalaliEnd.split(' ')[0]}" ORDER BY created ASC` : null;
+  const jalaliDashDateOnly = effectiveJalaliStart && effectiveJalaliEnd ? `${projectInNoQuotes}created >= "${effectiveJalaliStart.split(' ')[0].replace(/\//g, '-')}" AND created <= "${effectiveJalaliEnd.split(' ')[0].replace(/\//g, '-')}" ORDER BY created ASC` : null;
 
   const queriesToTry = [
-    { id: 1, name: 'میلادی با ساعت', jql: gregorianWithTime },
-    { id: 2, name: 'میلادی تاریخ تنها', jql: gregorianDateOnly },
-    { id: 3, name: 'میلادی با اسلش', jql: gregorianSlashDateOnly },
-    { id: 4, name: 'شمسی اسلش با ساعت', jql: jalaliSlashWithTime },
-    { id: 5, name: 'شمسی دش با ساعت', jql: jalaliDashWithTime },
-    { id: 6, name: 'شمسی اسلش تاریخ تنها', jql: jalaliSlashDateOnly },
-    { id: 7, name: 'شمسی دش تاریخ تنها', jql: jalaliDashDateOnly }
+    { id: 1, name: 'پروژه استاندارد (project IN (ORD))', jql: gregorianWithTime },
+    { id: 2, name: 'پروژه تک تاریخ (project = ORD)', jql: gregorianDateOnly },
+    { id: 3, name: 'شمسی اسلش (1403/06/01)', jql: jalaliSlashDateOnly },
+    { id: 4, name: 'شمسی دش (1403-06-01)', jql: jalaliDashDateOnly },
+    { id: 5, name: 'کل تسک‌های پروژه + فیلتر هوشمند تاریخ', jql: pureProjectJql }
   ].filter(q => q.jql);
 
   const queryAuditResults = [];
@@ -667,7 +661,19 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       }
     }
 
-    const finalIssues = (winningSearchRes && winningSearchRes.issues) ? winningSearchRes.issues : [];
+    const startDt = new Date(startStr);
+    const endDt = new Date(endStr);
+    const matchedIssues = (winningSearchRes && winningSearchRes.issues) ? winningSearchRes.issues : [];
+    
+    // Filter issues locally by created date if fetched via pure project query
+    const finalIssues = winningVariant && winningVariant.includes('فیلتر هوشمند')
+      ? matchedIssues.filter(issue => {
+          if (!issue.fields || !issue.fields.created) return true;
+          const cDate = new Date(issue.fields.created);
+          return cDate >= startDt && cDate <= endDt;
+        })
+      : matchedIssues;
+
     const parsedTasks = finalIssues.map((issue, idx) => jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue);
 
     db.transaction(() => {
