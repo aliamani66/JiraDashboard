@@ -39,9 +39,11 @@ async function start() {
   // Always ensure admin user exists with full permissions
   try {
     const db = getDb();
-    try {
+    const columns = db.prepare("PRAGMA table_info(users)").all();
+    const hasPermissions = columns.some(c => c.name === 'permissions');
+    if (!hasPermissions) {
       db.prepare("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '[\"dashboard\",\"overall_timeline\",\"waiting_tasks\",\"user_management\",\"jira_settings\"]'").run();
-    } catch (_) {}
+    }
 
     const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
     if (!existingAdmin) {
