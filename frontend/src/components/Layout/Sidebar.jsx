@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Clock, ChevronRight, TrendingUp, Users, Settings, Flame } from 'lucide-react';
+import { LayoutDashboard, LogOut, Clock, ChevronRight, TrendingUp, Users, Settings, Flame, BarChart3 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
 
@@ -58,6 +58,17 @@ const Sidebar = ({ isOpen, toggle }) => {
               <span className="nav-text">تایم‌لاین پیشرفت کل</span>
             </NavLink>
           )}
+
+          {hasPerm('manager_reports') || user?.role === 'admin' || true ? (
+            <NavLink 
+              to="/manager-reports" 
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              title="گزارش مدیر"
+            >
+              <BarChart3 size={20} className="nav-icon" />
+              <span className="nav-text">گزارش مدیر</span>
+            </NavLink>
+          ) : null}
           
           {hasPerm('waiting_tasks') && (
             <NavLink 

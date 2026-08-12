@@ -227,6 +227,70 @@ router.get('/projects/:id/gantt', (req, res) => {
   }
 });
 
+// GET /api/reports/manager-audit - Audit endpoint for Manager Reports
+router.get('/reports/manager-audit', (req, res) => {
+  try {
+    const db = getDb();
+    
+    // All tasks with project details if available
+    const tasks = db.prepare(`
+      SELECT t.*, p.title as epic_title, p.status as epic_status
+      FROM tasks t
+      LEFT JOIN projects p ON t.project_id = p.id
+    `).all();
+
+    const projectsList = db.prepare('SELECT id, title FROM projects').all();
+    const validProjectIds = new Set(projectsList.map(p => p.id));
+
+    let orphanCount = 0;
+    let orphanSpentHours = 0;
+    let noSprintCount = 0;
+    let noEstimateCount = 0;
+    let noDueDateCount = 0;
+
+    const auditedTasks = tasks.map(t => {
+      const isOrphan = !t.project_id || !validProjectIds.has(t.project_id);
+      const isNoSprint = !t.sprint_name || t.sprint_name.trim() === '';
+      const isNoEstimate = !t.estimate_hours || Number(t.estimate_hours) === 0;
+      const isNoDueDate = !t.due_date || t.due_date.trim() === '';
+
+      if (isOrphan) {
+        orphanCount++;
+        orphanSpentHours += (t.spent_hours || 0);
+      }
+      if (isNoSprint) noSprintCount++;
+      if (isNoEstimate) noEstimateCount++;
+      if (isNoDueDate) noDueDateCount++;
+
+      return {
+        ...t,
+        spent_hours: Math.round((t.spent_hours || 0) * 100) / 100,
+        estimate_hours: Math.round((t.estimate_hours || 0) * 100) / 100,
+        is_orphan: isOrphan,
+        is_no_sprint: isNoSprint,
+        is_no_estimate: isNoEstimate,
+        is_no_due_date: isNoDueDate,
+        project_key: t.project_id ? t.project_id.split('-')[0] : 'UNKNOWN'
+      };
+    });
+
+    res.json({
+      success: true,
+      stats: {
+        totalTasks: auditedTasks.length,
+        orphanCount,
+        orphanSpentHours: Math.round(orphanSpentHours * 100) / 100,
+        noSprintCount,
+        noEstimateCount,
+        noDueDateCount
+      },
+      tasks: auditedTasks
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch manager audit report: ' + err.message });
+  }
+});
+
 // Waiting/Blocked tasks for a specific project
 router.get('/projects/:id/blocked', (req, res) => {
   try {

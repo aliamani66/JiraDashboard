@@ -10,6 +10,7 @@ import OverallTimelinePage from './pages/OverallTimelinePage';
 import SprintsPage from './pages/SprintsPage';
 import UserManagementPage from './pages/UserManagementPage';
 import JiraSettingsPage from './pages/JiraSettingsPage';
+import ManagerReportPage from './pages/ManagerReportPage';
 
 import ErrorBoundary from './components/common/ErrorBoundary';
 
@@ -78,6 +79,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <UserManagementPage />
+                </ProtectedRoute>
+              } 
+            />
+
+            <Route 
+              path="/manager-reports" 
+              element={
+                <ProtectedRoute>
+                  <ManagerReportPage />
                 </ProtectedRoute>
               } 
             />
