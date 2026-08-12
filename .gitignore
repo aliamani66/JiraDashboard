@@ -25,7 +25,6 @@ frontend/node_modules/
 
 # Production build
 frontend/build/
-frontend/dist/
 
 # Database & logs
 backend/database.sqlite
