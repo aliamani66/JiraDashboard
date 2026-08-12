@@ -545,6 +545,9 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0) {
 
   let epicKey = epicKeyOverride;
   if (!epicKey) {
+    // Determine this issue's own project prefix (e.g. "OPS" from "OPS-501")
+    const issueProjPrefix = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
+
     if (issue.fields?.epic?.key) {
       epicKey = issue.fields.epic.key;
     } else if (issue.fields?.customfield_10014) {
@@ -554,20 +557,25 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0) {
     } else if (issue.fields?.parent?.key) {
       epicKey = issue.fields.parent.key;
     } else {
-      // Scan customfields for any Epic key pattern (e.g. ORD-101)
-      if (issue.fields) {
+      // Scan customfields for any Epic key pattern (e.g. OPS-101)
+      // ONLY accept keys with the SAME project prefix as this issue to avoid picking up SG-1, GHX-5 etc.
+      if (issue.fields && issueProjPrefix) {
         for (const [k, val] of Object.entries(issue.fields)) {
           if (!val) continue;
           const strVal = typeof val === 'object' ? (val.key || val.value || JSON.stringify(val)) : String(val);
           const match = strVal.match(/([A-Z0-9_]+-\d+)/);
           if (match && match[1] && match[1] !== issue.key) {
-            epicKey = match[1];
-            break;
+            const candidatePrefix = match[1].split('-')[0].toUpperCase();
+            // Only accept if same project prefix
+            if (candidatePrefix === issueProjPrefix) {
+              epicKey = match[1];
+              break;
+            }
           }
         }
       }
       if (!epicKey) {
-        epicKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
+        epicKey = issueProjPrefix || (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
       }
     }
   }
