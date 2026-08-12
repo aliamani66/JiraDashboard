@@ -323,7 +323,10 @@ const JiraSettingsPage = () => {
     .map(k => k.trim())
     .filter(Boolean);
 
+  const [onlyActiveProjects, setOnlyActiveProjects] = useState(false);
+
   const filteredDiscoveredProjects = discoveredProjects.filter(p => {
+    if (onlyActiveProjects && (p.epicCount || 0) <= 0) return false;
     if (!projectSearchTerm.trim()) return true;
     const term = projectSearchTerm.trim().toLowerCase();
     return (p.key || '').toLowerCase().includes(term) || (p.name || '').toLowerCase().includes(term);
@@ -497,25 +500,38 @@ const JiraSettingsPage = () => {
             {/* List of Discovered Projects Pills */}
             {discoveredProjects.length > 0 ? (
               <div>
-                {/* 🔍 Mini Live Search Box & Counter */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <input
-                    type="text"
-                    value={projectSearchTerm}
-                    onChange={e => setProjectSearchTerm(e.target.value)}
-                    placeholder="🔍 جستجوی سریع پروژه‌ها (نام یا کلید)..."
-                    style={{
-                      flex: 1,
-                      maxWidth: '320px',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(56, 189, 248, 0.4)',
-                      color: '#FFFFFF',
-                      borderRadius: '8px',
-                      padding: '0.35rem 0.75rem',
-                      fontSize: '0.82rem',
-                      outline: 'none'
-                    }}
-                  />
+                {/* 🔍 Mini Live Search Box, Active Projects Toggle & Counter */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.65rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      value={projectSearchTerm}
+                      onChange={e => setProjectSearchTerm(e.target.value)}
+                      placeholder="🔍 جستجوی سریع پروژه‌ها (نام یا کلید)..."
+                      style={{
+                        flex: 1,
+                        maxWidth: '280px',
+                        background: 'rgba(0, 0, 0, 0.4)',
+                        border: '1px solid rgba(56, 189, 248, 0.4)',
+                        color: '#FFFFFF',
+                        borderRadius: '8px',
+                        padding: '0.35rem 0.75rem',
+                        fontSize: '0.82rem',
+                        outline: 'none'
+                      }}
+                    />
+
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.82rem', color: '#E2E8F0', cursor: 'pointer', userSelect: 'none', background: 'rgba(255, 255, 255, 0.06)', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                      <input
+                        type="checkbox"
+                        checked={onlyActiveProjects}
+                        onChange={e => setOnlyActiveProjects(e.target.checked)}
+                        style={{ accentColor: '#38BDF8', width: '15px', height: '15px', cursor: 'pointer' }}
+                      />
+                      <span>🔥 فقط پروژه‌های دارای اپیک (اپیک &gt; ۰)</span>
+                    </label>
+                  </div>
+
                   <span style={{ fontSize: '0.8rem', color: '#38BDF8', fontWeight: 'bold' }}>
                     📊 {filteredDiscoveredProjects.length} از {discoveredProjects.length} پروژه
                   </span>
