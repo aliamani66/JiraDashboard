@@ -301,6 +301,8 @@ router.get('/reports/manager-audit', (req, res) => {
       if (isNoEstimate) noEstimateCount++;
       if (isNoDueDate) noDueDateCount++;
 
+      const taskProjectKey = t.id && t.id.includes('-') ? t.id.split('-')[0].toUpperCase() : (t.project_id && t.project_id.includes('-') ? t.project_id.split('-')[0].toUpperCase() : 'UNKNOWN');
+
       return {
         ...t,
         spent_hours: Math.round((t.spent_hours || 0) * 100) / 100,
@@ -314,7 +316,7 @@ router.get('/reports/manager-audit', (req, res) => {
         initial_estimate: initialEstimate,
         total_delta: totalDelta,
         estimate_change_text: estimateChangeText,
-        project_key: t.project_id ? t.project_id.split('-')[0] : 'UNKNOWN'
+        project_key: taskProjectKey
       };
     });
 

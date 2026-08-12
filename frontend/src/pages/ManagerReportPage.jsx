@@ -39,11 +39,23 @@ const ManagerReportPage = () => {
     fetchAuditReport();
   }, []);
 
+  // Helper to reliably get Jira Project Key from task ID (e.g. ORD-901 -> ORD)
+  const getTaskProjectKey = (t) => {
+    if (t.id && t.id.includes('-')) {
+      return t.id.split('-')[0].toUpperCase();
+    }
+    if (t.project_key && t.project_key !== 'UNKNOWN' && !t.project_key.startsWith('NON_EXISTENT') && !t.project_key.startsWith('ORPHAN')) {
+      return t.project_key.toUpperCase();
+    }
+    return 'UNKNOWN';
+  };
+
   // Collect available Jira Project Keys dynamically
   const availableProjectKeys = useMemo(() => {
     const keys = new Set();
     (data.tasks || []).forEach(t => {
-      if (t.project_key) keys.add(t.project_key);
+      const pk = getTaskProjectKey(t);
+      if (pk && pk !== 'UNKNOWN') keys.add(pk);
     });
     return Array.from(keys).sort();
   }, [data.tasks]);
@@ -68,7 +80,8 @@ const ManagerReportPage = () => {
       if (auditTypeFilter === 'revised' && !t.is_estimate_revised) return false;
 
       // 2. Project Key Filter
-      if (selectedProjectKeys.length > 0 && !selectedProjectKeys.includes(t.project_key)) {
+      const pKey = getTaskProjectKey(t);
+      if (selectedProjectKeys.length > 0 && !selectedProjectKeys.includes(pKey)) {
         return false;
       }
 
