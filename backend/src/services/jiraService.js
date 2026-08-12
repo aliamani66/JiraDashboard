@@ -77,11 +77,15 @@ function extractDateField(issue, fieldName) {
 }
 
 // Perform JQL Search with retry logic for network stability
-async function jiraSearch(jql, fields = [], retries = 2) {
+async function jiraSearch(jql, fields = [], options = {}) {
   const cfg = getJiraConfig();
   const authVariants = getAuthHeaderVariants(cfg.username, cfg.token);
   const validFields = fields.filter(Boolean);
   const isCloud = cfg.baseUrl && cfg.baseUrl.includes('.atlassian.net');
+
+  const maxResults = options.maxResults || undefined;
+  const timeout = options.timeout || 12000;
+  const retries = options.retries || 2;
 
   let lastError = null;
 
@@ -95,7 +99,10 @@ async function jiraSearch(jql, fields = [], retries = 2) {
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
         const endpoint = isCloud ? `${cfg.baseUrl}/rest/api/3/search/jql` : `${cfg.baseUrl}/rest/api/2/search`;
-        const response = await axios.post(endpoint, { jql, fields: validFields }, { headers, httpsAgent, timeout: 15000 });
+        const postBody = { jql, fields: validFields };
+        if (maxResults) postBody.maxResults = maxResults;
+
+        const response = await axios.post(endpoint, postBody, { headers, httpsAgent, timeout });
         return response.data;
       } catch (err) {
         lastError = err;
@@ -103,11 +110,14 @@ async function jiraSearch(jql, fields = [], retries = 2) {
           // Try GET fallback before switching auth variant
           try {
             const urlFallback = isCloud ? `${cfg.baseUrl}/rest/api/3/search/jql` : `${cfg.baseUrl}/rest/api/2/search`;
+            const getParams = { jql, fields: validFields.join(',') };
+            if (maxResults) getParams.maxResults = maxResults;
+
             const getRes = await axios.get(urlFallback, {
               headers,
               httpsAgent,
-              params: { jql, fields: validFields.join(',') },
-              timeout: 10000
+              params: getParams,
+              timeout
             });
             return getRes.data;
           } catch (_) {}

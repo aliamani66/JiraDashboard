@@ -333,6 +333,70 @@ const JiraSettingsPage = () => {
         </div>
       </div>
 
+      {/* ── DIAGNOSTIC RESULTS (TOP OF PAGE) ── */}
+      {diagResult && (
+        <motion.div className="glass-card jsp-diag-card" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="jsp-diag-header">
+            <div>
+              <h2>گزارش پایش زنده ساختار Jira API</h2>
+              {diagResult.projectName && (
+                <p className="jsp-diag-sub">
+                  پروژه: <strong>{diagResult.projectName}</strong> — تسک نمونه: <strong>{diagResult.sampleIssueKey}</strong> — مجموع تسک‌ها: {diagResult.totalIssuesFound}
+                </p>
+              )}
+            </div>
+            {diagResult.complianceScore !== undefined && (
+              <div className={`jsp-score-badge ${diagResult.complianceScore >= 80 ? 'good' : diagResult.complianceScore >= 50 ? 'warn' : 'bad'}`}>
+                <span className="score-num">%{diagResult.complianceScore}</span>
+                <span className="score-lbl">تطابق ساختاری</span>
+              </div>
+            )}
+          </div>
+
+          {!diagResult.success && (
+            <div className="jsp-error-msg"><AlertTriangle size={16} /> {diagResult.message}</div>
+          )}
+
+          {diagResult.diagnostics?.length > 0 && (
+            <div className="jsp-diag-table-wrapper">
+              <table className="jsp-diag-table">
+                <thead>
+                  <tr>
+                    <th>فیلد مورد انتظار</th>
+                    <th>وضعیت</th>
+                    <th>مقدار دریافتی از Jira</th>
+                    <th>توضیح و راهکار</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {diagResult.diagnostics.map((d, i) => (
+                    <tr key={i}>
+                      <td><strong className="mono-code">{d.field}</strong></td>
+                      <td>
+                        <span className={`diag-status-pill ${d.status}`}>
+                          {d.status === 'matched' ? '✅ تطابق' : d.status === 'warning' ? '⚠️ بررسی شود' : d.status === 'missing' ? '❌ یافت نشد' : 'ℹ️ اختیاری'}
+                        </span>
+                      </td>
+                      <td><code className="diag-val-code">{d.value || '—'}</code></td>
+                      <td className="diag-note-text">{d.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {diagResult.rawSampleKeys?.length > 0 && (
+            <div className="jsp-customfields-footer">
+              <h4>فیلدهای شناسایی‌شده در پاسخ Jira (می‌توانید از اینها در بخش Custom Fields استفاده کنید):</h4>
+              <div className="jsp-cf-tags">
+                {diagResult.rawSampleKeys.map(k => <span key={k} className="jsp-cf-tag">{k}</span>)}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* ── 1. CONNECTION ── */}
       <Section icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
         <div className="jsp-grid-2">
@@ -519,70 +583,6 @@ const JiraSettingsPage = () => {
           placeholder="learning، meeting، support..."
         />
       </Section>
-
-      {/* ── 9. DIAGNOSTIC RESULTS ── */}
-      {diagResult && (
-        <motion.div className="glass-card jsp-diag-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <div className="jsp-diag-header">
-            <div>
-              <h2>گزارش پایش زنده ساختار Jira API</h2>
-              {diagResult.projectName && (
-                <p className="jsp-diag-sub">
-                  پروژه: <strong>{diagResult.projectName}</strong> — تسک نمونه: <strong>{diagResult.sampleIssueKey}</strong> — مجموع تسک‌ها: {diagResult.totalIssuesFound}
-                </p>
-              )}
-            </div>
-            {diagResult.complianceScore !== undefined && (
-              <div className={`jsp-score-badge ${diagResult.complianceScore >= 80 ? 'good' : diagResult.complianceScore >= 50 ? 'warn' : 'bad'}`}>
-                <span className="score-num">%{diagResult.complianceScore}</span>
-                <span className="score-lbl">تطابق ساختاری</span>
-              </div>
-            )}
-          </div>
-
-          {!diagResult.success && (
-            <div className="jsp-error-msg"><AlertTriangle size={16} /> {diagResult.message}</div>
-          )}
-
-          {diagResult.diagnostics?.length > 0 && (
-            <div className="jsp-diag-table-wrapper">
-              <table className="jsp-diag-table">
-                <thead>
-                  <tr>
-                    <th>فیلد مورد انتظار</th>
-                    <th>وضعیت</th>
-                    <th>مقدار دریافتی از Jira</th>
-                    <th>توضیح و راهکار</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {diagResult.diagnostics.map((d, i) => (
-                    <tr key={i}>
-                      <td><strong className="mono-code">{d.field}</strong></td>
-                      <td>
-                        <span className={`diag-status-pill ${d.status}`}>
-                          {d.status === 'matched' ? '✅ تطابق' : d.status === 'warning' ? '⚠️ بررسی شود' : d.status === 'missing' ? '❌ یافت نشد' : 'ℹ️ اختیاری'}
-                        </span>
-                      </td>
-                      <td><code className="diag-val-code">{d.value || '—'}</code></td>
-                      <td className="diag-note-text">{d.note}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {diagResult.rawSampleKeys?.length > 0 && (
-            <div className="jsp-customfields-footer">
-              <h4>فیلدهای شناسایی‌شده در پاسخ Jira (می‌توانید از اینها در بخش Custom Fields استفاده کنید):</h4>
-              <div className="jsp-cf-tags">
-                {diagResult.rawSampleKeys.map(k => <span key={k} className="jsp-cf-tag">{k}</span>)}
-              </div>
-            </div>
-          )}
-        </motion.div>
-      )}
 
     </motion.div>
   );

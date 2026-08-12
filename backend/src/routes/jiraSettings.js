@@ -290,7 +290,7 @@ function cleanErrorMessage(e) {
 
     for (const q of jqlAttempts) {
       try {
-        searchData = await jiraService.jiraSearch(q, ['*all']);
+        searchData = await jiraService.jiraSearch(q, ['*all'], { maxResults: 2, timeout: 6000, retries: 1 });
         if (searchData && searchData.issues) break;
       } catch (e1) {
         lastSearchErr = e1;
