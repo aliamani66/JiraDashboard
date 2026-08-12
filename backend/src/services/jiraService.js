@@ -402,44 +402,13 @@ async function fetchTasksForEpic(epicKey) {
         }
       }
 
-      // Sprint Schedule Map for realistic staggered Gantt dates (April to September 2026)
-      const sprintSchedule = {
-        1:  { start: '2026-04-15', due: '2026-05-10' },
-        2:  { start: '2026-05-01', due: '2026-06-05' },
-        3:  { start: '2026-05-20', due: '2026-06-25' },
-        4:  { start: '2026-06-05', due: '2026-07-10' },
-        5:  { start: '2026-06-20', due: '2026-07-25' },
-        6:  { start: '2026-07-05', due: '2026-08-10' },
-        7:  { start: '2026-07-20', due: '2026-08-25' },
-        8:  { start: '2026-08-01', due: '2026-09-05' },
-        9:  { start: '2026-08-12', due: '2026-09-15' },
-        10: { start: '2026-08-20', due: '2026-09-25' }
-      };
-
-      // Extract Sprint Number
-      const rawLabels = issue.fields?.labels || [];
-      const sprintLabelObj = rawLabels.find(l => typeof l === 'string' && l.startsWith('sprint:'));
-      let sprintNum = 10;
-      if (sprintLabelObj) {
-        sprintNum = parseInt(sprintLabelObj.replace('sprint:', '').trim()) || 10;
-      }
-
-      const sched = sprintSchedule[sprintNum] || sprintSchedule[10];
-
-      let startDate = extractDateField(issue, mapping.dateMapping.taskStartDateField);
+      let startDate = extractDateField(issue, mapping.dateMapping.taskStartDateField) || (issue.fields?.created ? issue.fields.created.split('T')[0] : null);
       let dueDate = extractDateField(issue, mapping.dateMapping.taskDueDateField) || extractDateField(issue, 'duedate');
 
-      if (!startDate || startDate === '2026-08-09') {
-        startDate = sched.start;
-      }
-      if (!dueDate) {
-        dueDate = sched.due;
-      }
-
       // Sprint Extraction (Custom Field or Default Field)
-      let sprintName = `Sprint ${sprintNum}`;
-      let sprintStartDate = sched.start;
-      let sprintEndDate = sched.due;
+      let sprintName = null;
+      let sprintStartDate = null;
+      let sprintEndDate = null;
 
       const sprintFieldVal = (customFields.sprintField && issue.fields?.[customFields.sprintField])
         || issue.fields?.sprint 
@@ -465,9 +434,9 @@ async function fetchTasksForEpic(epicKey) {
               sprintEndDate = endMatch[1].split('T')[0];
             }
           } else if (typeof sprint === 'object') {
-            sprintName = sprint.name || sprintName;
-            sprintStartDate = sprint.startDate ? sprint.startDate.split('T')[0] : sprintStartDate;
-            sprintEndDate = sprint.endDate ? sprint.endDate.split('T')[0] : sprintEndDate;
+            sprintName = sprint.name || null;
+            sprintStartDate = sprint.startDate ? sprint.startDate.split('T')[0] : null;
+            sprintEndDate = sprint.endDate ? sprint.endDate.split('T')[0] : null;
           }
         }
       }

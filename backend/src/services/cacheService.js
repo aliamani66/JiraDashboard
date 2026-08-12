@@ -672,10 +672,6 @@ function autoLinkTasksToEpics() {
           const assignedEpic = matchingEpics[idx % matchingEpics.length];
           updateStmt.run(assignedEpic, task.id);
           idx++;
-        } else if (epics.length > 0) {
-          const assignedEpic = epics[idx % epics.length];
-          updateStmt.run(assignedEpic, task.id);
-          idx++;
         }
       }
     })();
