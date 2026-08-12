@@ -301,6 +301,8 @@ async function fetchTasksForEpic(epicKey) {
       'priority', 
       'labels', 
       'sprint', 
+      'customfield_10004',
+      'customfield_10020',
       'issuelinks',
       mapping.dateMapping.taskStartDateField,
       mapping.dateMapping.taskDueDateField,
@@ -402,13 +404,27 @@ async function fetchTasksForEpic(epicKey) {
 
       const sprintFieldVal = (customFields.sprintField && issue.fields?.[customFields.sprintField])
         || issue.fields?.sprint 
+        || issue.fields?.customfield_10004
         || issue.fields?.customfield_10020;
 
       if (sprintFieldVal) {
         const sprint = Array.isArray(sprintFieldVal) ? sprintFieldVal[sprintFieldVal.length - 1] : sprintFieldVal;
         if (sprint) {
           if (typeof sprint === 'string') {
-            sprintName = sprint;
+            const nameMatch = sprint.match(/name=([^,\]]+)/);
+            if (nameMatch && nameMatch[1] && nameMatch[1] !== '<null>') {
+              sprintName = nameMatch[1].trim();
+            } else if (!sprint.includes('com.atlassian.')) {
+              sprintName = sprint.trim();
+            }
+            const startMatch = sprint.match(/startDate=([^,\]]+)/);
+            if (startMatch && startMatch[1] && startMatch[1] !== '<null>') {
+              sprintStartDate = startMatch[1].split('T')[0];
+            }
+            const endMatch = sprint.match(/endDate=([^,\]]+)/);
+            if (endMatch && endMatch[1] && endMatch[1] !== '<null>') {
+              sprintEndDate = endMatch[1].split('T')[0];
+            }
           } else if (typeof sprint === 'object') {
             sprintName = sprint.name || sprintName;
             sprintStartDate = sprint.startDate ? sprint.startDate.split('T')[0] : sprintStartDate;
