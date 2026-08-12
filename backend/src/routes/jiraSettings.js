@@ -242,6 +242,36 @@ router.post('/diagnose', async (req, res) => {
     const jqlFilter = (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') ? `project = "${pKeyStr}" ORDER BY created DESC` : `ORDER BY created DESC`;
     const projectUrlPath = (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') ? `/${pKeyStr}` : '';
 
+function cleanErrorMessage(e) {
+  if (!e) return 'خطای نامشخص در ارتباط با سرور جیرا';
+  const status = e.response ? e.response.status : null;
+  let rawData = e.response ? e.response.data : (e.message || e);
+  let cleanMsg = '';
+
+  if (typeof rawData === 'string') {
+    const titleMatch = rawData.match(/<title>(.*?)<\/title>/i);
+    const h1Match = rawData.match(/<h1>(.*?)<\/h1>/i);
+    const extracted = (titleMatch && titleMatch[1]) || (h1Match && h1Match[1]) || '';
+    if (extracted) {
+      cleanMsg = extracted.replace(/<[^>]+>/g, '').trim();
+    } else {
+      cleanMsg = rawData.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 250);
+    }
+  } else if (typeof rawData === 'object' && rawData !== null) {
+    cleanMsg = rawData.errorMessages ? rawData.errorMessages.join(', ') : (rawData.message || rawData.error || JSON.stringify(rawData));
+  } else {
+    cleanMsg = String(rawData);
+  }
+
+  let statusDesc = '';
+  if (status === 401) statusDesc = ' [کد 401: احراز هویت ناموفق - نام کاربری یا کلمه عبور/توکن جیرا اشتباه است]';
+  else if (status === 403) statusDesc = ' [کد 403: عدم دسترسی - حساب شما مجاز به مشاهده این پروژه نیست]';
+  else if (status === 404) statusDesc = ' [کد 404: مسیر یا پروژه جیرا یافت نشد]';
+  else if (status) statusDesc = ` [کد ${status}]`;
+
+  return `${cleanMsg}${statusDesc}`;
+}
+
     let projRes;
     try {
       projRes = await axios.get(`${baseUrl}/rest/api/2/project${projectUrlPath}`, { headers, httpsAgent, timeout: 10000 });
@@ -262,7 +292,7 @@ router.post('/diagnose', async (req, res) => {
         try {
           projRes = await axios.get(`${baseUrl}/rest/api/3/project${projectUrlPath}`, { headers, httpsAgent, timeout: 5000 });
         } catch (e3) {
-          const errMsg = e.response ? `کد ${e.response.status}: ${JSON.stringify(e.response.data)}` : (e.message || 'خطا در ارتباط با سرور جیرا');
+          const errMsg = cleanErrorMessage(e3 || e);
           return res.status(400).json({
             success: false,
             message: `عدم برقراری ارتباط با سرور جیرا (${baseUrl}): ${errMsg}`
@@ -294,7 +324,7 @@ router.post('/diagnose', async (req, res) => {
             fields: ['*all']
           }, { headers, httpsAgent, timeout: 10000 });
         } catch (e3) {
-          const errMsg = e.response ? `کد ${e.response.status}: ${JSON.stringify(e.response.data)}` : (e.message || 'خطا در جستجوی تسک‌ها');
+          const errMsg = cleanErrorMessage(e3 || e);
           return res.status(400).json({
             success: false,
             message: `پروژه متصل شد اما خطایی در دریافت تسک‌ها رخ داد (${jqlFilter}): ${errMsg}`
