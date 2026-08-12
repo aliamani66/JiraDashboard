@@ -12,16 +12,30 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    const adminUserObj = {
-      id: 1,
-      username: username || 'admin',
-      display_name: 'مدیر سیستم',
-      role: 'admin',
-      permissions: ["dashboard", "overall_timeline", "waiting_tasks", "user_management", "jira_settings"]
-    };
+    const db = getDb();
+    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
 
-    const token = generateToken(adminUserObj);
-    return res.json({ token, user: adminUserObj });
+    if (!user) {
+      return res.status(401).json({ error: 'نام کاربری یا کلمه عبور اشتباه است' });
+    }
+
+    const isValid = await comparePassword(password, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ error: 'نام کاربری یا کلمه عبور اشتباه است' });
+    }
+
+    const token = generateToken(user);
+    const { password_hash, ...userWithoutPassword } = user;
+    
+    let perms = ["dashboard", "overall_timeline", "waiting_tasks", "user_management", "jira_settings"];
+    if (userWithoutPassword.permissions) {
+      try {
+        perms = typeof userWithoutPassword.permissions === 'string' ? JSON.parse(userWithoutPassword.permissions) : userWithoutPassword.permissions;
+      } catch (e) {}
+    }
+    userWithoutPassword.permissions = perms;
+
+    res.json({ token, user: userWithoutPassword });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Internal server error' });
