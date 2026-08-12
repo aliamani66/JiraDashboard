@@ -209,8 +209,8 @@ const SprintsPage = () => {
     }
   }
 
-  const totalSpentHours = Math.round(filteredTasks.reduce((sum, t) => sum + (Number(t?.spent_hours) || 0), 0));
-  const totalEstHours = Math.round(filteredTasks.reduce((sum, t) => sum + (Number(t?.estimate_hours) || 0), 0));
+  const totalSpentHours = Math.round(filteredTasks.reduce((sum, t) => sum + (parseFloat(t?.spent_hours) || 0), 0));
+  const totalEstHours = Math.round(filteredTasks.reduce((sum, t) => sum + (parseFloat(t?.estimate_hours) || 0), 0));
   const sprintProgress = totalEstHours > 0 
     ? Math.min(100, Math.round((totalSpentHours / totalEstHours) * 100))
     : (totalSprintTasks > 0 ? Math.round((doneCount / totalSprintTasks) * 100) : 0);
@@ -423,8 +423,10 @@ const SprintsPage = () => {
             className="sp-select"
           >
             <option value="all">همه پروژه‌ها ({projectOptions.length})</option>
-            {projectOptions.map(p => (
-              <option key={p.id} value={p.id}>{p.id}: {p.title}</option>
+            {projectOptions.map((p, idx) => (
+              <option key={p?.id || `proj-${idx}`} value={p?.id || ''}>
+                {p?.id ? `${p.id}: ${p.title || p.id}` : (p?.title || 'نامشخص')}
+              </option>
             ))}
           </select>
         </div>
@@ -495,14 +497,16 @@ const SprintsPage = () => {
               </div>
 
               <div className="sp-tasks-grid">
-                {group.tasks.map(task => {
-                  const est = Number(task.estimate_hours) || 0;
-                  const spent = Number(task.spent_hours) || 0;
+                {(group.tasks || []).map((task, idx) => {
+                  if (!task) return null;
+                  const est = parseFloat(task.estimate_hours) || 0;
+                  const spent = parseFloat(task.spent_hours) || 0;
                   const timeProg = est > 0 ? Math.min(100, Math.round((spent / est) * 100)) : (task.status === 'Done' ? 100 : 0);
-                  const jiraUrl = `${JIRA_BASE_URL}/browse/${task.id}`;
+                  const taskId = task.id || `task-${idx}`;
+                  const jiraUrl = `${JIRA_BASE_URL}/browse/${taskId}`;
 
                   return (
-                    <div key={task.id} className={`sp-task-card ${task.is_waiting ? 'task-waiting-border' : ''}`}>
+                    <div key={taskId} className={`sp-task-card ${task.is_waiting ? 'task-waiting-border' : ''}`}>
                       <div className="sp-task-card-top">
                         <a 
                           href={jiraUrl} 

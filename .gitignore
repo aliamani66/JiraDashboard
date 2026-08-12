@@ -37,7 +37,10 @@ yarn-error.log*
 
 # IDE & OS
 .vscode/
-.idea/
-.DS_Store
-Thumbs.db
-
+# Deployment Archives
+*.zip
+*.tar.gz
+JiraDashboard.zip
+JiraDashboard.tar.gz
+jiradashboard.zip
+jiradashboar.zip

@@ -11,13 +11,19 @@ import SprintsPage from './pages/SprintsPage';
 import UserManagementPage from './pages/UserManagementPage';
 import JiraSettingsPage from './pages/JiraSettingsPage';
 
+import ErrorBoundary from './components/common/ErrorBoundary';
+
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
   
   if (loading) return <div className="loading-screen">در حال بارگذاری...</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   
-  return <Layout>{children}</Layout>;
+  return (
+    <ErrorBoundary>
+      <Layout>{children}</Layout>
+    </ErrorBoundary>
+  );
 }
 
 function App() {
