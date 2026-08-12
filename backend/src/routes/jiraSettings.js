@@ -239,7 +239,8 @@ router.post('/diagnose', async (req, res) => {
     let headers = { Authorization: basicAuth, 'Content-Type': 'application/json', 'Accept': 'application/json' };
 
     const pKeyStr = projectKey.trim().toUpperCase();
-    const jqlFilter = (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') ? `project = "${pKeyStr}" ORDER BY created DESC` : `ORDER BY created DESC`;
+    const cleanKey = /^[A-Z0-9_]+$/.test(pKeyStr) ? pKeyStr : `"${pKeyStr}"`;
+    const jqlFilter = (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') ? `project = ${cleanKey} ORDER BY created DESC` : `ORDER BY created DESC`;
     const projectUrlPath = (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') ? `/${pKeyStr}` : '';
 
 function cleanErrorMessage(e) {

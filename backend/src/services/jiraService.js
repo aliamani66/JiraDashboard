@@ -164,7 +164,10 @@ async function fetchEpics() {
     const projKeyStr = cfg.projectKey;
     let projectFilter = '';
     if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
-      const projects = projKeyStr.split(',').map(p => `"${p.trim().toUpperCase()}"`).filter(p => p !== '""');
+      const projects = projKeyStr.split(',').map(p => {
+        const clean = p.trim().toUpperCase();
+        return /^[A-Z0-9_]+$/.test(clean) ? clean : `"${clean}"`;
+      }).filter(p => p !== '""' && p !== '');
       if (projects.length > 1) {
         projectFilter = `AND project IN (${projects.join(',')})`;
       } else if (projects.length === 1) {
