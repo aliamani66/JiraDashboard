@@ -609,24 +609,19 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     }
   }
 
-  const gregorianWithTime = `${projectInNoQuotes}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC`;
-  const gregorianDateOnly = `${projectEqNoQuotes}created >= "${startStr.split(' ')[0]}" AND created <= "${endStr.split(' ')[0]}" ORDER BY created ASC`;
-  const pureProjectJql = projKeys.length > 0 ? `project IN (${projKeys.join(',')}) ORDER BY created DESC` : `ORDER BY created DESC`;
-
-  const jalaliSlashDateOnly = effectiveJalaliStart && effectiveJalaliEnd ? `${projectInNoQuotes}created >= "${effectiveJalaliStart.split(' ')[0]}" AND created <= "${effectiveJalaliEnd.split(' ')[0]}" ORDER BY created ASC` : null;
-  const jalaliDashDateOnly = effectiveJalaliStart && effectiveJalaliEnd ? `${projectInNoQuotes}created >= "${effectiveJalaliStart.split(' ')[0].replace(/\//g, '-')}" AND created <= "${effectiveJalaliEnd.split(' ')[0].replace(/\//g, '-')}" ORDER BY created ASC` : null;
-
   const queriesToTry = [
-    { id: 1, name: 'پروژه استاندارد (project IN (ORD))', jql: gregorianWithTime },
-    { id: 2, name: 'پروژه تک تاریخ (project = ORD)', jql: gregorianDateOnly },
-    { id: 3, name: 'شمسی اسلش (1403/06/01)', jql: jalaliSlashDateOnly },
-    { id: 4, name: 'شمسی دش (1403-06-01)', jql: jalaliDashDateOnly },
-    { id: 5, name: 'کل تسک‌های پروژه + فیلتر هوشمند تاریخ', jql: pureProjectJql }
+    { id: 1, name: 'پروژه تک با تاریخ میلادی (project = ORD)', jql: projKeys.length > 0 ? `project = ${projKeys[0]} AND created >= "${startStr.split(' ')[0]}" AND created <= "${endStr.split(' ')[0]}" ORDER BY created ASC` : null },
+    { id: 2, name: 'پروژه IN با تاریخ میلادی (project IN (ORD))', jql: projKeys.length > 0 ? `project IN (${projKeys.join(',')}) AND created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC` : null },
+    { id: 3, name: 'پروژه با تاریخ شمسی اسلش (1403/06/01)', jql: (effectiveJalaliStart && projKeys.length > 0) ? `project IN (${projKeys.join(',')}) AND created >= "${effectiveJalaliStart.split(' ')[0]}" AND created <= "${effectiveJalaliEnd.split(' ')[0]}" ORDER BY created ASC` : null },
+    { id: 4, name: 'پروژه با تاریخ شمسی دش (1403-06-01)', jql: (effectiveJalaliStart && projKeys.length > 0) ? `project IN (${projKeys.join(',')}) AND created >= "${effectiveJalaliStart.split(' ')[0].replace(/\//g, '-')}" AND created <= "${effectiveJalaliEnd.split(' ')[0].replace(/\//g, '-')}" ORDER BY created ASC` : null },
+    { id: 5, name: 'استخراج کامل پروژه (project = ORD)', jql: projKeys.length > 0 ? `project = ${projKeys[0]} ORDER BY created DESC` : null },
+    { id: 6, name: 'استخراج کامل پروژه‌ها (project IN (ORD))', jql: projKeys.length > 0 ? `project IN (${projKeys.join(',')}) ORDER BY created DESC` : null },
+    { id: 7, name: 'استخراج عمومی کلیه تسک‌ها (ORDER BY created DESC)', jql: `ORDER BY created DESC` }
   ].filter(q => q.jql);
 
   const queryAuditResults = [];
   let winningSearchRes = null;
-  let winningJql = gregorianWithTime;
+  let winningJql = queriesToTry[0]?.jql || `ORDER BY created DESC`;
   let winningVariant = null;
 
   try {
@@ -663,16 +658,23 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 
     const startDt = new Date(startStr);
     const endDt = new Date(endStr);
-    const matchedIssues = (winningSearchRes && winningSearchRes.issues) ? winningSearchRes.issues : [];
-    
-    // Filter issues locally by created date if fetched via pure project query
-    const finalIssues = winningVariant && winningVariant.includes('فیلتر هوشمند')
-      ? matchedIssues.filter(issue => {
-          if (!issue.fields || !issue.fields.created) return true;
-          const cDate = new Date(issue.fields.created);
-          return cDate >= startDt && cDate <= endDt;
-        })
-      : matchedIssues;
+    const selectedProjKeys = new Set(projKeys.map(k => k.toUpperCase()));
+    const rawIssues = (winningSearchRes && winningSearchRes.issues) ? winningSearchRes.issues : [];
+
+    // Filter issues in JS by project and date range
+    const finalIssues = rawIssues.filter(issue => {
+      const issueProjKey = (issue.fields?.project?.key || issue.key?.split('-')[0] || '').toUpperCase();
+      if (selectedProjKeys.size > 0 && issueProjKey && !selectedProjKeys.has(issueProjKey)) {
+        return false;
+      }
+      if (issue.fields && issue.fields.created) {
+        const cDate = new Date(issue.fields.created);
+        if (cDate < startDt || cDate > endDt) {
+          return false;
+        }
+      }
+      return true;
+    });
 
     const parsedTasks = finalIssues.map((issue, idx) => jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue);
 
