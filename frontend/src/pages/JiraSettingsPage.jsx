@@ -225,13 +225,14 @@ const JiraSettingsPage = () => {
   const [cfg, setCfg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [diagLoading, setDiagLoading] = useState(false);
   const [diagResult, setDiagResult] = useState(null);
   const [toast, setToast] = useState(null);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 5000);
   };
 
   const fetchConfig = useCallback(async () => {
@@ -240,7 +241,7 @@ const JiraSettingsPage = () => {
       const data = await api.getJiraConfig();
       setCfg(data);
     } catch (e) {
-      showToast('خطا در دریافت تنظیمات جیرا', 'error');
+      showToast('خطا در دریافت تنظیمات جیرا: ' + (e.message || ''), 'error');
     } finally {
       setLoading(false);
     }
@@ -251,12 +252,27 @@ const JiraSettingsPage = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await api.saveJiraConfig(cfg);
-      showToast('تنظیمات با موفقیت ذخیره شد. سرور را ری‌استارت کنید تا تغییرات اعمال شوند.');
+      const res = await api.saveJiraConfig(cfg);
+      showToast(res.message || 'تنظیمات با موفقیت ذخیره شد.');
     } catch (e) {
-      showToast('خطا در ذخیره تنظیمات', 'error');
+      showToast('خطا در ذخیره تنظیمات: ' + (e.message || ''), 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSync = async () => {
+    if (!window.confirm('آیا مایلید دیتابیس با آخرین پروژه و تسک‌های Jira همگام‌سازی شود؟')) return;
+    try {
+      setSyncing(true);
+      showToast('در حال همگام‌سازی و دریافت اطلاعات از Jira...');
+      const res = await api.resetDatabase();
+      showToast(res.message || 'همگام‌سازی با موفقیت انجام گردید.');
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (e) {
+      showToast('خطا در سینک جیرا: ' + (e.message || ''), 'error');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -306,9 +322,13 @@ const JiraSettingsPage = () => {
             <Zap size={16} className={diagLoading ? 'spin' : ''} />
             {diagLoading ? 'در حال پایش...' : '🔍 پایش زنده API'}
           </button>
+          <button className="jsp-run-diag-btn" style={{ background: '#0EA5E9' }} onClick={handleSync} disabled={syncing}>
+            <RefreshCw size={16} className={syncing ? 'spin' : ''} />
+            {syncing ? 'در حال دریافت...' : '🔄 همگام‌سازی با Jira'}
+          </button>
           <button className="jsp-run-diag-btn" onClick={handleSave} disabled={saving}>
             <Save size={16} className={saving ? 'spin' : ''} />
-            {saving ? 'در حال ذخیره...' : '💾 ذخیره همه تنظیمات'}
+            {saving ? 'در حال ذخیره...' : '💾 ذخیره تنظیمات'}
           </button>
         </div>
       </div>
