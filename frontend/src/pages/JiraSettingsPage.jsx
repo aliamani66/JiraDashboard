@@ -238,6 +238,10 @@ const JiraSettingsPage = () => {
   const [monthlySyncing, setMonthlySyncing] = useState(false);
   const [monthlyResults, setMonthlyResults] = useState(null);
 
+  const [showRangeModal, setShowRangeModal] = useState(false);
+  const [rangeStartDate, setRangeStartDate] = useState('2025-01-01');
+  const [rangeEndDate, setRangeEndDate] = useState(new Date().toISOString().split('T')[0]);
+
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 5000);
@@ -380,6 +384,47 @@ const JiraSettingsPage = () => {
         status: 'error',
         title: '❌ خطا در همگام‌سازی ۱۲ ماهه',
         message: e.message || 'همگام‌سازی ۱۲ ماه گذشته با خطا مواجه شد.'
+      });
+    } finally {
+      setMonthlySyncing(false);
+    }
+  };
+
+  const handleRangeSync = async () => {
+    if (!rangeStartDate || !rangeEndDate) {
+      showToast('لطفاً هر دو تاریخ شروع و پایان را انتخاب فرمایید.', 'error');
+      return;
+    }
+    setShowRangeModal(false);
+    try {
+      setMonthlySyncing(true);
+      setMonthlyResults(null);
+      setActiveModal({
+        status: 'loading',
+        title: '📅 در حال همگام‌سازی بازه زمانی انتخاب‌شده',
+        message: `سیستم در حال ارسال کوئری‌های ماهانه برای بازه ${rangeStartDate} تا ${rangeEndDate} به سرور جیرا می‌باشد...`
+      });
+      await api.saveJiraConfig(cfg);
+      const res = await api.syncRangeJiraConfig({ startDate: rangeStartDate, endDate: rangeEndDate });
+      if (res && res.monthlyResults) {
+        setMonthlyResults(res);
+        setActiveModal({
+          status: 'success',
+          title: '✅ همگام‌سازی بازه زمانی با موفقیت انجام شد',
+          message: `مجموع ${res.totalTasksSynced || 0} تسک درون ${res.totalMonths || 0} ماه فیلترشده از سرور جیرا دریافت و ثبت گردید.`
+        });
+      } else {
+        setActiveModal({
+          status: 'error',
+          title: '❌ خطا در همگام‌سازی بازه تاریخ',
+          message: res.message || 'پاسخی از سرور دریافت نشد.'
+        });
+      }
+    } catch (e) {
+      setActiveModal({
+        status: 'error',
+        title: '❌ خطا در همگام‌سازی بازه تاریخ',
+        message: e.message || 'همگام‌سازی بازه تاریخ با خطا مواجه شد.'
       });
     } finally {
       setMonthlySyncing(false);
@@ -571,6 +616,10 @@ const JiraSettingsPage = () => {
             <Zap size={16} className={diagLoading ? 'spin' : ''} />
             {diagLoading ? 'در حال پایش...' : '🔍 پایش زنده API'}
           </button>
+          <button className="jsp-run-diag-btn" style={{ background: '#10B981' }} onClick={() => setShowRangeModal(true)} disabled={monthlySyncing}>
+            <Calendar size={16} />
+            📅 همگام‌سازی بازه دلخواه
+          </button>
           <button className="jsp-run-diag-btn" style={{ background: '#8B5CF6' }} onClick={handleMonthlySync} disabled={monthlySyncing}>
             <Calendar size={16} className={monthlySyncing ? 'spin' : ''} />
             {monthlySyncing ? 'در حال دریافت ۱۲ ماه...' : '🗓️ همگام‌سازی ۱۲ ماه گذشته'}
@@ -585,6 +634,144 @@ const JiraSettingsPage = () => {
           </button>
         </div>
       </div>
+
+      {/* 📅 Datepicker Custom Range Sync Modal Overlay */}
+      <AnimatePresence>
+        {showRangeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(15, 23, 42, 0.85)',
+              backdropFilter: 'blur(12px)',
+              zIndex: 99999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.5rem'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: -20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: -20 }}
+              style={{
+                background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99))',
+                border: '1px solid rgba(16, 185, 129, 0.5)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.8), 0 0 35px rgba(16,185,129,0.3)',
+                borderRadius: '24px',
+                padding: '2.2rem 2.5rem',
+                maxWidth: '480px',
+                width: '100%',
+                color: '#FFFFFF'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#6EE7B7', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <Calendar size={24} /> همگام‌سازی بازه زمانی دلخواه
+                </h3>
+                <button
+                  onClick={() => setShowRangeModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <p style={{ margin: '0 0 1.35rem 0', fontSize: '0.88rem', color: '#CBD5E1', lineHeight: '1.6' }}>
+                لطفاً تاریخ شروع و پایان مورد نظر خود را انتخاب نمایید. سیستم کوئری‌های تفکیک‌شده ماهانه را ارسال کرده و گزارش کامل دریافت داده‌ها را آماده می‌سازد.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 'bold', color: '#38BDF8', marginBottom: '0.45rem' }}>
+                    🗓️ تاریخ شروع (روز / ماه / سال):
+                  </label>
+                  <input
+                    type="date"
+                    value={rangeStartDate}
+                    onChange={e => setRangeStartDate(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      color: '#FFFFFF',
+                      borderRadius: '12px',
+                      padding: '0.65rem 0.95rem',
+                      fontSize: '0.95rem',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 'bold', color: '#38BDF8', marginBottom: '0.45rem' }}>
+                    🗓️ تاریخ پایان (روز / ماه / سال):
+                  </label>
+                  <input
+                    type="date"
+                    value={rangeEndDate}
+                    onChange={e => setRangeEndDate(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      color: '#FFFFFF',
+                      borderRadius: '12px',
+                      padding: '0.65rem 0.95rem',
+                      fontSize: '0.95rem',
+                      outline: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRangeModal(false)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    color: '#CBD5E1',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    padding: '0.6rem 1.35rem',
+                    borderRadius: '12px',
+                    fontSize: '0.88rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  انصراف
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRangeSync}
+                  style={{
+                    background: 'linear-gradient(135deg, #10B981, #059669)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '0.6rem 1.6rem',
+                    borderRadius: '12px',
+                    fontSize: '0.88rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)'
+                  }}
+                >
+                  🚀 شروع همگام‌سازی بازه
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── 12-MONTH BATCH SYNC RESULTS ── */}
       {monthlyResults && (

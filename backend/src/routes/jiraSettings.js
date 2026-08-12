@@ -263,6 +263,18 @@ router.post('/sync-monthly', async (req, res) => {
   }
 });
 
+// POST Custom Date-Range Sync with detailed monthly report
+router.post('/sync-range', async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body;
+    const cacheService = require('../services/cacheService');
+    const result = await cacheService.syncDateRangeFromJira(startDate, endDate);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در همگام‌سازی بازه تاریخ: ' + err.message });
+  }
+});
+
 // GET All Jira Projects from live Jira Server for multi-select combo
 router.get('/fetch-jira-projects', async (req, res) => {
   try {
