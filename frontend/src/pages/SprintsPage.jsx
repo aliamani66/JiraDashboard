@@ -53,7 +53,7 @@ const SprintsPage = () => {
         setTasks(tList);
         setAllProjects(Array.isArray(projData) ? projData : []);
 
-        const projStr = jiraCfgData?.config?.connection?.projectKey || 'ORD';
+        const projStr = jiraCfgData?.connection?.projectKey || jiraCfgData?.config?.connection?.projectKey || 'ORD';
         const parsedKeys = projStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean);
         setJiraConfiguredKeys(parsedKeys);
 
