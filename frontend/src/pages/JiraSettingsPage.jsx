@@ -1011,8 +1011,8 @@ const JiraSettingsPage = () => {
                         </strong>
                       </td>
                       <td>
-                        <code className="diag-val-code accent" style={{ fontSize: '0.76rem', whiteSpace: 'nowrap', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block' }} title={m.jql}>
-                          {m.jql}
+                        <code className="diag-val-code accent" style={{ fontSize: '0.78rem', color: '#38BDF8', wordBreak: 'break-all', display: 'inline-block', padding: '0.2rem 0.5rem', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '6px' }} title={m.jql}>
+                          {m.jql || 'مشخص نشده'}
                         </code>
                       </td>
                     </tr>
