@@ -423,24 +423,25 @@ const JiraSettingsPage = () => {
         const res = await api.syncSingleMonthJiraConfig({
           startStr: mRange.startStr,
           endStr: mRange.endStr,
+          jalaliStartStr: mRange.jalaliStartStr || null,
+          jalaliEndStr: mRange.jalaliEndStr || null,
           monthLabel: mRange.jalaliName,
           monthIndex: stepNum
         });
 
-        const monthRes = res.success ? res : {
+        const monthRes = {
           monthIndex: stepNum,
           monthLabel: mRange.jalaliName,
           jalaliName: mRange.jalaliName,
           gregorianName: mRange.gregorianName,
           dateRange: `${mRange.startStr.split(' ')[0]} تا ${mRange.endStr.split(' ')[0]}`,
-          status: 'error',
-          taskCount: 0,
+          status: res.status || (res.success ? 'success' : 'error'),
+          taskCount: res.taskCount || 0,
           jql: res.jql || '',
-          message: res.message || 'خطا در همگام‌سازی'
+          winningVariant: res.winningVariant || '',
+          queryAuditResults: res.queryAuditResults || [],
+          message: res.message || ''
         };
-
-        if (!monthRes.jalaliName) monthRes.jalaliName = mRange.jalaliName;
-        if (!monthRes.gregorianName) monthRes.gregorianName = mRange.gregorianName;
 
         totalTasksSynced += (monthRes.taskCount || 0);
         results.push(monthRes);
@@ -495,6 +496,10 @@ const JiraSettingsPage = () => {
       const startStr = `${y}-${String(m + 1).padStart(2, '0')}-01 00:00`;
       const endStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')} 23:59`;
       const monthInfo = getJalaliMonthLabel(y, m);
+      const jStart = g2j(y, m + 1, 1);
+      const jEnd = g2j(y, m + 1, lastDay.getDate());
+      const jalaliStartStr = `${jStart.jy}/${String(jStart.jm).padStart(2,'0')}/${String(jStart.jd).padStart(2,'0')} 00:00`;
+      const jalaliEndStr = `${jEnd.jy}/${String(jEnd.jm).padStart(2,'0')}/${String(jEnd.jd).padStart(2,'0')} 23:59`;
 
       monthRanges.push({
         monthIndex: 12 - i,
@@ -503,7 +508,9 @@ const JiraSettingsPage = () => {
         jalaliName: monthInfo.jalali,
         gregorianName: monthInfo.gregorian,
         startStr,
-        endStr
+        endStr,
+        jalaliStartStr,
+        jalaliEndStr
       });
     }
 
