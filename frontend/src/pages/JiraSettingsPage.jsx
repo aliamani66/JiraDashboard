@@ -240,6 +240,7 @@ const JiraSettingsPage = () => {
   const [monthlySyncing, setMonthlySyncing] = useState(false);
   const [monthlyResults, setMonthlyResults] = useState(null);
   const [syncProgress, setSyncProgress] = useState(null);
+  const [showRangeModal, setShowRangeModal] = useState(false);
 
   const [rangeStartJalali, setRangeStartJalali] = useState(() => {
     const now = new Date();
@@ -807,6 +808,15 @@ const JiraSettingsPage = () => {
           <p className="jsp-subtitle">مدیریت کامل تمام مپینگ‌ها، فیلدهای کاستوم، وضعیت‌ها، برچسب‌ها و استخراج پیشرفته اطلاعات جیرا</p>
         </div>
         <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
+          <button
+            className="jsp-run-diag-btn"
+            style={{ background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.35)' }}
+            onClick={() => setShowRangeModal(true)}
+            disabled={monthlySyncing}
+          >
+            <Calendar size={16} />
+            {monthlySyncing ? 'در حال استخراج...' : '🗓️ استخراج دیتای جیرا در بازه دلخواه'}
+          </button>
           <button className="jsp-run-diag-btn secondary" onClick={handleDiagnose} disabled={diagLoading}>
             <Zap size={16} className={diagLoading ? 'spin' : ''} />
             {diagLoading ? 'در حال پایش...' : '🔍 پایش زنده API'}
@@ -822,89 +832,134 @@ const JiraSettingsPage = () => {
         </div>
       </div>
 
-      {/* 📅 Permanent Inline Custom Range Search & Jira Data Extraction Card */}
-      <motion.div
-        className="glass-card"
-        style={{
-          padding: '1.5rem 1.8rem',
-          borderRadius: '20px',
-          border: '1px solid rgba(16, 185, 129, 0.4)',
-          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.95))',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(16, 185, 129, 0.15)'
-        }}
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.1rem' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#6EE7B7', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <Calendar size={22} /> همگام‌سازی و استخراج داده‌های جیرا در بازه زمانی دلخواه
-            </h2>
-            <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.86rem', color: '#94A3B8' }}>
-              تعیین بازه تاریخی مشخص و استخراج تفکیک‌شده ماه به ماه اطلاعات تسک‌ها از سرور جیرا
-            </p>
-          </div>
-
-          {/* Quick Presets Pills */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#CBD5E1', marginLeft: '0.3rem' }}>⚡ میان‌برها:</span>
-            <button type="button" onClick={() => applyDatePreset(10, 0)} className="jsp-preset-pill">⚡ ۱۰ روز گذشته</button>
-            <button type="button" onClick={() => applyDatePreset(30, 0)} className="jsp-preset-pill">⚡ ۳۰ روز گذشته</button>
-            <button type="button" onClick={() => applyDatePreset(0, 1)} className="jsp-preset-pill purple">🗓️ ۱ ماه اخیر</button>
-            <button type="button" onClick={() => applyDatePreset(0, 2)} className="jsp-preset-pill purple">🗓️ ۲ ماه اخیر</button>
-            <button type="button" onClick={() => applyDatePreset(0, 3)} className="jsp-preset-pill purple">🗓️ ۳ ماه اخیر</button>
-            <button type="button" onClick={() => applyDatePreset(0, 6)} className="jsp-preset-pill green">🗓️ ۶ ماه اخیر</button>
-            <button type="button" onClick={() => applyDatePreset(0, 12)} className="jsp-preset-pill gold">🗓️ ۱ سال اخیر</button>
-          </div>
-        </div>
-
-        {/* Inputs & Extract Button Row */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1.25rem', background: 'rgba(0, 0, 0, 0.3)', padding: '1rem 1.25rem', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-          <div style={{ flex: '1 1 220px' }}>
-            <JalaliDatePicker
-              label="🗓️ از تاریخ (شمسی):"
-              value={rangeStartJalali}
-              onChange={setRangeStartJalali}
-            />
-          </div>
-
-          <div style={{ flex: '1 1 220px' }}>
-            <JalaliDatePicker
-              label="🗓️ تا تاریخ (شمسی):"
-              value={rangeEndJalali}
-              onChange={setRangeEndJalali}
-            />
-          </div>
-
-          <div style={{ flex: '1 1 220px' }}>
-            <button
-              type="button"
-              onClick={handleRangeSync}
-              disabled={monthlySyncing}
+      {/* 📅 POPUP MODAL FOR CUSTOM RANGE JIRA EXTRACTION */}
+      <AnimatePresence>
+        {showRangeModal && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 99999,
+              background: 'rgba(15, 23, 42, 0.82)',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.5rem'
+            }}
+            onClick={() => setShowRangeModal(false)}
+          >
+            <motion.div
               style={{
+                background: 'linear-gradient(135deg, #0F172A, #1E293B)',
+                border: '1px solid rgba(16, 185, 129, 0.5)',
+                borderRadius: '24px',
+                padding: '2rem',
+                maxWidth: '650px',
                 width: '100%',
-                height: '42px',
-                background: 'linear-gradient(135deg, #10B981, #059669)',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '0.92rem',
-                fontWeight: 'bold',
-                cursor: monthlySyncing ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.65rem',
-                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)',
-                opacity: monthlySyncing ? 0.7 : 1
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(16, 185, 129, 0.25)',
+                color: '#FFFFFF'
               }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
             >
-              <RefreshCw size={18} className={monthlySyncing ? 'spin' : ''} />
-              {monthlySyncing ? 'در حال استخراج...' : '🚀 شروع همگام‌سازی و استخراج از جیرا'}
-            </button>
+              {/* Modal Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '1rem' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#6EE7B7', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <Calendar size={24} /> همگام‌سازی و استخراج داده‌های جیرا در بازه زمانی دلخواه
+                  </h2>
+                  <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: '#94A3B8' }}>
+                    تاریخ شروع و پایان شمسی را انتخاب نمایید؛ پس از زدن دکمه استخراج، این پاپ‌آپ بسته شده و اطلاعات ماه به ماه دریافت می‌شود.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowRangeModal(false)}
+                  style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', color: '#94A3B8', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Quick Presets Pills */}
+              <div style={{ marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 'bold', color: '#CBD5E1', marginBottom: '0.5rem' }}>⚡ میان‌برهای بازه زمانی:</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                  <button type="button" onClick={() => applyDatePreset(10, 0)} className="jsp-preset-pill">⚡ ۱۰ روز گذشته</button>
+                  <button type="button" onClick={() => applyDatePreset(30, 0)} className="jsp-preset-pill">⚡ ۳۰ روز گذشته</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 1)} className="jsp-preset-pill purple">🗓️ ۱ ماه اخیر</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 2)} className="jsp-preset-pill purple">🗓️ ۲ ماه اخیر</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 3)} className="jsp-preset-pill purple">🗓️ ۳ ماه اخیر</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 6)} className="jsp-preset-pill green">🗓️ ۶ ماه اخیر</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 12)} className="jsp-preset-pill gold">🗓️ ۱ سال اخیر</button>
+                </div>
+              </div>
+
+              {/* Jalali Date Pickers */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.75rem' }}>
+                <JalaliDatePicker
+                  label="🗓️ از تاریخ (شمسی):"
+                  value={rangeStartJalali}
+                  onChange={setRangeStartJalali}
+                />
+                <JalaliDatePicker
+                  label="🗓️ تا تاریخ (شمسی):"
+                  value={rangeEndJalali}
+                  onChange={setRangeEndJalali}
+                />
+              </div>
+
+              {/* Modal Action Buttons */}
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRangeModal(false)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    color: '#CBD5E1',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '12px',
+                    padding: '0.65rem 1.25rem',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  انصراف
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleRangeSync}
+                  disabled={monthlySyncing}
+                  style={{
+                    background: 'linear-gradient(135deg, #10B981, #059669)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '0.65rem 1.5rem',
+                    fontSize: '0.92rem',
+                    fontWeight: 'bold',
+                    cursor: monthlySyncing ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)'
+                  }}
+                >
+                  <RefreshCw size={18} className={monthlySyncing ? 'spin' : ''} />
+                  {monthlySyncing ? 'در حال استخراج...' : '🚀 شروع همگام‌سازی و استخراج از جیرا'}
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── 12-MONTH BATCH SYNC RESULTS ── */}
       {monthlyResults && (
