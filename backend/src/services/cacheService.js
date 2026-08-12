@@ -632,125 +632,81 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   const gregStartSlashOnly = gregStartDateOnly.replace(/-/g, '/');
   const gregEndSlashOnly = gregEndDateOnly.replace(/-/g, '/');
 
-  // ✅ CONFIRMED WORKING: Gregorian date WITHOUT project filter (query #6 from test)
-  // Order: confirmed working first, then fallbacks
-  const queriesToTry = [
-    { id: 1, name: '✅ میلادی بدون پروژه (تایید شده)', jql: `created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC` },
-    { id: 2, name: 'میلادی با ساعت بدون پروژه', jql: `created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC` },
-    { id: 3, name: 'میلادی با پروژه', jql: `${projPrefix}created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC` },
-    { id: 4, name: 'شمسی دش با پروژه', jql: jalaliDashDateOnly ? `${projPrefix}created >= "${jalaliDashDateOnly}" AND created <= "${jalaliDashDateEndOnly}" ORDER BY created ASC` : null },
-    { id: 5, name: 'شمسی دش بدون پروژه', jql: jalaliDashDateOnly ? `created >= "${jalaliDashDateOnly}" AND created <= "${jalaliDashDateEndOnly}" ORDER BY created ASC` : null },
-    { id: 6, name: 'همه تسک‌ها (بدون فیلتر)', jql: `ORDER BY created DESC` }
-  ].filter(q => q && q.jql);
+  // ✅ CONFIRMED: Jira REST API does NOT accept project filter for this user
+  // Use Gregorian date only (no project clause), then filter in JS
+  const confirmedJql = `created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
 
-  const queryAuditResults = [];
-  let winningSearchRes = null;
-  let winningJql = queriesToTry[0]?.jql || `ORDER BY created DESC`;
-  let winningVariant = null;
+  const startDt = new Date(startStr);
+  const endDt = new Date(endStr);
+  const configuredProjKeys = new Set(
+    projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
+  );
+
+  let searchRes = null;
+  let taskCount = 0;
+  let statusResult = 'empty';
+  let errorCode = null;
+  let errorMessage = null;
 
   try {
-    for (const qItem of queriesToTry) {
-      try {
-        const res = await jiraService.jiraSearch(qItem.jql);
-        const count = (res && res.issues) ? res.issues.length : 0;
-        
-        const auditItem = {
-          variant: qItem.id,
-          name: qItem.name,
-          jql: qItem.jql,
-          taskCount: count,
-          status: count > 0 ? 'success' : 'zero'
-        };
-        queryAuditResults.push(auditItem);
-
-        if (count > 0 && !winningSearchRes) {
-          winningSearchRes = res;
-          winningJql = qItem.jql;
-          winningVariant = qItem.name;
-        }
-      } catch (err) {
-        queryAuditResults.push({
-          variant: qItem.id,
-          name: qItem.name,
-          jql: qItem.jql,
-          taskCount: 0,
-          status: 'error',
-          error: err.message || 'خطا در اجرای JQL'
-        });
-      }
-    }
-
-    const startDt = new Date(startStr);
-    const endDt = new Date(endStr);
-    const configuredProjKeys = new Set(
-      projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
-    );
-    const rawIssues = (winningSearchRes && winningSearchRes.issues) ? winningSearchRes.issues : [];
-
-    // Filter issues in JS by project and date range
-    const finalIssues = rawIssues.filter(issue => {
-      const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
-      if (configuredProjKeys.size > 0 && issueProjKey && !configuredProjKeys.has(issueProjKey)) {
-        return false;
-      }
-      if (issue.fields && issue.fields.created) {
-        const cDate = new Date(issue.fields.created);
-        if (cDate < startDt || cDate > endDt) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-    const parsedTasks = finalIssues.map((issue, idx) => jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue);
-
-    db.transaction(() => {
-      for (const task of parsedTasks) {
-        if (task && task.id) {
-          task.last_synced = syncTime;
-          insertTask.run(task);
-        }
-      }
-    })();
-
-    try {
-      const updateAllProjectStats = db.prepare(`
-        UPDATE projects SET
-          total_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0)),
-          completed_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (status = 'Done' OR status = 'Completed')),
-          waiting_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (is_waiting = 1 OR status = 'OnHolding' OR status = 'Waiting'))
-      `);
-      updateAllProjectStats.run();
-    } catch (_) {}
-
-    return {
-      success: true,
-      monthIndex,
-      monthLabel,
-      dateRange: `${startStr.split(' ')[0]} تا ${endStr.split(' ')[0]}`,
-      jql: winningJql,
-      winningVariant: winningVariant || 'هیچ‌کدام تسک نداشت',
-      taskCount: parsedTasks.length,
-      status: parsedTasks.length > 0 ? 'success' : 'empty',
-      message: parsedTasks.length > 0 ? `${parsedTasks.length} تسک دریافت شد` : '۰ تسک (بدون نتیجه)',
-      queryAuditResults
-    };
+    searchRes = await jiraService.jiraSearch(confirmedJql);
   } catch (err) {
-    const errCode = err.code || (err.response ? `HTTP_${err.response.status}` : 'TIMEOUT_OR_NETWORK');
-    const detailMsg = err.response && err.response.data && err.response.data.errorMessages ? err.response.data.errorMessages.join(', ') : err.message;
+    errorCode = err.code || (err.response ? `HTTP_${err.response.status}` : 'TIMEOUT_OR_NETWORK');
+    const detailMsg = err.response?.data?.errorMessages?.join(', ') || err.message;
     return {
-      success: false,
-      monthIndex,
-      monthLabel,
-      dateRange: `${startStr.split(' ')[0]} تا ${endStr.split(' ')[0]}`,
-      jql: winningJql || queriesToTry[0]?.jql || '',
-      taskCount: 0,
-      status: 'error',
-      errorCode: errCode,
-      message: `🔴 خطا (${errCode}): ${detailMsg}`,
-      queryAuditResults
+      success: false, monthIndex, monthLabel,
+      dateRange: `${gregStartDateOnly} تا ${gregEndDateOnly}`,
+      jql: confirmedJql, taskCount: 0, status: 'error',
+      errorCode, message: `🔴 خطا (${errorCode}): ${detailMsg}`,
+      queryAuditResults: [{ variant: 1, name: 'میلادی بدون پروژه', jql: confirmedJql, taskCount: 0, status: 'error', error: detailMsg }]
     };
   }
+
+  const rawIssues = (searchRes && searchRes.issues) ? searchRes.issues : [];
+
+  // Filter in JS: by configured project keys + date range
+  const finalIssues = rawIssues.filter(issue => {
+    const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
+    if (configuredProjKeys.size > 0 && issueProjKey && !configuredProjKeys.has(issueProjKey)) return false;
+    if (issue.fields?.created) {
+      const cDate = new Date(issue.fields.created);
+      if (cDate < startDt || cDate > endDt) return false;
+    }
+    return true;
+  });
+
+  const parsedTasks = finalIssues.map((issue, idx) =>
+    jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue
+  );
+
+  db.transaction(() => {
+    for (const task of parsedTasks) {
+      if (task && task.id) { task.last_synced = syncTime; insertTask.run(task); }
+    }
+  })();
+
+  try {
+    db.prepare(`UPDATE projects SET
+      total_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0)),
+      completed_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (status = 'Done' OR status = 'Completed')),
+      waiting_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (is_waiting = 1 OR status = 'OnHolding' OR status = 'Waiting'))
+    `).run();
+  } catch (_) {}
+
+  return {
+    success: true, monthIndex, monthLabel,
+    dateRange: `${gregStartDateOnly} تا ${gregEndDateOnly}`,
+    jql: confirmedJql,
+    winningVariant: 'میلادی بدون پروژه (تایید شده)',
+    taskCount: parsedTasks.length,
+    status: parsedTasks.length > 0 ? 'success' : 'empty',
+    message: parsedTasks.length > 0 ? `${parsedTasks.length} تسک دریافت و ذخیره شد` : '۰ تسک (بازه خالی است)',
+    queryAuditResults: [{
+      variant: 1, name: '✅ میلادی بدون پروژه (تایید شده)',
+      jql: confirmedJql, taskCount: parsedTasks.length,
+      status: parsedTasks.length > 0 ? 'success' : 'zero'
+    }]
+  };
 }
 
 function initCron() {
