@@ -188,6 +188,14 @@ const DashboardFilterPanel = ({
             </button>
 
             <button
+              className={`mft-pill ${statusFilters.includes('todo') ? 'active' : ''}`}
+              onClick={() => toggleSelection('todo', statusFilters, setStatusFilters)}
+              style={statusFilters.includes('todo') ? { background: 'linear-gradient(135deg, rgba(168,85,247,0.35), rgba(192,132,252,0.35))', borderColor: '#C084FC', color: '#FFFFFF', boxShadow: '0 0 12px rgba(192,132,252,0.35)' } : {}}
+            >
+              📋 برای انجام
+            </button>
+
+            <button
               className={`mft-pill status-done-pill ${statusFilters.includes('done') ? 'active' : ''}`}
               onClick={() => toggleSelection('done', statusFilters, setStatusFilters)}
             >

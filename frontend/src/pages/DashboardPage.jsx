@@ -78,10 +78,12 @@ const DashboardPage = () => {
       const waitingTasks = p.waiting_tasks || 0;
       const activeTasks = totalTasks - completedTasks;
       const isCritical = totalTasks > 0 && activeTasks > 0 && waitingTasks >= activeTasks;
-      const isDone = p.status === 'Done';
+      const isDone = p.status === 'Done' || p.status === 'done';
+      const isTodo = p.status === 'To Do' || p.status === 'to_do' || p.status === 'ToDo' || p.status === 'برای انجام';
 
       const matchStatus = statusFilters.some(st => {
-        if (st === 'active') return !isDone && !isCritical;
+        if (st === 'todo') return isTodo;
+        if (st === 'active') return !isDone && !isCritical && !isTodo;
         if (st === 'done') return isDone;
         if (st === 'critical') return isCritical;
         return true;
