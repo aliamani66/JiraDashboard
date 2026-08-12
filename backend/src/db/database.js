@@ -159,7 +159,8 @@ async function initDb() {
   const schema = fs.readFileSync(schemaPath, 'utf8');
   db.exec(schema);
 
-  // Migrations for tasks table
+  // Migrations
+  try { db.run("CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY, value TEXT)"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN is_subtask INTEGER DEFAULT 0"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN description TEXT"); } catch (_) {}

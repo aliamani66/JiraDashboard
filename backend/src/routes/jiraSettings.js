@@ -66,55 +66,94 @@ function writeEnv(updates) {
   fs.writeFileSync(envPath, newLines.join('\n'), 'utf8');
 }
 
+const { getDb } = require('../db/database');
+
+// Helper: read all settings stored in SQLite system_settings table
+function getDbSettings() {
+  try {
+    const db = getDb();
+    const rows = db.prepare("SELECT key, value FROM system_settings").all();
+    const result = {};
+    for (const r of rows) {
+      if (r.key && r.value !== null && r.value !== undefined) {
+        result[r.key] = r.value;
+      }
+    }
+    return result;
+  } catch (e) {
+    return {};
+  }
+}
+
+// Helper: save a key-value setting into SQLite system_settings table
+function saveDbSetting(key, value) {
+  try {
+    const db = getDb();
+    db.prepare("INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(key, String(value));
+  } catch (e) {
+    console.error('Error saving db setting:', e.message);
+  }
+}
+
 function getFullConfigObject() {
   const env = parseEnv();
+  const dbConfig = getDbSettings();
+
+  // Helper to read setting priority: SQLite DB -> .env file -> process.env -> defaultVal
+  const getVal = (key, defaultVal = '') => {
+    if (dbConfig[key] !== undefined && dbConfig[key] !== null && dbConfig[key] !== '') return dbConfig[key];
+    if (env[key] !== undefined && env[key] !== null && env[key] !== '') return env[key];
+    if (process.env[key] !== undefined && process.env[key] !== null && process.env[key] !== '') return process.env[key];
+    return defaultVal;
+  };
+
   return {
     connection: {
-      baseUrl: env.JIRA_BASE_URL || process.env.JIRA_BASE_URL || '',
-      username: env.JIRA_USERNAME || process.env.JIRA_USERNAME || '',
-      token: (env.JIRA_TOKEN || process.env.JIRA_TOKEN) ? '••••••••' : '',
-      projectKey: env.JIRA_PROJECT_KEY || process.env.JIRA_PROJECT_KEY || '',
+      baseUrl: getVal('JIRA_BASE_URL'),
+      username: getVal('JIRA_USERNAME'),
+      token: getVal('JIRA_TOKEN') ? '••••••••' : '',
+      projectKey: getVal('JIRA_PROJECT_KEY'),
       isConfigured: jiraService.isConfigured,
-      syncIntervalMinutes: env.SYNC_INTERVAL_MINUTES || process.env.SYNC_INTERVAL_MINUTES || '60',
+      syncIntervalMinutes: getVal('SYNC_INTERVAL_MINUTES', '60'),
     },
     apiEndpoints: {
-      apiVersion: env.JIRA_API_VERSION || process.env.JIRA_API_VERSION || 'auto',
-      searchEndpoint: env.JIRA_SEARCH_ENDPOINT || process.env.JIRA_SEARCH_ENDPOINT || '/rest/api/2/search',
-      projectEndpoint: env.JIRA_PROJECT_ENDPOINT || process.env.JIRA_PROJECT_ENDPOINT || '/rest/api/2/project',
+      apiVersion: getVal('JIRA_API_VERSION', 'auto'),
+      searchEndpoint: getVal('JIRA_SEARCH_ENDPOINT', '/rest/api/2/search'),
+      projectEndpoint: getVal('JIRA_PROJECT_ENDPOINT', '/rest/api/2/project'),
     },
     serverAndDb: {
-      port: env.PORT || process.env.PORT || '3001',
-      jwtSecret: (env.JWT_SECRET || process.env.JWT_SECRET) ? '••••••••' : 'dev-secret-key',
-      dbDriver: 'SQLite 3 (database.sqlite)',
-      dbStatus: 'متصل و فعال',
+      port: getVal('PORT', '3001'),
+      jwtSecret: getVal('JWT_SECRET') ? '••••••••' : 'dev-secret-key',
+      dbDriver: 'SQLite 3 (database.sqlite & system_settings)',
+      dbStatus: 'متصل و فعال (ذخیره‌شده در دیتابیس)',
     },
     confluence: {
-      baseUrl: env.CONFLUENCE_BASE_URL || process.env.CONFLUENCE_BASE_URL || '',
-      username: env.CONFLUENCE_USERNAME || process.env.CONFLUENCE_USERNAME || '',
-      defaultSpaceKey: env.CONFLUENCE_DEFAULT_SPACE || process.env.CONFLUENCE_DEFAULT_SPACE || 'OPS',
+      baseUrl: getVal('CONFLUENCE_BASE_URL'),
+      username: getVal('CONFLUENCE_USERNAME'),
+      defaultSpaceKey: getVal('CONFLUENCE_DEFAULT_SPACE', 'OPS'),
     },
-    waitingStatuses: (env.JIRA_WAITING_STATUSES || process.env.JIRA_WAITING_STATUSES || 'OnHolding,Waiting,Blocked,On Hold').split(',').map(s => s.trim()),
+    waitingStatuses: getVal('JIRA_WAITING_STATUSES', 'OnHolding,Waiting,Blocked,On Hold').split(',').map(s => s.trim()),
     statusMapping: jiraMapping.statusMapping || {},
     customFields: {
-      sprintField: env.JIRA_SPRINT_FIELD !== undefined ? env.JIRA_SPRINT_FIELD : (process.env.JIRA_SPRINT_FIELD || 'customfield_10004'),
-      waitingTeamField: env.JIRA_WAITING_TEAM_FIELD !== undefined ? env.JIRA_WAITING_TEAM_FIELD : (process.env.JIRA_WAITING_TEAM_FIELD || ''),
-      waitingReasonField: env.JIRA_WAITING_REASON_FIELD !== undefined ? env.JIRA_WAITING_REASON_FIELD : (process.env.JIRA_WAITING_REASON_FIELD || ''),
-      confluenceLinkField: env.JIRA_CONFLUENCE_LINK_FIELD !== undefined ? env.JIRA_CONFLUENCE_LINK_FIELD : (process.env.JIRA_CONFLUENCE_LINK_FIELD || ''),
-      capabilitiesField: env.JIRA_CAPABILITIES_FIELD !== undefined ? env.JIRA_CAPABILITIES_FIELD : (process.env.JIRA_CAPABILITIES_FIELD || ''),
-      categoryField: env.JIRA_CATEGORY_FIELD !== undefined ? env.JIRA_CATEGORY_FIELD : (process.env.JIRA_CATEGORY_FIELD || ''),
+      sprintField: getVal('JIRA_SPRINT_FIELD', 'customfield_10004'),
+      waitingTeamField: getVal('JIRA_WAITING_TEAM_FIELD', ''),
+      waitingReasonField: getVal('JIRA_WAITING_REASON_FIELD', ''),
+      confluenceLinkField: getVal('JIRA_CONFLUENCE_LINK_FIELD', ''),
+      capabilitiesField: getVal('JIRA_CAPABILITIES_FIELD', ''),
+      categoryField: getVal('JIRA_CATEGORY_FIELD', ''),
     },
     dateMapping: {
-      epicStartDateField: env.JIRA_EPIC_START_DATE_FIELD || process.env.JIRA_EPIC_START_DATE_FIELD || 'created',
-      epicDueDateField: env.JIRA_EPIC_DUE_DATE_FIELD || process.env.JIRA_EPIC_DUE_DATE_FIELD || 'duedate',
-      taskStartDateField: env.JIRA_TASK_START_DATE_FIELD || process.env.JIRA_TASK_START_DATE_FIELD || '',
-      taskDueDateField: env.JIRA_TASK_DUE_DATE_FIELD || process.env.JIRA_TASK_DUE_DATE_FIELD || 'duedate',
+      epicStartDateField: getVal('JIRA_EPIC_START_DATE_FIELD', 'created'),
+      epicDueDateField: getVal('JIRA_EPIC_DUE_DATE_FIELD', 'duedate'),
+      taskStartDateField: getVal('JIRA_TASK_START_DATE_FIELD', ''),
+      taskDueDateField: getVal('JIRA_TASK_DUE_DATE_FIELD', 'duedate'),
     },
     labelPrefixes: {
-      waitingTeam: env.JIRA_WAIT_TEAM_PREFIX || process.env.JIRA_WAIT_TEAM_PREFIX || 'wait:',
-      waitingReason: env.JIRA_WAIT_REASON_PREFIX || process.env.JIRA_WAIT_REASON_PREFIX || 'reason:',
-      capability: env.JIRA_CAPABILITY_PREFIX || process.env.JIRA_CAPABILITY_PREFIX || 'cap:',
+      waitingTeam: getVal('JIRA_WAIT_TEAM_PREFIX', 'wait:'),
+      waitingReason: getVal('JIRA_WAIT_REASON_PREFIX', 'reason:'),
+      capability: getVal('JIRA_CAPABILITY_PREFIX', 'cap:'),
     },
-    featuredComponents: (env.JIRA_FEATURED_COMPONENTS || process.env.JIRA_FEATURED_COMPONENTS || 'learning,meeting,support').split(',').map(s => s.trim()),
+    featuredComponents: getVal('JIRA_FEATURED_COMPONENTS', 'learning,meeting,support').split(',').map(s => s.trim()),
   };
 }
 
@@ -192,6 +231,10 @@ router.put('/config', (req, res) => {
       updates.JIRA_FEATURED_COMPONENTS = body.featuredComponents.join(',');
     }
 
+    // Write to both SQLite system_settings table and .env file
+    for (const [k, v] of Object.entries(updates)) {
+      saveDbSetting(k, v);
+    }
     writeEnv(updates);
     
     // Automatically trigger Jira sync in background with newly saved config
@@ -200,7 +243,7 @@ router.put('/config', (req, res) => {
 
     res.json({
       success: true,
-      message: 'تنظیمات با موفقیت ذخیره گردید و فیلدهای جدید اعمال گردید.',
+      message: 'تنظیمات با موفقیت در دیتابیس و فایل پیکربندی سیستم ذخیره و اعمال گردید.',
       config: getFullConfigObject()
     });
   } catch (err) {

@@ -58,3 +58,8 @@ CREATE TABLE IF NOT EXISTS sync_log (
     projects_synced INTEGER DEFAULT 0,
     tasks_synced INTEGER DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS system_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
