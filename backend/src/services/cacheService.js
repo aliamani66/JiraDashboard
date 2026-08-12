@@ -219,10 +219,10 @@ async function syncMonthlyLastYearFromJira() {
         for (const task of parsedTasks) {
           if (task && task.id) {
             task.last_synced = syncTime;
-            // Only insert if project exists in DB (no auto-create for unknown projects)
-            if (task.project_id) {
-              const projExists = db.prepare('SELECT id FROM projects WHERE id = ?').get(task.project_id);
-              if (!projExists) continue;
+            // Only insert tasks from configured project keys (check by key prefix, not exact epic ID)
+            if (task.project_id && configuredProjKeySet.size > 0) {
+              const taskProjPrefix = (task.project_id || '').split('-')[0].toUpperCase();
+              if (!configuredProjKeySet.has(taskProjPrefix)) continue;
             }
             insertTask.run(task);
           }
@@ -620,10 +620,10 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       for (const task of parsedTasks) {
         if (task && task.id) {
           task.last_synced = syncTime;
-          // Only insert task if its project already exists in DB (no auto-create of unknown projects)
-          if (task.project_id) {
-            const projExists = db.prepare('SELECT id FROM projects WHERE id = ?').get(task.project_id);
-            if (!projExists) continue; // Skip tasks from unauthorized projects
+          // Only insert tasks from configured project keys (check by key prefix, not exact epic ID)
+          if (task.project_id && configuredProjKeys.size > 0) {
+            const taskProjPrefix = (task.project_id || '').split('-')[0].toUpperCase();
+            if (!configuredProjKeys.has(taskProjPrefix)) continue;
           }
           insertTask.run(task);
         }
@@ -671,26 +671,40 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 function autoLinkTasksToEpics() {
   try {
     const db = getDb();
+    // Get all epics grouped by project key prefix
     const epics = db.prepare("SELECT id FROM projects WHERE id LIKE '%-%'").all().map(r => r.id);
     if (epics.length === 0) return;
 
-    const unlinkedTasks = db.prepare("SELECT id, project_id FROM tasks WHERE project_id NOT LIKE '%-%' OR project_id NOT IN (SELECT id FROM projects)").all();
+    // Find tasks whose project_id is NOT a valid epic (not matching any projects.id)
+    const unlinkedTasks = db.prepare(
+      "SELECT id, project_id FROM tasks WHERE project_id NOT IN (SELECT id FROM projects)"
+    ).all();
     if (unlinkedTasks.length === 0) return;
 
     const updateStmt = db.prepare('UPDATE tasks SET project_id = ? WHERE id = ?');
+    // Build a map: projectKeyPrefix -> list of epic IDs
+    const epicsByPrefix = {};
+    for (const epicId of epics) {
+      const prefix = epicId.split('-')[0].toUpperCase();
+      if (!epicsByPrefix[prefix]) epicsByPrefix[prefix] = [];
+      epicsByPrefix[prefix].push(epicId);
+    }
+
     db.transaction(() => {
-      let idx = 0;
       for (const task of unlinkedTasks) {
+        // Try to match by task's own key prefix (e.g. OPS-501 -> OPS -> OPS-101)
         const taskPrefix = (task.id || '').split('-')[0].toUpperCase();
-        const matchingEpics = epics.filter(e => e.toUpperCase().startsWith(taskPrefix + '-'));
-        if (matchingEpics.length > 0) {
-          const assignedEpic = matchingEpics[idx % matchingEpics.length];
-          updateStmt.run(assignedEpic, task.id);
-          idx++;
+        // Also try by project_id prefix if it's a plain project key
+        const projPrefix = (task.project_id || '').split('-')[0].toUpperCase();
+
+        const candidates = epicsByPrefix[taskPrefix] || epicsByPrefix[projPrefix] || [];
+        if (candidates.length > 0) {
+          // Assign to first available epic with same prefix
+          updateStmt.run(candidates[0], task.id);
         }
       }
     })();
-    console.log(`Auto-linked ${unlinkedTasks.length} tasks to ${epics.length} Epics.`);
+    console.log(`Auto-linked ${unlinkedTasks.length} tasks to epics.`);
   } catch (err) {
     console.error('Auto-link tasks error:', err.message);
   }
