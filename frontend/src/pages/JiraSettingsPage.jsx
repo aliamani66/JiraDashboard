@@ -586,6 +586,31 @@ const JiraSettingsPage = () => {
       return;
     }
 
+    const diffDays = Math.ceil((endDt - startDt) / (1000 * 60 * 60 * 24));
+    
+    // If selected range is within 60 days, do NOT split into months — run directly as 1 single query matching the preview
+    if (diffDays <= 60) {
+      const startStr = `${startG.gy}-${String(startG.gm).padStart(2, '0')}-${String(startG.gd).padStart(2, '0')} 00:00`;
+      const endStr = `${endG.gy}-${String(endG.gm).padStart(2, '0')}-${String(endG.gd).padStart(2, '0')} 23:59`;
+      const jalaliStartStr = `${rangeStartJalali.jy}/${String(rangeStartJalali.jm).padStart(2, '0')}/${String(rangeStartJalali.jd).padStart(2, '0')} 00:00`;
+      const jalaliEndStr = `${rangeEndJalali.jy}/${String(rangeEndJalali.jm).padStart(2, '0')}/${String(rangeEndJalali.jd).padStart(2, '0')} 23:59`;
+
+      const singleRange = [{
+        monthIndex: 1,
+        year: startG.gy,
+        month: startG.gm,
+        jalaliName: `بازه انتخابی (${rangeStartJalali.jy}/${rangeStartJalali.jm}/${rangeStartJalali.jd} تا ${rangeEndJalali.jy}/${rangeEndJalali.jm}/${rangeEndJalali.jd})`,
+        gregorianName: `${startStr.split(' ')[0]} to ${endStr.split(' ')[0]}`,
+        startStr,
+        endStr,
+        jalaliStartStr,
+        jalaliEndStr
+      }];
+
+      await executeStepByStepSync(singleRange, '📅 در حال همگام‌سازی مستقیم بازه انتخابی');
+      return;
+    }
+
     const monthRanges = [];
     let curr = new Date(startDt.getFullYear(), startDt.getMonth(), 1);
     let stepIndex = 1;
