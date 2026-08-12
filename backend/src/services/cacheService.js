@@ -630,9 +630,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   const gregStartDateOnly = startStr.split(' ')[0];
   const gregEndDateOnly = endStr.split(' ')[0];
 
-  // ✅ CONFIRMED WORKING: query #6 — exact Gregorian dates, NO project filter
-  // project filter causes issues on this server; filter by project in JS instead
-  const confirmedJql = `created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
+  // ✅ کوئری پایدار: -365d با project filter — تنها فرمتی که روی این سرور کار می‌کند
+  const confirmedJql = `${projPrefix}created >= -365d ORDER BY created ASC`;
 
   const configuredProjKeys = new Set(
     projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
