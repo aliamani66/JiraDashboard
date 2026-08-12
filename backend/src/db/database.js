@@ -166,59 +166,67 @@ async function initDb() {
   try { db.run("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN description TEXT"); } catch (_) {}
 
-  // Seed sample estimate revision history if table is empty
+  // Seed comprehensive test data for ALL audit categories if tasks are few or empty
   try {
-    const historyCount = db.exec("SELECT COUNT(*) as cnt FROM task_estimate_history");
-    const count = (historyCount && historyCount[0] && historyCount[0].values && historyCount[0].values[0]) ? historyCount[0].values[0][0] : 0;
+    const taskCountRows = db.exec("SELECT COUNT(*) as cnt FROM tasks");
+    const taskCount = (taskCountRows && taskCountRows[0] && taskCountRows[0].values) ? taskCountRows[0].values[0][0] : 0;
 
-    if (count === 0) {
-      const taskRows = db.exec("SELECT id, estimate_hours FROM tasks LIMIT 15");
-      if (taskRows && taskRows[0] && taskRows[0].values) {
-        const rows = taskRows[0].values;
-        const now = new Date();
+    const historyCountRows = db.exec("SELECT COUNT(*) as cnt FROM task_estimate_history");
+    const historyCount = (historyCountRows && historyCountRows[0] && historyCountRows[0].values) ? historyCountRows[0].values[0][0] : 0;
 
-        if (rows.length >= 1) {
-          const t1 = rows[0][0]; // Task 1 -> Increased estimate (+8h)
-          const currentEst = rows[0][1] || 15;
-          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
-            [t1, Math.max(1, currentEst - 8), Math.max(1, currentEst - 3), 5, new Date(now.getTime() - 86400000 * 5).toISOString()]);
-          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
-            [t1, Math.max(1, currentEst - 3), currentEst, 3, new Date(now.getTime() - 86400000 * 2).toISOString()]);
-        }
+    // 1. Seed demo tasks for all audit categories if taskCount < 5
+    if (taskCount < 5) {
+      const nowStr = new Date().toISOString();
+      const insertSeedTask = db.prepare(`
+        INSERT OR REPLACE INTO tasks (
+          id, title, status, project_id, estimate_hours, spent_hours, assignee, sprint_name, due_date, start_date, is_waiting, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
 
-        if (rows.length >= 2) {
-          const t2 = rows[1][0]; // Task 2 -> Decreased estimate (-4h)
-          const currentEst = rows[1][1] || 10;
-          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
-            [t2, currentEst + 4, currentEst, -4, new Date(now.getTime() - 86400000 * 4).toISOString()]);
-        }
+      // Category 1: Orphan Tasks (No Epic / Non-existent project_id)
+      insertSeedTask.run('ORD-901', 'بررسی زیرساخت‌های پایگاه داده و مانیتورینگ عمومی', 'In Progress', 'NON_EXISTENT_EPIC', 16, 12.5, 'علی امانی', 'Sprint 14', '2026-08-25', '2026-08-01', 0, nowStr, nowStr);
+      insertSeedTask.run('OPS-902', 'بهینه‌سازی فایل‌های کش بورد و رندر فرانت‌اند', 'To Do', null, 24, 18.0, 'رضا محمدی', 'Sprint 14', '2026-08-30', '2026-08-05', 0, nowStr, nowStr);
 
-        if (rows.length >= 3) {
-          const t3 = rows[2][0]; // Task 3 -> Increased estimate (+10h)
-          const currentEst = rows[2][1] || 25;
-          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
-            [t3, Math.max(1, currentEst - 10), currentEst, 10, new Date(now.getTime() - 86400000 * 3).toISOString()]);
-        }
+      // Category 2: No Sprint Tasks
+      insertSeedTask.run('DEV-903', 'پیاده‌سازی ماژول اکسپورت PDF گزارشات مدیریتی', 'In Progress', 'OPS-101', 20, 8.5, 'سارا احمدی', null, '2026-09-05', '2026-08-10', 0, nowStr, nowStr);
+      insertSeedTask.run('ORD-904', 'اصلاح استایل‌های حالت تاریک و تم دراکولا', 'Done', 'ORD-202', 12, 12.0, 'محمد کاظمی', '', '2026-08-15', '2026-08-02', 0, nowStr, nowStr);
 
-        if (rows.length >= 4) {
-          const t4 = rows[3][0]; // Task 4 -> Decreased estimate (-10h)
-          const currentEst = rows[3][1] || 12;
-          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
-            [t4, currentEst + 10, currentEst + 4, -6, new Date(now.getTime() - 86400000 * 6).toISOString()]);
-          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
-            [t4, currentEst + 4, currentEst, -4, new Date(now.getTime() - 86400000 * 1).toISOString()]);
-        }
+      // Category 3: No Estimate Tasks (estimate_hours = 0)
+      insertSeedTask.run('OPS-905', 'پایش خطاهای سرور و رفع باگ 504 در تایم‌اوت API', 'In Progress', 'OPS-101', 0, 14.0, 'علی امانی', 'Sprint 14', '2026-08-28', '2026-08-08', 0, nowStr, nowStr);
+      insertSeedTask.run('DEV-906', 'مستندسازی کامپوننت‌های فرانت‌اند و فیلترهای سرچ', 'To Do', 'DEV-303', 0, 0, 'رضا محمدی', 'Sprint 15', '2026-09-10', '2026-08-12', 0, nowStr, nowStr);
 
-        if (rows.length >= 5) {
-          const t5 = rows[4][0]; // Task 5 -> Increased estimate (+7h)
-          const currentEst = rows[4][1] || 18;
-          db.run("INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at) VALUES (?, ?, ?, ?, ?)",
-            [t5, Math.max(1, currentEst - 7), currentEst, 7, new Date(now.getTime() - 86400000 * 2).toISOString()]);
-        }
-      }
+      // Category 4: No Due Date Tasks (due_date = NULL / '')
+      insertSeedTask.run('ORD-907', 'تست یکپارچه‌سازی سرویس‌های جیرا و بانک اطلاعاتی', 'In Progress', 'ORD-202', 18, 9.0, 'سارا احمدی', 'Sprint 14', null, '2026-08-05', 0, nowStr, nowStr);
+      insertSeedTask.run('OPS-908', 'بازبینی دسترسی‌های کاربران و نقش‌های سیستمی', 'To Do', 'OPS-101', 10, 2.0, 'محمد کاظمی', 'Sprint 15', '', '2026-08-11', 0, nowStr, nowStr);
+
+      // Category 5: Multi-issue Tasks (Orphan + No Sprint + Revised)
+      insertSeedTask.run('DEV-909', 'توسعه الگوریتم محاسبه تاخیر و ریسک پروژه‌ها', 'In Progress', null, 30, 22.0, 'علی امانی', null, null, '2026-08-01', 0, nowStr, nowStr);
+    }
+
+    // 2. Seed Estimate Revisions in task_estimate_history if historyCount === 0
+    if (historyCount === 0) {
+      const insertHist = db.prepare(`
+        INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      const now = new Date();
+
+      // Increased Estimates (+8h, +10h, +5h)
+      insertHist.run('ORD-901', 8, 12, 4, new Date(now.getTime() - 86400000 * 6).toISOString());
+      insertHist.run('ORD-901', 12, 16, 4, new Date(now.getTime() - 86400000 * 2).toISOString());
+
+      insertHist.run('DEV-903', 10, 20, 10, new Date(now.getTime() - 86400000 * 4).toISOString());
+
+      insertHist.run('OPS-908', 5, 10, 5, new Date(now.getTime() - 86400000 * 3).toISOString());
+
+      // Decreased Estimates (-6h, -10h)
+      insertHist.run('OPS-902', 30, 24, -6, new Date(now.getTime() - 86400000 * 5).toISOString());
+
+      insertHist.run('DEV-909', 40, 35, -5, new Date(now.getTime() - 86400000 * 7).toISOString());
+      insertHist.run('DEV-909', 35, 30, -5, new Date(now.getTime() - 86400000 * 1).toISOString());
     }
   } catch (err) {
-    console.error('Failed to seed estimate history:', err);
+    console.error('Failed to seed comprehensive audit data:', err);
   }
 
   saveDb();

@@ -373,7 +373,6 @@ const ManagerReportPage = () => {
                   <th>تخمین اولیه</th>
                   <th>کارکرد (Spent)</th>
                   <th>تاریخ سررسید</th>
-                  <th>تغییرات استیمیت (دست‌خوردگی)</th>
                   <th>اختلالات شناسایی‌شده</th>
                 </tr>
               </thead>
@@ -451,15 +450,6 @@ const ManagerReportPage = () => {
                           <span className="badge-missing purple">📅 بدون سررسید</span>
                         ) : (
                           <span className="duedate-tag">{t.due_date}</span>
-                        )}
-                      </td>
-                      <td className="td-revision">
-                        {t.is_estimate_revised ? (
-                          <span className={`revision-tag ${t.total_delta > 0 ? 'increase' : t.total_delta < 0 ? 'decrease' : ''}`}>
-                            📈 {t.estimate_change_text}
-                          </span>
-                        ) : (
-                          <span className="text-muted">—</span>
                         )}
                       </td>
                       <td className="td-issues">
