@@ -18,13 +18,35 @@ const Layout = ({ children }) => {
 
   const menuRef = useRef(null);
 
+  const formatSyncTime = (rawDateStr) => {
+    if (!rawDateStr) return 'همگام‌نشده';
+    try {
+      let normalized = rawDateStr;
+      if (typeof rawDateStr === 'string' && !rawDateStr.endsWith('Z') && !rawDateStr.includes('T')) {
+        normalized = rawDateStr.replace(' ', 'T') + 'Z';
+      }
+      const d = new Date(normalized);
+      if (isNaN(d.getTime())) return 'همگام‌نشده';
+
+      const now = new Date();
+      const isToday = d.toDateString() === now.toDateString();
+      const timeStr = d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+
+      if (isToday) {
+        return `امروز ساعت ${timeStr}`;
+      }
+      const dateStr = d.toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' });
+      return `${dateStr} ساعت ${timeStr}`;
+    } catch (e) {
+      return 'همگام‌نشده';
+    }
+  };
+
   const fetchSyncStatus = async () => {
     try {
       const status = await api.getSyncStatus();
       if (status && status.synced_at) {
-        const d = new Date(status.synced_at);
-        const timeStr = d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
-        setLastSync(`ساعت ${timeStr}`);
+        setLastSync(formatSyncTime(status.synced_at));
       }
     } catch (e) {
       console.error('Error fetching sync status:', e);
@@ -51,8 +73,8 @@ const Layout = ({ children }) => {
     setIsSyncing(true);
     try {
       const res = await api.triggerSync();
-      const nowStr = new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
-      setLastSync(`ساعت ${nowStr}`);
+      const nowStr = new Date().toISOString();
+      setLastSync(formatSyncTime(nowStr));
       setToastMessage(`همگام‌سازی موفق با جیرا (${res.projectsSynced || 0} پروژه، ${res.tasksSynced || 0} تسک)`);
       setShowToast(true);
 
@@ -98,11 +120,11 @@ const Layout = ({ children }) => {
             <button 
               className={`theme-toggle-btn ${theme === 'dracula' ? 'dracula-active' : ''}`}
               onClick={toggleTheme}
-              title={theme === 'dracula' ? 'تغییر به تم سایبرپانک (پیش‌فرض)' : 'تغییر به تم دراکولا (Dracula Theme)'}
+              title={theme === 'dracula' ? 'تغییر به تم سایبرپانک' : 'تغییر به تم دراکولا'}
             >
-              <Palette size={16} />
+              <Palette size={12} style={{ width: '12px', height: '12px', opacity: 0.85 }} />
               <span className="theme-toggle-label">
-                {theme === 'dracula' ? '🧛 تم دراکولا' : '🌌 تم سایبرپانک'}
+                {theme === 'dracula' ? 'تم دراکولا' : 'تم سایبرپانک'}
               </span>
             </button>
 
