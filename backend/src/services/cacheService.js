@@ -13,23 +13,29 @@ async function syncFromJira() {
     return { success: false, message: 'Jira not configured' };
   }
 
-  // Quick sync: Run range extraction for past 90 days to fetch all tasks and components efficiently
+  // Quick sync: Run exact Query #3 date range extraction via syncSingleMonthFromJira
   try {
-    console.log('Starting Quick Sync using range extraction...');
+    console.log('Starting Quick Sync using exact Query #3 date range extraction...');
     const endG = new Date();
     const startG = new Date();
     startG.setDate(endG.getDate() - 90);
 
-    const startStr = `${startG.getFullYear()}-${String(startG.getMonth() + 1).padStart(2, '0')}-${String(startG.getDate()).padStart(2, '0')}`;
-    const endStr = `${endG.getFullYear()}-${String(endG.getMonth() + 1).padStart(2, '0')}-${String(endG.getDate()).padStart(2, '0')}`;
+    const startStr = `${startG.getFullYear()}-${String(startG.getMonth() + 1).padStart(2, '0')}-${String(startG.getDate()).padStart(2, '0')} 00:00`;
+    const endStr = `${endG.getFullYear()}-${String(endG.getMonth() + 1).padStart(2, '0')}-${String(endG.getDate()).padStart(2, '0')} 23:59`;
 
-    const res = await syncSingleMonthFromJira({ startStr, endStr });
+    const res = await syncSingleMonthFromJira({
+      monthIndex: 1,
+      startStr,
+      endStr,
+      monthLabel: 'همگام‌سازی سریع'
+    });
+
     console.log('Quick Sync complete:', res);
     return {
       success: true,
-      projectsSynced: res.totalProjects || 1,
-      tasksSynced: res.tasksSynced || 0,
-      message: res.message || 'همگام‌سازی سریع با موفقیت انجام شد.'
+      projectsSynced: res.taskCount || 1,
+      tasksSynced: res.taskCount || 0,
+      message: res.message || `همگام‌سازی سریع انجام شد (${res.taskCount || 0} تسک لود گردید)`
     };
   } catch (err) {
     console.error('Quick Sync failed:', err);
