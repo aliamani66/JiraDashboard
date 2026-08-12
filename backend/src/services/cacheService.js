@@ -629,15 +629,15 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 
   const gregStartDateOnly = startStr.split(' ')[0];
   const gregEndDateOnly = endStr.split(' ')[0];
-  const gregStartSlashOnly = gregStartDateOnly.replace(/-/g, '/');
-  const gregEndSlashOnly = gregEndDateOnly.replace(/-/g, '/');
 
-  // ✅ CONFIRMED: Jira REST API does NOT accept project filter for this user
-  // Use Gregorian date only (no project clause), then filter in JS
-  const confirmedJql = `created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
-
+  // ✅ CONFIRMED WORKING: query #9 style — project + relative date (created >= -Xd)
+  // Calculate how many days ago the startStr is, add buffer, use relative date
+  // Then filter exact range in JS. This avoids absolute date format issues.
   const startDt = new Date(startStr);
   const endDt = new Date(endStr);
+  const daysAgo = Math.ceil((Date.now() - startDt.getTime()) / (1000 * 60 * 60 * 24)) + 2; // +2 day buffer
+  const confirmedJql = `${projPrefix}created >= -${daysAgo}d ORDER BY created ASC`;
+
   const configuredProjKeys = new Set(
     projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
   );
