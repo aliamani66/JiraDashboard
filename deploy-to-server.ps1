@@ -40,7 +40,7 @@ scp JiraDashboard.zip "${serverSSH}:/tmp/JiraDashboard.zip"
 # 5. Remote Unzip & Docker Build
 Write-Host ""
 Write-Host "[4/4] Extracting package and deploying Docker Compose at /appserver/amani/JiraDashboard..." -ForegroundColor Yellow
-$remoteCmd = "mkdir -p /appserver/amani/JiraDashboard && unzip -o /tmp/JiraDashboard.zip -d /appserver/amani/JiraDashboard && cd /appserver/amani/JiraDashboard && docker compose down && (docker compose up -d --build || docker-compose up -d --build)"
+$remoteCmd = "mkdir -p /appserver/amani/JiraDashboard && unzip -q -o /tmp/JiraDashboard.zip -d /appserver/amani/JiraDashboard && cd /appserver/amani/JiraDashboard && docker compose down && (docker compose up -d --build || docker-compose up -d --build)"
 ssh $serverSSH $remoteCmd
 
 Write-Host ""

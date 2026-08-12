@@ -37,7 +37,7 @@ if errorlevel 1 (
 
 echo.
 echo [4/4] Extracting archive and executing Docker Compose on server...
-ssh %SERVER_SSH% "mkdir -p /appserver/amani/JiraDashboard && unzip -o /tmp/JiraDashboard.zip -d /appserver/amani/JiraDashboard && cd /appserver/amani/JiraDashboard && docker compose down && (docker compose up -d --build || docker-compose up -d --build)"
+ssh %SERVER_SSH% "mkdir -p /appserver/amani/JiraDashboard && unzip -q -o /tmp/JiraDashboard.zip -d /appserver/amani/JiraDashboard && cd /appserver/amani/JiraDashboard && docker compose down && (docker compose up -d --build || docker-compose up -d --build)"
 
 if errorlevel 1 (
     echo ❌ ERROR: Remote SSH command execution failed!
