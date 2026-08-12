@@ -129,7 +129,12 @@ async function jiraSearch(jql, fields = [], options = {}) {
       allIssues.push(...pageIssues);
       totalCount = pageData.total || allIssues.length;
 
-      if (allIssues.length >= totalCount || pageIssues.length < pageSize || options.singlePage) {
+      if (
+        allIssues.length >= totalCount ||
+        pageIssues.length === 0 ||
+        (options.maxResults && allIssues.length >= options.maxResults) ||
+        options.singlePage
+      ) {
         return { total: totalCount, issues: allIssues };
       }
 

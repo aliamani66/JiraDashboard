@@ -309,7 +309,7 @@ function cleanErrorMessage(e) {
 
     for (const q of jqlAttempts) {
       try {
-        searchData = await jiraService.jiraSearch(q, ['*all'], { maxResults: 2, timeout: 6000, retries: 1 });
+        searchData = await jiraService.jiraSearch(q, ['*all'], { maxResults: 5, singlePage: true, timeout: 8000, retries: 1 });
         if (searchData && searchData.issues) {
           lastExecutedJql = q;
           break;
