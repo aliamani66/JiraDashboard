@@ -16,59 +16,62 @@ async function seed() {
     console.log('Created admin user.');
   }
 
+  // Define Projects Key (defaults to process.env.JIRA_PROJECT_KEY or ORD)
+  const pKey = (process.env.JIRA_PROJECT_KEY || 'ORD').split(',')[0].trim().toUpperCase() || 'ORD';
+
   // Define Projects
-  const projects = [
+  const rawProjects = [
     {
-      id: 'OPS-1', title: 'پایپلاین CI/CD',
+      title: 'پایپلاین CI/CD',
       description: 'طراحی و پیاده‌سازی پایپلاین CI/CD برای خودکارسازی فرآیند بیلد، تست و دیپلوی اپلیکیشن‌ها. شامل GitLab CI، ArgoCD و Tekton.',
       category: 'devops', status: 'In Progress', progress: 70,
       capabilities: 'خودکارسازی دیپلوی|کاهش زمان انتشار از ۲ روز به ۳۰ دقیقه|استانداردسازی فرآیند انتشار|افزایش کیفیت کد با تست خودکار',
       confluence_link: 'https://confluence.example.com/display/OPS/Pipeline-CICD'
     },
     {
-      id: 'OPS-2', title: 'استک مانیتورینگ',
+      title: 'استک مانیتورینگ',
       description: 'پیاده‌سازی استک مانیتورینگ جامع شامل Prometheus، Grafana، Alertmanager و Loki برای نظارت بر سلامت سرویس‌ها.',
       category: 'monitoring', status: 'In Progress', progress: 45,
       capabilities: 'مانیتورینگ Real-time|هشدارگذاری هوشمند|داشبورد متمرکز سلامت سرویس‌ها|تحلیل لاگ‌ها',
       confluence_link: 'https://confluence.example.com/display/OPS/Monitoring-Stack'
     },
     {
-      id: 'OPS-3', title: 'مهاجرت به کوبرنتیز',
+      title: 'مهاجرت به کوبرنتیز',
       description: 'مهاجرت سرویس‌های عملیاتی از محیط VM به Kubernetes. شامل Dockerize کردن اپلیکیشن‌ها، Helm Charts و مدیریت کلاستر.',
       category: 'infrastructure', status: 'In Progress', progress: 85,
       capabilities: 'مقیاس‌پذیری خودکار|Self-healing|مدیریت منابع بهینه|Zero-downtime deployment',
       confluence_link: 'https://confluence.example.com/display/OPS/K8s-Migration'
     },
     {
-      id: 'OPS-4', title: 'خودکارسازی امنیت',
+      title: 'خودکارسازی امنیت',
       description: 'پیاده‌سازی DevSecOps شامل اسکن آسیب‌پذیری خودکار، SAST/DAST، مدیریت secrets و compliance checking.',
       category: 'security', status: 'In Progress', progress: 30,
       capabilities: 'اسکن خودکار آسیب‌پذیری|مدیریت Secrets متمرکز|Compliance as Code|کاهش ریسک امنیتی',
       confluence_link: 'https://confluence.example.com/display/OPS/Security-Automation'
     },
     {
-      id: 'OPS-5', title: 'یکپارچه‌سازی AI با ورکفلوها',
+      title: 'یکپارچه‌سازی AI با ورکفلوها',
       description: 'بررسی و پیاده‌سازی ابزارهای هوش مصنوعی برای بهینه‌سازی ورکفلوهای عملیاتی. شامل AIOps، تحلیل پیش‌بینانه و Chatbot عملیاتی.',
       category: 'ai', status: 'To Do', progress: 15,
       capabilities: 'تحلیل پیش‌بینانه خرابی|AIOps|خودکارسازی پاسخ به حوادث|Chatbot عملیاتی',
       confluence_link: 'https://confluence.example.com/display/OPS/AI-Integration'
     },
     {
-      id: 'OPS-6', title: 'برنامه آموزش تیم‌ها',
+      title: 'برنامه آموزش تیم‌ها',
       description: 'طراحی و اجرای برنامه آموزشی برای تیم‌های عملیاتی شامل Kubernetes، CI/CD، مانیتورینگ و امنیت.',
       category: 'training', status: 'In Progress', progress: 60,
       capabilities: 'ارتقاء مهارت تیم‌ها|استانداردسازی دانش فنی|کاهش وابستگی به افراد کلیدی|مستندسازی بهتر',
       confluence_link: 'https://confluence.example.com/display/OPS/Training-Program'
     },
     {
-      id: 'OPS-7', title: 'طرح بازیابی از بحران',
+      title: 'طرح بازیابی از بحران',
       description: 'طراحی و پیاده‌سازی Disaster Recovery Plan شامل بکاپ خودکار، Failover، تست‌های DR و مستندسازی runbook‌ها.',
       category: 'infrastructure', status: 'Done', progress: 95,
       capabilities: 'بکاپ خودکار|Failover خودکار|RTO کمتر از ۱ ساعت|مستندسازی Runbook',
       confluence_link: 'https://confluence.example.com/display/OPS/Disaster-Recovery'
     },
     {
-      id: 'OPS-8', title: 'مدیریت متمرکز لاگ‌ها',
+      title: 'مدیریت متمرکز لاگ‌ها',
       description: 'پیاده‌سازی سیستم مدیریت متمرکز لاگ‌ها با ELK Stack و Fluentd برای جمع‌آوری، تحلیل و جستجوی لاگ‌ها.',
       category: 'monitoring', status: 'In Progress', progress: 55,
       capabilities: 'جمع‌آوری متمرکز لاگ|جستجوی سریع لاگ|تحلیل روند خطاها|هشدار بر اساس لاگ',
@@ -76,9 +79,14 @@ async function seed() {
     }
   ];
 
-  // Task templates per project
-  const taskSets = {
-    'OPS-1': [
+  const projects = rawProjects.map((p, i) => ({
+    id: `${pKey}-${i + 1}`,
+    ...p
+  }));
+
+  // Task templates per project index (0-based)
+  const taskSetsByIndex = [
+    [
       { title: 'تحقیق و انتخاب ابزار CI/CD', status: 'Done', est: 16, spent: 14, priority: 'High' },
       { title: 'پیاده‌سازی GitLab Runner', status: 'Done', est: 8, spent: 8, priority: 'High' },
       { title: 'نوشتن Pipeline Template پایه', status: 'Done', est: 24, spent: 20, priority: 'High' },
@@ -88,7 +96,7 @@ async function seed() {
       { title: 'راه‌اندازی Artifact Repository', status: 'OnHolding', est: 8, spent: 6, priority: 'Medium', waiting: true, waitingBy: 'تیم زیرساخت', waitingReason: 'نیاز به سرور اختصاصی' },
       { title: 'تنظیم Notification ها', status: 'To Do', est: 4, spent: 0, priority: 'Low' },
     ],
-    'OPS-2': [
+    [
       { title: 'نصب و پیکربندی Prometheus', status: 'Done', est: 12, spent: 10, priority: 'High' },
       { title: 'طراحی داشبوردهای Grafana', status: 'In Progress', est: 20, spent: 12, priority: 'High' },
       { title: 'تنظیم Alertmanager', status: 'In Progress', est: 8, spent: 3, priority: 'High' },
@@ -97,7 +105,7 @@ async function seed() {
       { title: 'تعریف SLI/SLO برای سرویس‌ها', status: 'To Do', est: 12, spent: 0, priority: 'High' },
       { title: 'آموزش تیم عملیات', status: 'To Do', est: 8, spent: 0, priority: 'Medium' },
     ],
-    'OPS-3': [
+    [
       { title: 'Dockerize کردن اپلیکیشن‌ها', status: 'Done', est: 32, spent: 28, priority: 'High' },
       { title: 'نوشتن Helm Charts', status: 'Done', est: 24, spent: 22, priority: 'High' },
       { title: 'تنظیم Ingress Controller', status: 'Done', est: 8, spent: 8, priority: 'High' },
@@ -108,7 +116,7 @@ async function seed() {
       { title: 'مستندسازی معماری K8s', status: 'To Do', est: 8, spent: 0, priority: 'Low' },
       { title: 'دسترسی شبکه بین کلاسترها', status: 'OnHolding', est: 12, spent: 4, priority: 'High', waiting: true, waitingBy: 'تیم شبکه', waitingReason: 'نیاز به تنظیم فایروال بین VLAN ها' },
     ],
-    'OPS-4': [
+    [
       { title: 'بررسی ابزارهای SAST/DAST', status: 'Done', est: 16, spent: 14, priority: 'High' },
       { title: 'پیاده‌سازی SonarQube', status: 'In Progress', est: 12, spent: 6, priority: 'High' },
       { title: 'راه‌اندازی HashiCorp Vault', status: 'Waiting', est: 16, spent: 0, priority: 'High', waiting: true, waitingBy: 'تیم امنیت', waitingReason: 'نیاز به تأیید سیاست‌های امنیتی' },
@@ -116,14 +124,14 @@ async function seed() {
       { title: 'تعریف Security Policies', status: 'To Do', est: 12, spent: 0, priority: 'High' },
       { title: 'آموزش تیم توسعه', status: 'To Do', est: 8, spent: 0, priority: 'Medium' },
     ],
-    'OPS-5': [
+    [
       { title: 'تحقیق ابزارهای AIOps', status: 'In Progress', est: 20, spent: 8, priority: 'High' },
       { title: 'PoC تحلیل پیش‌بینانه', status: 'To Do', est: 24, spent: 0, priority: 'High' },
       { title: 'طراحی Chatbot عملیاتی', status: 'To Do', est: 16, spent: 0, priority: 'Medium' },
       { title: 'یکپارچه‌سازی با مانیتورینگ', status: 'OnHolding', est: 12, spent: 0, priority: 'Medium', waiting: true, waitingBy: 'تیم مانیتورینگ', waitingReason: 'منتظر تکمیل استک مانیتورینگ' },
       { title: 'تست و ارزیابی مدل‌ها', status: 'To Do', est: 16, spent: 0, priority: 'High' },
     ],
-    'OPS-6': [
+    [
       { title: 'تهیه محتوای آموزشی Kubernetes', status: 'Done', est: 24, spent: 20, priority: 'High' },
       { title: 'برگزاری کارگاه Docker', status: 'Done', est: 16, spent: 16, priority: 'High' },
       { title: 'برگزاری کارگاه CI/CD', status: 'In Progress', est: 16, spent: 8, priority: 'High' },
@@ -132,7 +140,7 @@ async function seed() {
       { title: 'آزمون و ارزیابی یادگیری', status: 'To Do', est: 8, spent: 0, priority: 'Medium' },
       { title: 'تهیه ویدئوهای آموزشی', status: 'To Do', est: 20, spent: 0, priority: 'Low' },
     ],
-    'OPS-7': [
+    [
       { title: 'تحلیل ریسک و BIA', status: 'Done', est: 16, spent: 14, priority: 'High' },
       { title: 'طراحی سیاست بکاپ', status: 'Done', est: 12, spent: 10, priority: 'High' },
       { title: 'پیاده‌سازی بکاپ خودکار', status: 'Done', est: 20, spent: 18, priority: 'High' },
@@ -141,7 +149,7 @@ async function seed() {
       { title: 'تست DR (آزمایش بازیابی)', status: 'Done', est: 8, spent: 8, priority: 'High' },
       { title: 'مستندسازی نهایی', status: 'In Progress', est: 8, spent: 4, priority: 'Low' },
     ],
-    'OPS-8': [
+    [
       { title: 'نصب و پیکربندی Elasticsearch', status: 'Done', est: 16, spent: 14, priority: 'High' },
       { title: 'پیاده‌سازی Fluentd', status: 'Done', est: 12, spent: 10, priority: 'High' },
       { title: 'طراحی داشبورد Kibana', status: 'In Progress', est: 16, spent: 8, priority: 'High' },
@@ -150,7 +158,7 @@ async function seed() {
       { title: 'تعریف هشدار بر اساس لاگ', status: 'To Do', est: 8, spent: 0, priority: 'Medium' },
       { title: 'آموزش تیم پشتیبانی', status: 'To Do', est: 8, spent: 0, priority: 'Low' },
     ]
-  };
+  ];
 
   const insertProject = db.prepare(`
     INSERT INTO projects (id, title, description, category, status, progress, capabilities, confluence_link, start_date, due_date)
@@ -179,7 +187,7 @@ async function seed() {
       if (!p.confluence_link) p.confluence_link = '';
       insertProject.run(p);
 
-      const tasks = taskSets[p.id] || [];
+      const tasks = taskSetsByIndex[i] || [];
       tasks.forEach((t, j) => {
         const taskStartDate = new Date(Date.now() - (50 - i * 5 - j * 3) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const taskDueDate = new Date(Date.now() + (10 + j * 5) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

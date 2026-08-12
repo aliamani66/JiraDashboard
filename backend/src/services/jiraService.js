@@ -21,16 +21,26 @@ try {
   };
 }
 
-const jiraConfig = config.jira || config;
-const mapping = jiraConfig.mapping || jiraMapping;
-const customFields = mapping.customFields || {};
-
-const isConfigured = jiraConfig.isConfigured !== undefined 
-  ? jiraConfig.isConfigured 
-  : !!(jiraConfig.baseUrl && jiraConfig.token);
+function getJiraConfig() {
+  const baseUrl = (process.env.JIRA_BASE_URL || (config && config.jira && config.jira.baseUrl) || '').trim();
+  const username = (process.env.JIRA_USERNAME || (config && config.jira && config.jira.username) || '').trim();
+  const token = (process.env.JIRA_TOKEN || (config && config.jira && config.jira.token) || '').trim();
+  const projectKey = (process.env.JIRA_PROJECT_KEY || (config && config.jira && config.jira.projectKey) || 'ORD').trim();
+  const isConfigured = !!(baseUrl && token);
+  const currentMapping = (config && config.jira && config.jira.mapping) || jiraMapping;
+  return {
+    baseUrl,
+    username,
+    token,
+    projectKey,
+    isConfigured,
+    mapping: currentMapping
+  };
+}
 
 function getAuthHeader() {
-  return 'Basic ' + Buffer.from(`${jiraConfig.username}:${jiraConfig.token}`).toString('base64');
+  const cfg = getJiraConfig();
+  return 'Basic ' + Buffer.from(`${cfg.username}:${cfg.token}`).toString('base64');
 }
 
 // Helper to extract date from issue fields according to mapping
@@ -48,6 +58,7 @@ function extractDateField(issue, fieldName) {
 
 // Perform JQL Search with retry logic for network stability
 async function jiraSearch(jql, fields = [], retries = 5) {
+  const cfg = getJiraConfig();
   let headers = { 
     Authorization: getAuthHeader(),
     'Content-Type': 'application/json',
@@ -55,30 +66,30 @@ async function jiraSearch(jql, fields = [], retries = 5) {
   };
 
   const validFields = fields.filter(Boolean);
-  const isCloud = jiraConfig.baseUrl && jiraConfig.baseUrl.includes('.atlassian.net');
+  const isCloud = cfg.baseUrl && cfg.baseUrl.includes('.atlassian.net');
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       if (isCloud) {
-        const urlCloud = `${jiraConfig.baseUrl}/rest/api/3/search/jql`;
+        const urlCloud = `${cfg.baseUrl}/rest/api/3/search/jql`;
         const response = await axios.post(urlCloud, { jql, fields: validFields }, { headers, httpsAgent, timeout: 15000 });
         return response.data;
       } else {
-        const urlServer = `${jiraConfig.baseUrl}/rest/api/2/search`;
+        const urlServer = `${cfg.baseUrl}/rest/api/2/search`;
         const response = await axios.post(urlServer, { jql, fields: validFields }, { headers, httpsAgent, timeout: 15000 });
         return response.data;
       }
     } catch (err) {
       if (err.response && err.response.status === 401 && !headers.Authorization.startsWith('Bearer')) {
         console.log(`[JiraSearch 401 Auth Retry] Switching from Basic to Bearer Token...`);
-        headers.Authorization = `Bearer ${jiraConfig.token}`;
+        headers.Authorization = `Bearer ${cfg.token}`;
         attempt--;
         continue;
       }
       console.log(`[JiraSearch Attempt ${attempt + 1}/${retries}] Error: ${err.code || err.message}`);
       if (attempt === retries - 1) {
         try {
-          const urlFallback = `${jiraConfig.baseUrl}/rest/api/2/search`;
+          const urlFallback = `${cfg.baseUrl}/rest/api/2/search`;
           const response = await axios.get(urlFallback, {
             headers,
             httpsAgent,
@@ -118,9 +129,10 @@ function parseJiraDescription(desc) {
 
 // Fetch all epics from the configured project
 async function fetchEpics() {
-  if (!isConfigured) return [];
+  const cfg = getJiraConfig();
+  if (!cfg.isConfigured) return [];
   try {
-    const projKeyStr = (process.env.JIRA_PROJECT_KEY || jiraConfig.projectKey || '').trim();
+    const projKeyStr = cfg.projectKey;
     let projectFilter = '';
     if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
       const projects = projKeyStr.split(',').map(p => `"${p.trim().toUpperCase()}"`).filter(p => p !== '""');
@@ -224,7 +236,8 @@ async function fetchEpics() {
 
 // Fetch all tasks (stories/tasks/sub-tasks) under an epic
 async function fetchTasksForEpic(epicKey) {
-  if (!isConfigured) return [];
+  const cfg = getJiraConfig();
+  if (!cfg.isConfigured) return [];
   try {
     const jql = `("Epic Link" = ${epicKey} OR parent = ${epicKey}) ORDER BY rank ASC`;
     const fields = [
@@ -459,7 +472,10 @@ async function fetchTasksForEpic(epicKey) {
 }
 
 module.exports = {
-  isConfigured,
+  get isConfigured() {
+    return getJiraConfig().isConfigured;
+  },
+  getJiraConfig,
   fetchEpics,
   fetchTasksForEpic
 };

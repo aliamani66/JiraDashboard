@@ -39,7 +39,7 @@ services:
       - JIRA_BASE_URL=https://10.100.71.140:8443
       - JIRA_USERNAME=m.ghafoory
       - JIRA_TOKEN=NzIyMzUzNTMwNDM0OnAHiPl33I/QMs2nYu8GUiTP3d/p
-      - JIRA_PROJECT_KEY=
+      - JIRA_PROJECT_KEY=ORD
       - JIRA_WAITING_STATUSES=OnHolding,Waiting,On Hold,Wait,Pending
       - CONFLUENCE_BASE_URL=https://10.100.71.140:8443/wiki
       - CONFLUENCE_USERNAME=m.ghafoory
