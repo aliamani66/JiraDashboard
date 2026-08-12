@@ -615,6 +615,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       }
     })();
 
+    autoLinkTasksToEpics();
+
     try {
       db.prepare(`UPDATE projects SET
         total_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0)),
@@ -651,6 +653,38 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   }
 }
 
+function autoLinkTasksToEpics() {
+  try {
+    const db = getDb();
+    const epics = db.prepare("SELECT id FROM projects WHERE id LIKE '%-%'").all().map(r => r.id);
+    if (epics.length === 0) return;
+
+    const unlinkedTasks = db.prepare("SELECT id, project_id FROM tasks WHERE project_id NOT LIKE '%-%' OR project_id NOT IN (SELECT id FROM projects)").all();
+    if (unlinkedTasks.length === 0) return;
+
+    const updateStmt = db.prepare('UPDATE tasks SET project_id = ? WHERE id = ?');
+    db.transaction(() => {
+      let idx = 0;
+      for (const task of unlinkedTasks) {
+        const taskPrefix = (task.id || '').split('-')[0].toUpperCase();
+        const matchingEpics = epics.filter(e => e.toUpperCase().startsWith(taskPrefix + '-'));
+        if (matchingEpics.length > 0) {
+          const assignedEpic = matchingEpics[idx % matchingEpics.length];
+          updateStmt.run(assignedEpic, task.id);
+          idx++;
+        } else if (epics.length > 0) {
+          const assignedEpic = epics[idx % epics.length];
+          updateStmt.run(assignedEpic, task.id);
+          idx++;
+        }
+      }
+    })();
+    console.log(`Auto-linked ${unlinkedTasks.length} tasks to ${epics.length} Epics.`);
+  } catch (err) {
+    console.error('Auto-link tasks error:', err.message);
+  }
+}
+
 function initCron() {
   if (jiraService.isConfigured) {
     cron.schedule(`*/${SYNC_INTERVAL} * * * *`, syncFromJira);
@@ -664,5 +698,6 @@ module.exports = {
   syncDateRangeFromJira,
   syncSingleMonthFromJira,
   getLastSync,
+  autoLinkTasksToEpics,
   initCron
 };

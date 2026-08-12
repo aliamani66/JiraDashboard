@@ -585,7 +585,21 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0) {
     } else if (issue.fields?.parent?.key) {
       epicKey = issue.fields.parent.key;
     } else {
-      epicKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
+      // Scan customfields for any Epic key pattern (e.g. ORD-101)
+      if (issue.fields) {
+        for (const [k, val] of Object.entries(issue.fields)) {
+          if (!val) continue;
+          const strVal = typeof val === 'object' ? (val.key || val.value || JSON.stringify(val)) : String(val);
+          const match = strVal.match(/([A-Z0-9_]+-\d+)/);
+          if (match && match[1] && match[1] !== issue.key) {
+            epicKey = match[1];
+            break;
+          }
+        }
+      }
+      if (!epicKey) {
+        epicKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
+      }
     }
   }
 

@@ -160,7 +160,18 @@ router.get('/projects/:id', (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    const tasks = db.prepare(`SELECT * FROM tasks WHERE project_id = ? OR id LIKE (? || '-%') ORDER BY sort_order ASC, id ASC`).all(req.params.id, req.params.id);
+    let tasks = db.prepare(`SELECT * FROM tasks WHERE project_id = ? OR id LIKE (? || '-%') ORDER BY sort_order ASC, id ASC`).all(req.params.id, req.params.id);
+    
+    if (tasks.length === 0) {
+      try {
+        const cacheService = require('../services/cacheService');
+        if (cacheService.autoLinkTasksToEpics) {
+          cacheService.autoLinkTasksToEpics();
+          tasks = db.prepare(`SELECT * FROM tasks WHERE project_id = ? OR id LIKE (? || '-%') ORDER BY sort_order ASC, id ASC`).all(req.params.id, req.params.id);
+        }
+      } catch (_) {}
+    }
+
     project.tasks = tasks;
     project.waitingTasks = tasks.filter(t => t.is_waiting === 1 || t.status === 'OnHolding' || t.status === 'Waiting' || t.status === 'Blocked');
     
