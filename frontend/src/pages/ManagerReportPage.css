@@ -476,14 +476,23 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.td-key {
+  white-space: nowrap !important;
+  width: 1%;
+}
+
 .task-key-tag {
   background: rgba(56, 189, 248, 0.15);
   border: 1px solid rgba(56, 189, 248, 0.35);
   color: #38BDF8;
-  padding: 0.2rem 0.6rem;
+  padding: 0.25rem 0.65rem;
   border-radius: 8px;
   font-weight: bold;
   font-family: monospace;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  display: inline-block;
+  direction: ltr !important;
 }
 
 .task-title-text {
