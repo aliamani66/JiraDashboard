@@ -2,18 +2,29 @@ const { initDb, getDb } = require('./db/database');
 const { hashPassword } = require('./services/authService');
 
 async function seed() {
-  console.log('Seeding database...');
+  console.log('Database seed check running...');
   await initDb();
   const db = getDb();
 
-  // Seed Admin User
-  const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
-  if (!existingAdmin) {
-    const hashed = await hashPassword('admin123');
-    db.prepare('INSERT INTO users (username, password_hash, display_name, role) VALUES (?, ?, ?, ?)').run(
-      'admin', hashed, 'مدیر سیستم', 'admin'
-    );
-    console.log('Created admin user.');
+  // Always Seed Admin User safely
+  try {
+    const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+    if (!existingAdmin) {
+      const hashed = await hashPassword('admin123');
+      const allPerms = JSON.stringify(["dashboard", "overall_timeline", "waiting_tasks", "user_management", "jira_settings"]);
+      db.prepare('INSERT INTO users (username, password_hash, display_name, role, permissions) VALUES (?, ?, ?, ?, ?)').run(
+        'admin', hashed, 'مدیر سیستم', 'admin', allPerms
+      );
+      console.log('Created permanent admin user (admin / admin123).');
+    }
+  } catch (errAdmin) {
+    console.error('Error seeding admin user:', errAdmin.message);
+  }
+
+  // ONLY seed demo projects if explicitly enabled via SEED_DEMO_DATA=true env flag
+  if (process.env.SEED_DEMO_DATA !== 'true') {
+    console.log('Skipping fake demo project seeding (SEED_DEMO_DATA is not set to true). Real Jira data preserved.');
+    return;
   }
 
   // Define Projects Key (defaults to process.env.JIRA_PROJECT_KEY or ORD)
