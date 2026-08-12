@@ -159,11 +159,22 @@ const SprintsPage = () => {
     quickPills.unshift(selectedSprint);
   }
 
-  // Extract unique assignee / person options
+  // Tasks pre-filtered by Sprint and Project so dropdowns only show relevant choices
+  const sprintAndProjectFilteredTasks = (tasks || []).filter(t => {
+    if (!t) return false;
+    if (projectFilter !== 'all') {
+      const jKey = t.project_key || (t.project_id ? String(t.project_id).split('-')[0] : '');
+      if (jKey !== projectFilter) return false;
+    }
+    if (selectedSprint !== 'all' && String(t.sprint_name || 'Sprint 10') !== selectedSprint) return false;
+    return true;
+  });
+
+  // Extract unique assignee / person options ONLY for tasks in the selected Sprint & Project
   const assigneeOptions = Array.from(
     new Set(
-      (tasks || [])
-        .map(t => (t && t.assignee ? String(t.assignee).trim() : ''))
+      sprintAndProjectFilteredTasks
+        .map(t => (t && t.assignee ? String(t.assignee).trim() : 'تخصیص‌نیافته'))
         .filter(Boolean)
     )
   ).sort();
