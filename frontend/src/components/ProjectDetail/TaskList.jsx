@@ -80,8 +80,8 @@ const TaskList = ({ tasks }) => {
           <tbody>
             {filteredTasks.map(task => {
               const taskIdStr = task.task_id || task.id;
-              const est = task.estimate_hours || parseInt(task.estimate) || 0;
-              const spent = task.spent_hours || parseInt(task.spent) || 0;
+              const est = Math.round((Number(task.estimate_hours || task.estimate) || 0) * 100) / 100;
+              const spent = Math.round((Number(task.spent_hours || task.spent) || 0) * 100) / 100;
               const timeProgress = est > 0 ? Math.min(100, (spent / est) * 100) : 0;
               const pri = priorityMap[task.priority] || { label: task.priority || 'متوسط', className: 'normal' };
               const compInfo = compBadgeMap[task.component || 'dev'] || compBadgeMap.dev;

@@ -45,11 +45,11 @@ const ProjectHeader = ({ project, capabilities = [] }) => {
 
   const tasks = project.tasks || [];
   const totalSpentHours = Math.round(
-    project.total_spent_hours || tasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0)
-  );
+    (project.total_spent_hours || tasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0)) * 100
+  ) / 100;
   const totalEstimateHours = Math.round(
-    project.total_estimate_hours || tasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0)
-  );
+    (project.total_estimate_hours || tasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0)) * 100
+  ) / 100;
 
   const [isDescExpanded, setIsDescExpanded] = useState(false);
 

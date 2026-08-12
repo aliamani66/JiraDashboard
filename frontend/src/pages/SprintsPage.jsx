@@ -209,8 +209,8 @@ const SprintsPage = () => {
     }
   }
 
-  const totalSpentHours = Math.round(filteredTasks.reduce((sum, t) => sum + (parseFloat(t?.spent_hours) || 0), 0));
-  const totalEstHours = Math.round(filteredTasks.reduce((sum, t) => sum + (parseFloat(t?.estimate_hours) || 0), 0));
+  const totalSpentHours = Math.round(filteredTasks.reduce((sum, t) => sum + (parseFloat(t?.spent_hours) || 0), 0) * 100) / 100;
+  const totalEstHours = Math.round(filteredTasks.reduce((sum, t) => sum + (parseFloat(t?.estimate_hours) || 0), 0) * 100) / 100;
   const sprintProgress = totalEstHours > 0 
     ? Math.min(100, Math.round((totalSpentHours / totalEstHours) * 100))
     : (totalSprintTasks > 0 ? Math.round((doneCount / totalSprintTasks) * 100) : 0);
@@ -499,8 +499,8 @@ const SprintsPage = () => {
               <div className="sp-tasks-grid">
                 {(group.tasks || []).map((task, idx) => {
                   if (!task) return null;
-                  const est = parseFloat(task.estimate_hours) || 0;
-                  const spent = parseFloat(task.spent_hours) || 0;
+                  const est = Math.round((parseFloat(task.estimate_hours) || 0) * 100) / 100;
+                  const spent = Math.round((parseFloat(task.spent_hours) || 0) * 100) / 100;
                   const timeProg = est > 0 ? Math.min(100, Math.round((spent / est) * 100)) : (task.status === 'Done' ? 100 : 0);
                   const taskId = task.id || `task-${idx}`;
                   const jiraUrl = `${JIRA_BASE_URL}/browse/${taskId}`;

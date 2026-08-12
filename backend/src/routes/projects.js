@@ -28,6 +28,9 @@ router.get('/projects', (req, res) => {
     `).all();
 
     for (const p of projects) {
+      p.total_estimate_hours = Math.round((p.total_estimate_hours || 0) * 100) / 100;
+      p.total_spent_hours = Math.round((p.total_spent_hours || 0) * 100) / 100;
+
       // Component map
       const compRows = db.prepare(`
         SELECT component, COUNT(*) as count 
@@ -154,6 +157,9 @@ router.get('/projects/:id', (req, res) => {
     const statusMap = { done: 0, active: 0, waiting: 0, todo: 0 };
 
     for (const t of tasks) {
+      t.estimate_hours = Math.round((t.estimate_hours || 0) * 100) / 100;
+      t.spent_hours = Math.round((t.spent_hours || 0) * 100) / 100;
+
       extractQuarterLabels(t.labels).forEach(q => quarterSet.add(q));
 
       const s = (t.status || '').toLowerCase();

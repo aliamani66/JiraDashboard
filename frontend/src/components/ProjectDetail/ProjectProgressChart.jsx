@@ -148,7 +148,7 @@ const ProjectProgressChart = ({ tasks = [], project = {} }) => {
           <div className="ppc-worklog-box">
             <div className="ppc-worklog-info">
               <span>⏱️ پیشرفت کارکرد تیمی (Worklog):</span>
-              <span><strong>{Math.round(totalSpent)}h</strong> / {Math.round(totalEst)}h</span>
+              <span><strong>{Math.round(totalSpent * 100) / 100}h</strong> / {Math.round(totalEst * 100) / 100}h</span>
             </div>
             <div className="ppc-worklog-bar">
               <div className="ppc-worklog-fill" style={{ width: `${hoursProgress}%` }} />
