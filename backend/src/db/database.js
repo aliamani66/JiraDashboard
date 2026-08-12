@@ -150,8 +150,13 @@ async function initDb() {
   const SQL = await initSqlJs();
   
   if (fs.existsSync(dbPath)) {
-    const fileBuffer = fs.readFileSync(dbPath);
-    db = new SQL.Database(fileBuffer);
+    try {
+      const fileBuffer = fs.readFileSync(dbPath);
+      db = new SQL.Database(fileBuffer);
+    } catch (dbReadErr) {
+      console.error('Database file corrupted or invalid SQLite binary. Resetting DB instance:', dbReadErr.message);
+      db = new SQL.Database();
+    }
   } else {
     db = new SQL.Database();
   }
