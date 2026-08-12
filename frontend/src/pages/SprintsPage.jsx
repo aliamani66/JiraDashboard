@@ -316,53 +316,6 @@ const SprintsPage = () => {
         </div>
       </div>
 
-      {/* Sprint Selector Tabs Bar */}
-      <div className="glass-card sp-sprint-selector-tile">
-        <div className="sp-selector-main-row">
-          <div className="sp-selector-combo-box">
-            <Flame size={18} className="text-accent-orange" />
-            <span className="sp-tabs-label">انتخاب اسپرینت:</span>
-            
-            <select
-              value={selectedSprint}
-              onChange={(e) => setSelectedSprint(e.target.value)}
-              className="sp-sprint-select-dropdown"
-            >
-              <option value="all">🌐 همه اسپرینت‌ها (مشاهده کل تسک‌ها)</option>
-              {allSprintNames.map(s => (
-                <option key={s} value={s}>🔥 {s}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Quick Pills Container (Displays Recent Sprints) */}
-          <div className="sp-quick-pills-row">
-            <button
-              className={`sp-sprint-tab ${selectedSprint === 'all' ? 'active' : ''}`}
-              onClick={() => setSelectedSprint('all')}
-            >
-              🌐 همه
-            </button>
-            {quickPills.map(s => (
-              <button
-                key={s}
-                className={`sp-sprint-tab ${selectedSprint === s ? 'active' : ''}`}
-                onClick={() => setSelectedSprint(s)}
-              >
-                🔥 {s}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {selectedSprint !== 'all' && (
-          <div className="sp-sprint-dates-banner">
-            <Calendar size={15} className="text-accent-cyan" />
-            <span>زمان‌بندی {selectedSprint}: <strong>از {selectedDates.start} تا {selectedDates.due}</strong></span>
-          </div>
-        )}
-      </div>
-
       {/* Sprint Summary KPI Cards */}
       <div className="sp-kpi-grid">
         <div className="glass-card sp-kpi-card orange">
@@ -423,7 +376,7 @@ const SprintsPage = () => {
         {/* Sprint Filter Dropdown */}
         <div className="sp-filter-item">
           <Flame size={16} className="text-accent-orange" />
-          <span className="sp-filter-label">فیلتر اسپرینت:</span>
+          <span className="sp-filter-label">انتخاب اسپرینت:</span>
           <select 
             value={selectedSprint} 
             onChange={(e) => setSelectedSprint(e.target.value)}
@@ -432,6 +385,25 @@ const SprintsPage = () => {
             <option value="all">🌐 همه اسپرینت‌ها ({allSprintNames.length})</option>
             {allSprintNames.map(s => (
               <option key={s} value={s}>🔥 {s}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Jira Project Filter */}
+        <div className="sp-filter-item">
+          <FolderGit2 size={16} className="text-accent-purple" style={{ color: '#C084FC' }} />
+          <span className="sp-filter-label">پروژه Jira:</span>
+          <select 
+            value={projectFilter} 
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className="sp-select"
+            style={{ fontWeight: 'bold', color: '#E9D5FF' }}
+          >
+            <option value="all">🌐 همه پروژه‌های Jira ({jiraProjectOptions.length})</option>
+            {jiraProjectOptions.map(pKey => (
+              <option key={pKey} value={pKey}>
+                📂 پروژه {pKey}
+              </option>
             ))}
           </select>
         </div>
@@ -453,24 +425,6 @@ const SprintsPage = () => {
         </div>
 
         <div className="sp-filter-item">
-          <FolderGit2 size={16} className="text-accent-purple" style={{ color: '#C084FC' }} />
-          <span className="sp-filter-label">پروژه Jira:</span>
-          <select 
-            value={projectFilter} 
-            onChange={(e) => setProjectFilter(e.target.value)}
-            className="sp-select"
-            style={{ fontWeight: 'bold', color: '#E9D5FF' }}
-          >
-            <option value="all">🌐 همه پروژه‌های Jira ({jiraProjectOptions.length})</option>
-            {jiraProjectOptions.map(pKey => (
-              <option key={pKey} value={pKey}>
-                📂 پروژه {pKey}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="sp-filter-item">
           <span className="sp-filter-label">وضعیت:</span>
           <select 
             value={statusFilter} 
@@ -485,25 +439,6 @@ const SprintsPage = () => {
           </select>
         </div>
 
-        <div className="sp-filter-item">
-          <span className="sp-filter-label">کامپوننت:</span>
-          <select 
-            value={componentFilter} 
-            onChange={(e) => setComponentFilter(e.target.value)}
-            className="sp-select"
-          >
-            <option value="all">همه کامپوننت‌ها</option>
-            <option value="dev">🚀 توسعه</option>
-            <option value="infrastructure">🌐 زیرساخت</option>
-            <option value="monitoring">📊 مانیتورینگ</option>
-            <option value="security">🔐 امنیت</option>
-            <option value="ai">🤖 هوش مصنوعی</option>
-            <option value="database">🗄️ دیتابیس</option>
-            <option value="testing">🧪 تست</option>
-            <option value="support">🛠️ پشتیبانی</option>
-          </select>
-        </div>
-
         <div className="sp-search-box">
           <Search size={16} className="sp-search-icon" />
           <input 
@@ -515,6 +450,14 @@ const SprintsPage = () => {
           />
         </div>
       </div>
+
+      {/* Selected Sprint Date Schedule Tag */}
+      {selectedSprint !== 'all' && (
+        <div className="sp-sprint-dates-banner" style={{ margin: '0.85rem 0 1.5rem 0' }}>
+          <Calendar size={15} className="text-accent-cyan" />
+          <span>زمان‌بندی {selectedSprint}: <strong>از {selectedDates.start} تا {selectedDates.due}</strong></span>
+        </div>
+      )}
 
       {/* Sprint Project Groups & Task Cards View */}
       <div className="sp-project-groups-list">
