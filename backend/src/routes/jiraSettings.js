@@ -306,11 +306,28 @@ function cleanErrorMessage(e) {
             fields: ['*all']
           }, { headers, httpsAgent, timeout: 10000 });
         } catch (e3) {
-          const errMsg = cleanErrorMessage(e3 || e);
-          return res.status(400).json({
-            success: false,
-            message: `پروژه متصل شد اما خطایی در دریافت تسک‌ها رخ داد (${jqlFilter}): ${errMsg}`
-          });
+          // If 403 Forbidden because project key is restricted or different, try fallback search
+          if ((e3.response && e3.response.status === 403) || (e && e.response && e.response.status === 403)) {
+            try {
+              searchRes = await axios.post(`${baseUrl}/rest/api/2/search`, {
+                jql: 'ORDER BY created DESC',
+                maxResults: 10,
+                fields: ['*all']
+              }, { headers, httpsAgent, timeout: 10000 });
+            } catch (fallbackErr) {
+              const errMsg = cleanErrorMessage(e3 || e);
+              return res.status(400).json({
+                success: false,
+                message: `حساب کاربری دسترسی به کلید پروژه "${pKeyStr}" را ندارد (خطای 403). لطفاً در جیرا دسترسی‌های حساب m.ghafoory را چک فرمایید یا در تنظیمات کلید پروژه را روی ALL قرار دهید: ${errMsg}`
+              });
+            }
+          } else {
+            const errMsg = cleanErrorMessage(e3 || e);
+            return res.status(400).json({
+              success: false,
+              message: `خطا در دریافت تسک‌ها از جیرا (${jqlFilter}): ${errMsg}`
+            });
+          }
         }
       }
     }

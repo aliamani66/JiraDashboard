@@ -119,6 +119,16 @@ async function jiraSearch(jql, fields = [], retries = 2) {
     }
   }
 
+  if (lastError && lastError.response && lastError.response.status === 403 && jql.includes('project')) {
+    const fallbackJql = jql.replace(/AND\s+project\s*=\s*"[^"]+"/gi, '').replace(/project\s*=\s*"[^"]+"/gi, '').trim();
+    if (fallbackJql && fallbackJql !== jql) {
+      console.log(`[JiraSearch 403 Fallback] Retrying search without project filter: ${fallbackJql}`);
+      try {
+        return await jiraSearch(fallbackJql, fields, 1);
+      } catch (_) {}
+    }
+  }
+
   if (lastError) throw lastError;
   throw new Error('Jira search failed due to authentication or network error');
 }
