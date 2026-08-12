@@ -567,7 +567,6 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     const gregStartDateOnly = (startStr || '').split(' ')[0];
     const gregEndDateOnly = (endStr || '').split(' ')[0];
 
-    // ✅ EXACT MATCH to working test/preview query (#3): project IN (...) AND created >= "YYYY-MM-DD" AND created <= "YYYY-MM-DD" ORDER BY created ASC
     const confirmedJql = projectClause
       ? `${projectClause} AND created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`
       : `created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
@@ -576,12 +575,20 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
     );
 
+    console.log(`[SYNC][${monthLabel}] JQL: ${confirmedJql}`);
+    console.log(`[SYNC][${monthLabel}] configuredProjKeys: ${[...configuredProjKeys].join(', ')}`);
+
+    // Count projects in DB
+    const projCount = db.prepare('SELECT COUNT(*) as c FROM projects').get();
+    console.log(`[SYNC][${monthLabel}] Projects in DB before sync: ${projCount.c}`);
+
     let searchRes = null;
     try {
       searchRes = await jiraService.jiraSearch(confirmedJql);
     } catch (err) {
       const errCode = err.code || (err.response ? `HTTP_${err.response.status}` : 'TIMEOUT_OR_NETWORK');
       const detailMsg = err.response?.data?.errorMessages?.join(', ') || err.message;
+      console.error(`[SYNC][${monthLabel}] Jira search ERROR: ${errCode} - ${detailMsg}`);
       return {
         success: false, monthIndex, monthLabel,
         dateRange: `${gregStartDateOnly} تا ${gregEndDateOnly}`,
@@ -595,6 +602,12 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     const endDt = new Date(endStr);
     const rawIssues = (searchRes && searchRes.issues) ? searchRes.issues : [];
 
+    console.log(`[SYNC][${monthLabel}] Raw issues from Jira: ${rawIssues.length}`);
+    if (rawIssues.length > 0) {
+      const projKeysSeen = [...new Set(rawIssues.map(i => i.fields?.project?.key || i.key?.split('-')[0] || '?'))];
+      console.log(`[SYNC][${monthLabel}] Project keys seen in raw issues: ${projKeysSeen.join(', ')}`);
+    }
+
     // Filter in JS: by configured project keys + exact date range
     const finalIssues = rawIssues.filter(issue => {
       const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
@@ -606,6 +619,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       return true;
     });
 
+    console.log(`[SYNC][${monthLabel}] Issues after JS project+date filter: ${finalIssues.length}`);
+
     const parsedTasks = finalIssues.map((issue, idx) => {
       const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue;
       if (parsed && !parsed.project_id) {
@@ -616,6 +631,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       return parsed;
     });
 
+    let savedCount = 0;
+    let skippedCount = 0;
     db.transaction(() => {
       for (const task of parsedTasks) {
         if (task && task.id) {
@@ -623,14 +640,27 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
           // Only insert tasks from configured project keys (check by key prefix, not exact epic ID)
           if (task.project_id && configuredProjKeys.size > 0) {
             const taskProjPrefix = (task.project_id || '').split('-')[0].toUpperCase();
-            if (!configuredProjKeys.has(taskProjPrefix)) continue;
+            if (!configuredProjKeys.has(taskProjPrefix)) {
+              skippedCount++;
+              continue;
+            }
           }
-          insertTask.run(task);
+          try {
+            insertTask.run(task);
+            savedCount++;
+          } catch (insertErr) {
+            console.error(`[SYNC][${monthLabel}] insertTask ERROR for ${task.id}:`, insertErr.message);
+          }
         }
       }
     })();
 
+    console.log(`[SYNC][${monthLabel}] Tasks saved: ${savedCount}, skipped (wrong project): ${skippedCount}`);
+
     autoLinkTasksToEpics();
+
+    const tasksInDb = db.prepare('SELECT COUNT(*) as c FROM tasks').get();
+    console.log(`[SYNC][${monthLabel}] Total tasks in DB after sync: ${tasksInDb.c}`);
 
     try {
       db.prepare(`UPDATE projects SET
@@ -645,9 +675,9 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       dateRange: `${gregStartDateOnly} تا ${gregEndDateOnly}`,
       jql: confirmedJql,
       winningVariant: 'کوئری #۳ (پروژه + تاریخ میلادی دقیق)',
-      taskCount: parsedTasks.length,
-      status: parsedTasks.length > 0 ? 'success' : 'empty',
-      message: parsedTasks.length > 0 ? `${parsedTasks.length} تسک دریافت و ذخیره شد` : '۰ تسک (در این بازه تسکی یافت نشد)',
+      taskCount: savedCount,
+      status: savedCount > 0 ? 'success' : 'empty',
+      message: savedCount > 0 ? `${savedCount} تسک دریافت و ذخیره شد` : '۰ تسک (در این بازه تسکی یافت نشد)',
       queryAuditResults: [{
         variant: 3, name: '✅ کوئری #۳ (پروژه + تاریخ میلادی دقیق)',
         jql: confirmedJql, taskCount: parsedTasks.length,
