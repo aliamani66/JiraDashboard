@@ -284,32 +284,20 @@ function cleanErrorMessage(e) {
       } catch (_) {}
     }
 
-    let searchRes;
+    let searchData;
     const jqlAttempts = [jqlFilter, jqlFilterQuotes, 'ORDER BY created DESC'];
     let lastSearchErr = null;
 
     for (const q of jqlAttempts) {
       try {
-        searchRes = await axios.post(`${baseUrl}/rest/api/2/search`, { jql: q, maxResults: 10, fields: ['*all'] }, { headers, httpsAgent, timeout: 10000 });
-        if (searchRes.data) break;
+        searchData = await jiraService.jiraSearch(q, ['*all']);
+        if (searchData && searchData.issues) break;
       } catch (e1) {
         lastSearchErr = e1;
-        try {
-          searchRes = await axios.get(`${baseUrl}/rest/api/2/search`, { headers, httpsAgent, params: { jql: q, maxResults: 10, fields: '*all' }, timeout: 10000 });
-          if (searchRes.data) break;
-        } catch (e2) {
-          lastSearchErr = e2;
-          try {
-            searchRes = await axios.post(`${baseUrl}/rest/api/3/search/jql`, { jql: q, maxResults: 10, fields: ['*all'] }, { headers, httpsAgent, timeout: 10000 });
-            if (searchRes.data) break;
-          } catch (e3) {
-            lastSearchErr = e3;
-          }
-        }
       }
     }
 
-    if (!searchRes || !searchRes.data) {
+    if (!searchData || !searchData.issues) {
       const errMsg = cleanErrorMessage(lastSearchErr);
       return res.status(400).json({
         success: false,
@@ -317,7 +305,7 @@ function cleanErrorMessage(e) {
       });
     }
 
-    const issues = searchRes.data.issues || [];
+    const issues = searchData.issues || [];
     if (issues.length === 0) {
       return res.json({ success: true, projectName: projName, complianceScore: 60, message: 'پروژه متصل شد اما تسکی یافت نشد.', diagnostics: [] });
     }
@@ -372,7 +360,7 @@ function cleanErrorMessage(e) {
       success: true,
       projectName: projName,
       sampleIssueKey: firstIssue.key,
-      totalIssuesFound: searchRes.data.total || issues.length,
+      totalIssuesFound: searchData.total || issues.length,
       complianceScore: 100,
       diagnostics: schemaReport,
       rawSampleKeys: customKeys,
