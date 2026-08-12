@@ -127,8 +127,20 @@ async function syncFromJira() {
 }
 
 function getLastSync() {
-  const db = getDb();
-  return db.prepare('SELECT * FROM sync_log ORDER BY id DESC LIMIT 1').get() || null;
+  try {
+    const db = getDb();
+    const logRow = db.prepare('SELECT * FROM sync_log WHERE status = "Success" ORDER BY id DESC LIMIT 1').get();
+    if (logRow && logRow.synced_at) {
+      return logRow;
+    }
+    const projRow = db.prepare('SELECT MAX(last_synced) as synced_at FROM projects').get();
+    if (projRow && projRow.synced_at) {
+      return { synced_at: projRow.synced_at, status: 'Success' };
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
 }
 
 function initCron() {

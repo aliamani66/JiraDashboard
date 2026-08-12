@@ -21,11 +21,17 @@ const Layout = ({ children }) => {
   const formatSyncTime = (rawDateStr) => {
     if (!rawDateStr) return 'همگام‌نشده';
     try {
-      let normalized = rawDateStr;
-      if (typeof rawDateStr === 'string' && !rawDateStr.endsWith('Z') && !rawDateStr.includes('T')) {
-        normalized = rawDateStr.replace(' ', 'T') + 'Z';
+      let d;
+      if (typeof rawDateStr === 'string') {
+        if (rawDateStr.includes('T')) {
+          d = new Date(rawDateStr);
+        } else {
+          d = new Date(rawDateStr.replace(' ', 'T'));
+        }
+      } else {
+        d = new Date(rawDateStr);
       }
-      const d = new Date(normalized);
+
       if (isNaN(d.getTime())) return 'همگام‌نشده';
 
       const now = new Date();
@@ -116,16 +122,14 @@ const Layout = ({ children }) => {
           </div>
           
           <div className="topbar-left">
-            {/* 🎨 Theme Toggle Button */}
+            {/* 🎨 Theme Toggle Button (Icon Only) */}
             <button 
-              className={`theme-toggle-btn ${theme === 'dracula' ? 'dracula-active' : ''}`}
+              className={`theme-toggle-btn icon-only-theme-btn ${theme === 'dracula' ? 'dracula-active' : ''}`}
               onClick={toggleTheme}
-              title={theme === 'dracula' ? 'تغییر به تم سایبرپانک' : 'تغییر به تم دراکولا'}
+              title={theme === 'dracula' ? 'تغییر تم داشبورد (فعلی: دراکولا)' : 'تغییر تم داشبورد (فعلی: سایبرپانک)'}
+              style={{ padding: '0.45rem', borderRadius: '50%', width: '36px', height: '36px', justifyContent: 'center' }}
             >
-              <Palette size={12} style={{ width: '12px', height: '12px', opacity: 0.85 }} />
-              <span className="theme-toggle-label">
-                {theme === 'dracula' ? 'تم دراکولا' : 'تم سایبرپانک'}
-              </span>
+              <Palette size={17} />
             </button>
 
             <div className="sync-section">
