@@ -167,6 +167,24 @@ async function initDb() {
   try { db.run("ALTER TABLE tasks ADD COLUMN description TEXT"); } catch (_) {}
 
 
+  // Ensure Admin user always exists
+  try {
+    const existingAdminRows = db.exec("SELECT COUNT(*) FROM users WHERE username = 'admin'");
+    const adminCount = (existingAdminRows && existingAdminRows[0] && existingAdminRows[0].values) ? existingAdminRows[0].values[0][0] : 0;
+    if (adminCount === 0) {
+      // bcrypt hash for 'admin123'
+      const hash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+      const allPerms = JSON.stringify(["dashboard", "overall_timeline", "waiting_tasks", "user_management", "jira_settings"]);
+      db.run(
+        "INSERT INTO users (username, password_hash, display_name, role, permissions) VALUES (?, ?, ?, ?, ?)",
+        ['admin', hash, 'مدیر سیستم', 'admin', allPerms]
+      );
+      console.log('Seeded permanent admin user (admin / admin123).');
+    }
+  } catch (err) {
+    console.error('Error ensuring admin user in database:', err.message);
+  }
+
   saveDb();
 
   dbWrapper = createDbWrapper();
