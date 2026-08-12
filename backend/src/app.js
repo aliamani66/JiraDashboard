@@ -12,6 +12,9 @@ const syncRoutes = require('./routes/sync');
 const userRoutes = require('./routes/users');
 const jiraSettingsRoutes = require('./routes/jiraSettings');
 
+const path = require('path');
+const fs = require('fs');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -19,12 +22,26 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 
+// Health Check Endpoint for PM2 / Docker / Nginx
+app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api', projectRoutes);
 app.use('/api/sync', syncRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/jira', jiraSettingsRoutes);
+
+// Static frontend serving if built
+const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+  });
+}
 
 // Global Error Handlers to prevent process exit loops on server
 process.on('uncaughtException', (err) => {

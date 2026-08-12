@@ -10,12 +10,20 @@ const schemaPath = path.join(__dirname, 'schema.sql');
 let db = null;
 let inTransaction = false;
 
-// Save database to file
+// Save database to file safely
 function saveDb() {
   if (db && !inTransaction) {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(dbPath, buffer);
+    try {
+      const data = db.export();
+      const buffer = Buffer.from(data);
+      const dir = path.dirname(dbPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(dbPath, buffer);
+    } catch (err) {
+      console.error('Error saving SQLite DB to disk:', err.message);
+    }
   }
 }
 
@@ -147,7 +155,16 @@ function createDbWrapper() {
 let dbWrapper = null;
 
 async function initDb() {
-  const SQL = await initSqlJs();
+  let SQL;
+  try {
+    const sqljsDir = path.dirname(require.resolve('sql.js'));
+    SQL = await initSqlJs({
+      locateFile: file => path.join(sqljsDir, file)
+    });
+  } catch (errLocate) {
+    console.warn('Could not locate sql-wasm with require.resolve, falling back to default initSqlJs:', errLocate.message);
+    SQL = await initSqlJs();
+  }
   
   if (fs.existsSync(dbPath)) {
     try {
