@@ -245,5 +245,6 @@ function getDb() {
 
 module.exports = {
   initDb,
-  getDb
+  getDb,
+  saveDb
 };
