@@ -242,17 +242,56 @@ router.get('/reports/manager-audit', (req, res) => {
     const projectsList = db.prepare('SELECT id, title FROM projects').all();
     const validProjectIds = new Set(projectsList.map(p => p.id));
 
+    // Fetch all estimate history logs
+    let historyRows = [];
+    try {
+      historyRows = db.prepare('SELECT * FROM task_estimate_history ORDER BY id ASC').all();
+    } catch (_) {}
+
+    const historyByTask = {};
+    for (const h of historyRows) {
+      if (!historyByTask[h.task_id]) historyByTask[h.task_id] = [];
+      historyByTask[h.task_id].push(h);
+    }
+
     let orphanCount = 0;
     let orphanSpentHours = 0;
     let noSprintCount = 0;
     let noEstimateCount = 0;
     let noDueDateCount = 0;
+    let estimateRevisionCount = 0;
+    let netEstimateIncreaseHours = 0;
+    let netEstimateDecreaseHours = 0;
 
     const auditedTasks = tasks.map(t => {
       const isOrphan = !t.project_id || !validProjectIds.has(t.project_id);
       const isNoSprint = !t.sprint_name || t.sprint_name.trim() === '';
       const isNoEstimate = !t.estimate_hours || Number(t.estimate_hours) === 0;
       const isNoDueDate = !t.due_date || t.due_date.trim() === '';
+
+      const taskHistory = historyByTask[t.id] || [];
+      const revisionCount = taskHistory.length;
+      let totalDelta = 0;
+      let initialEstimate = t.estimate_hours || 0;
+
+      if (revisionCount > 0) {
+        initialEstimate = taskHistory[0].old_estimate;
+        totalDelta = Math.round(((t.estimate_hours || 0) - initialEstimate) * 100) / 100;
+        estimateRevisionCount++;
+        if (totalDelta > 0) netEstimateIncreaseHours += totalDelta;
+        else netEstimateDecreaseHours += Math.abs(totalDelta);
+      }
+
+      let estimateChangeText = '';
+      if (revisionCount > 0) {
+        if (totalDelta > 0) {
+          estimateChangeText = `${Math.abs(totalDelta)}h افزایش (${revisionCount} بار دست‌خورده)`;
+        } else if (totalDelta < 0) {
+          estimateChangeText = `${Math.abs(totalDelta)}h کاهش (${revisionCount} بار دست‌خورده)`;
+        } else {
+          estimateChangeText = `بدون تغییر خالص (${revisionCount} بار دست‌خورده)`;
+        }
+      }
 
       if (isOrphan) {
         orphanCount++;
@@ -270,6 +309,11 @@ router.get('/reports/manager-audit', (req, res) => {
         is_no_sprint: isNoSprint,
         is_no_estimate: isNoEstimate,
         is_no_due_date: isNoDueDate,
+        is_estimate_revised: revisionCount > 0,
+        revision_count: revisionCount,
+        initial_estimate: initialEstimate,
+        total_delta: totalDelta,
+        estimate_change_text: estimateChangeText,
         project_key: t.project_id ? t.project_id.split('-')[0] : 'UNKNOWN'
       };
     });
@@ -282,7 +326,10 @@ router.get('/reports/manager-audit', (req, res) => {
         orphanSpentHours: Math.round(orphanSpentHours * 100) / 100,
         noSprintCount,
         noEstimateCount,
-        noDueDateCount
+        noDueDateCount,
+        estimateRevisionCount,
+        netEstimateIncreaseHours: Math.round(netEstimateIncreaseHours * 100) / 100,
+        netEstimateDecreaseHours: Math.round(netEstimateDecreaseHours * 100) / 100
       },
       tasks: auditedTasks
     });

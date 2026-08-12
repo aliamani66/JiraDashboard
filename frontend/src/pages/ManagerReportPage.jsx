@@ -62,6 +62,7 @@ const ManagerReportPage = () => {
       if (auditTypeFilter === 'no_sprint' && !t.is_no_sprint) return false;
       if (auditTypeFilter === 'no_estimate' && !t.is_no_estimate) return false;
       if (auditTypeFilter === 'no_due_date' && !t.is_no_due_date) return false;
+      if (auditTypeFilter === 'revised' && !t.is_estimate_revised) return false;
 
       // 2. Project Key Filter
       if (selectedProjectKeys.length > 0 && !selectedProjectKeys.includes(t.project_key)) {
@@ -90,6 +91,7 @@ const ManagerReportPage = () => {
     let noSprintCount = 0;
     let noEstimateCount = 0;
     let noDueDateCount = 0;
+    let revisedCount = 0;
 
     filteredTasks.forEach(t => {
       spentSum += (t.spent_hours || 0);
@@ -98,6 +100,7 @@ const ManagerReportPage = () => {
       if (t.is_no_sprint) noSprintCount++;
       if (t.is_no_estimate) noEstimateCount++;
       if (t.is_no_due_date) noDueDateCount++;
+      if (t.is_estimate_revised) revisedCount++;
     });
 
     return {
@@ -107,7 +110,8 @@ const ManagerReportPage = () => {
       orphanCount,
       noSprintCount,
       noEstimateCount,
-      noDueDateCount
+      noDueDateCount,
+      revisedCount
     };
   }, [filteredTasks]);
 
@@ -156,7 +160,7 @@ const ManagerReportPage = () => {
           <div>
             <h1 className="mr-title">گزارش ممیزی مدیر (Executive Audit Report)</h1>
             <p className="mr-subtitle">
-              پایش کیفیت ثبت اطلاعات، تسک‌های خارج از اسپرینت، فاقد تخمین/سررسید و تسک‌های خارج از اپیک به همراه مجموع ساعت کارکرد
+              پایش کیفیت ثبت اطلاعات، تغییرات استیمیت، تسک‌های خارج از اسپرینت، فاقد تخمین/سررسید و تسک‌های خارج از اپیک به همراه مجموع ساعت کارکرد
             </p>
           </div>
         </div>
@@ -169,7 +173,7 @@ const ManagerReportPage = () => {
         </div>
       </div>
 
-      {/* ─── 4 Top KPI Cards ───────────────────────────────────────────── */}
+      {/* ─── Top KPI Cards ─────────────────────────────────────────────── */}
       <div className="mr-kpi-grid">
         
         {/* KPI 1: Orphan Tasks */}
@@ -186,12 +190,26 @@ const ManagerReportPage = () => {
           </div>
         </div>
 
-        {/* KPI 2: No Sprint Tasks */}
+        {/* KPI 2: Revised Estimate Tasks */}
+        <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'revised' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('revised')}>
+          <div className="mr-kpi-top">
+            <span className="mr-kpi-label">📈 تغییرات استیمیت (دست‌خورده)</span>
+            <div className="mr-kpi-badge orange">
+              <Zap size={14} />
+            </div>
+          </div>
+          <div className="mr-kpi-value">{stats.estimateRevisionCount || 0} <small>تسک</small></div>
+          <div className="mr-kpi-subtext">
+            <span>تسک‌های دارای تغییر و نوسان تخمین زمان</span>
+          </div>
+        </div>
+
+        {/* KPI 3: No Sprint Tasks */}
         <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'no_sprint' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('no_sprint')}>
           <div className="mr-kpi-top">
             <span className="mr-kpi-label">🏃 تسک‌های خارج از اسپرینت</span>
             <div className="mr-kpi-badge info">
-              <Zap size={14} />
+              <Clock size={14} />
             </div>
           </div>
           <div className="mr-kpi-value">{stats.noSprintCount || 0} <small>تسک</small></div>
@@ -200,12 +218,12 @@ const ManagerReportPage = () => {
           </div>
         </div>
 
-        {/* KPI 3: No Estimate Tasks */}
+        {/* KPI 4: No Estimate Tasks */}
         <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'no_estimate' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('no_estimate')}>
           <div className="mr-kpi-top">
             <span className="mr-kpi-label">⏱️ تسک‌های بدون تخمین زمان</span>
             <div className="mr-kpi-badge danger">
-              <Clock size={14} />
+              <AlertTriangle size={14} />
             </div>
           </div>
           <div className="mr-kpi-value">{stats.noEstimateCount || 0} <small>تسک</small></div>
@@ -214,7 +232,7 @@ const ManagerReportPage = () => {
           </div>
         </div>
 
-        {/* KPI 4: No Due Date Tasks */}
+        {/* KPI 5: No Due Date Tasks */}
         <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'no_due_date' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('no_due_date')}>
           <div className="mr-kpi-top">
             <span className="mr-kpi-label">📅 تسک‌های بدون تاریخ سررسید</span>
@@ -249,6 +267,12 @@ const ManagerReportPage = () => {
                 onClick={() => setAuditTypeFilter('orphan')}
               >
                 📂 بدون اپیک ({stats.orphanCount || 0})
+              </button>
+              <button
+                className={`mr-pill ${auditTypeFilter === 'revised' ? 'active orange' : ''}`}
+                onClick={() => setAuditTypeFilter('revised')}
+              >
+                📈 تغییر استیمیت ({stats.estimateRevisionCount || 0})
               </button>
               <button
                 className={`mr-pill ${auditTypeFilter === 'no_sprint' ? 'active info' : ''}`}
@@ -349,6 +373,7 @@ const ManagerReportPage = () => {
                   <th>تخمین اولیه</th>
                   <th>کارکرد (Spent)</th>
                   <th>تاریخ سررسید</th>
+                  <th>تغییرات استیمیت (دست‌خوردگی)</th>
                   <th>اختلالات شناسایی‌شده</th>
                 </tr>
               </thead>
@@ -356,6 +381,7 @@ const ManagerReportPage = () => {
                 {filteredTasks.map(t => {
                   const issueBadges = [];
                   if (t.is_orphan) issueBadges.push({ label: 'بدون اپیک', type: 'warning' });
+                  if (t.is_estimate_revised) issueBadges.push({ label: `تغییر استیمیت (${t.revision_count} بار)`, type: 'orange' });
                   if (t.is_no_sprint) issueBadges.push({ label: 'بدون اسپرینت', type: 'info' });
                   if (t.is_no_estimate) issueBadges.push({ label: 'بدون تخمین', type: 'danger' });
                   if (t.is_no_due_date) issueBadges.push({ label: 'بدون سررسید', type: 'purple' });
@@ -406,6 +432,15 @@ const ManagerReportPage = () => {
                           <span className="badge-missing purple">📅 بدون سررسید</span>
                         ) : (
                           <span className="duedate-tag">{t.due_date}</span>
+                        )}
+                      </td>
+                      <td className="td-revision">
+                        {t.is_estimate_revised ? (
+                          <span className={`revision-tag ${t.total_delta > 0 ? 'increase' : t.total_delta < 0 ? 'decrease' : ''}`}>
+                            📈 {t.estimate_change_text}
+                          </span>
+                        ) : (
+                          <span className="text-muted">—</span>
                         )}
                       </td>
                       <td className="td-issues">

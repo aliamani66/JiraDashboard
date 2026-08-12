@@ -63,3 +63,13 @@ CREATE TABLE IF NOT EXISTS system_settings (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS task_estimate_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id TEXT NOT NULL,
+    old_estimate REAL DEFAULT 0,
+    new_estimate REAL DEFAULT 0,
+    delta_hours REAL DEFAULT 0,
+    changed_at TEXT NOT NULL,
+    FOREIGN KEY (task_id) REFERENCES tasks(id)
+);

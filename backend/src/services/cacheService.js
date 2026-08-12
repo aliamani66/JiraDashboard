@@ -79,6 +79,14 @@ async function syncFromJira() {
       WHERE id = ?
     `);
 
+    // Record existing task estimates in memory before full refresh to catch revisions
+    const existingTaskEstimates = {};
+    try {
+      db.prepare('SELECT id, estimate_hours FROM tasks').all().forEach(t => {
+        existingTaskEstimates[t.id] = t.estimate_hours || 0;
+      });
+    } catch (_) {}
+
     db.transaction(() => {
       // FULL WIPE: Delete ALL existing projects and tasks before inserting fresh Jira data
       db.prepare('DELETE FROM tasks').run();
@@ -95,6 +103,11 @@ async function syncFromJira() {
       }
     })();
 
+    const insertEstHistory = db.prepare(`
+      INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
     for (const epic of epics) {
       const tasks = await jiraService.fetchTasksForEpic(epic.id);
       db.transaction(() => {
@@ -105,6 +118,15 @@ async function syncFromJira() {
           if (!task.sprint_name) task.sprint_name = null;
           if (!task.sprint_start_date) task.sprint_start_date = null;
           if (!task.sprint_end_date) task.sprint_end_date = null;
+
+          const oldEst = existingTaskEstimates[task.id];
+          const newEst = task.estimate_hours || 0;
+
+          if (oldEst !== undefined && oldEst > 0 && newEst > 0 && oldEst !== newEst) {
+            const delta = Math.round((newEst - oldEst) * 100) / 100;
+            insertEstHistory.run(task.id, oldEst, newEst, delta, syncTime);
+          }
+
           insertTask.run(task);
           tasksSynced++;
         }
