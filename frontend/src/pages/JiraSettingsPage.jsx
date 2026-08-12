@@ -264,7 +264,7 @@ const JiraSettingsPage = () => {
     try {
       setDiagLoading(true);
       setDiagResult(null);
-      const res = await api.runJiraDiagnostic({});
+      const res = await api.runJiraDiagnostic(cfg.connection || {});
       setDiagResult(res);
     } catch (e) {
       setDiagResult({ success: false, message: e.message });
