@@ -2,6 +2,11 @@ const { verifyToken } = require('../services/authService');
 const { getDb } = require('../db/database');
 
 function authenticate(req, res, next) {
+  // Allow public/open access for report endpoints so opening print/export views in browser tabs never fails with 401
+  if (req.path.includes('/reports/') || (req.originalUrl && req.originalUrl.includes('/reports/'))) {
+    return next();
+  }
+
   let token = null;
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {

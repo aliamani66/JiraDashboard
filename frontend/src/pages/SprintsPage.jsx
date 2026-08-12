@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Flame, Calendar, Clock, ExternalLink, User, Layers, ArrowLeft, Filter, Search, CheckCircle2, Printer, FileText } from 'lucide-react';
+import { Flame, Calendar, Clock, ExternalLink, User, Layers, ArrowLeft, Filter, Search, CheckCircle2, Printer, FileText, AlertTriangle } from 'lucide-react';
 import { api } from '../services/api';
 import StatusBadge from '../components/common/StatusBadge';
 import './SprintsPage.css';
@@ -12,6 +12,7 @@ const JIRA_BASE_URL = 'https://10.100.71.140:8443';
 const SprintsPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [selectedSprint, setSelectedSprint] = useState('Sprint 5');
   const [projectFilter, setProjectFilter] = useState('all');
@@ -34,39 +35,91 @@ const SprintsPage = () => {
   };
 
   useEffect(() => {
+    let isMounted = true;
     const loadData = async () => {
       try {
         setLoading(true);
+        setError(null);
         const data = await api.getAllSprints();
-        const tList = data.tasks || [];
+        if (!isMounted) return;
+        const tList = Array.isArray(data?.tasks) ? data.tasks : [];
         setTasks(tList);
 
-        // Auto-select the latest sprint by default
-        const sNames = Array.from(new Set(tList.map(t => t.sprint_name || 'Sprint 10'))).sort((a, b) => {
-          const numA = parseInt(a.replace(/\D/g, '')) || 0;
-          const numB = parseInt(b.replace(/\D/g, '')) || 0;
-          return numA - numB;
-        });
-        if (sNames.length > 0) {
-          setSelectedSprint(sNames[sNames.length - 1]);
+        if (tList.length > 0) {
+          const sNames = Array.from(new Set(tList.map(t => String(t?.sprint_name || 'Sprint 10')))).sort((a, b) => {
+            const numA = parseInt(String(a).replace(/\D/g, '')) || 0;
+            const numB = parseInt(String(b).replace(/\D/g, '')) || 0;
+            return numA - numB;
+          });
+          if (sNames.length > 0) {
+            setSelectedSprint(sNames[sNames.length - 1]);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch sprints data:', err);
+        if (isMounted) {
+          setError(err?.message || 'خطا در دریافت داده‌های اسپرینت');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     loadData();
+    return () => { isMounted = false; };
   }, []);
 
-  if (loading) return <div className="loading-screen">در حال دریافت داده‌های اسپرینت پروژه‌ها...</div>;
+  if (loading) {
+    return (
+      <div className="sprints-page">
+        <div className="sp-top-bar">
+          <button className="back-btn" onClick={() => navigate('/')}>
+            <ArrowLeft size={18} />
+            <span>بازگشت به داشبورد</span>
+          </button>
+        </div>
+        <div className="glass-card sp-empty-state">
+          <div className="loading-spinner"></div>
+          <p style={{ marginTop: '1rem' }}>در حال دریافت داده‌های اسپرینت پروژه‌ها...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="sprints-page">
+        <div className="sp-top-bar">
+          <button className="back-btn" onClick={() => navigate('/')}>
+            <ArrowLeft size={18} />
+            <span>بازگشت به داشبورد</span>
+          </button>
+        </div>
+        <div className="glass-card sp-empty-state" style={{ color: '#F87171' }}>
+          <AlertTriangle size={36} />
+          <h3 style={{ marginTop: '0.5rem' }}>خطا در دریافت اطلاعات اسپرینت‌ها</h3>
+          <p>{error}</p>
+          <button className="sp-export-btn" onClick={() => window.location.reload()} style={{ marginTop: '1rem' }}>
+            تلاش مجدد
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const defaultSprintList = ['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4', 'Sprint 5', 'Sprint 6', 'Sprint 7', 'Sprint 8', 'Sprint 9', 'Sprint 10'];
 
   // Dynamically extract all unique sprint names from backend tasks with fallback
-  const extractedSprints = Array.from(new Set(tasks.map(t => t.sprint_name).filter(Boolean))).sort((a, b) => {
-    const numA = parseInt(a.replace(/\D/g, '')) || 0;
-    const numB = parseInt(b.replace(/\D/g, '')) || 0;
+  const extractedSprints = Array.from(
+    new Set(
+      (tasks || [])
+        .map(t => (t && t.sprint_name ? String(t.sprint_name).trim() : ''))
+        .filter(Boolean)
+    )
+  ).sort((a, b) => {
+    const numA = parseInt(String(a).replace(/\D/g, '')) || 0;
+    const numB = parseInt(String(b).replace(/\D/g, '')) || 0;
     return numA - numB;
   });
 
@@ -80,22 +133,37 @@ const SprintsPage = () => {
   }
 
   // Extract unique project options
-  const projectOptions = Array.from(new Set(tasks.map(t => JSON.stringify({ id: t.project_id, title: t.project_title }))))
-    .map(s => JSON.parse(s));
+  const projectOptions = Array.from(
+    new Set(
+      (tasks || [])
+        .filter(t => t && t.project_id)
+        .map(t => JSON.stringify({ id: String(t.project_id), title: String(t.project_title || t.project_id) }))
+    )
+  ).map(s => {
+    try { return JSON.parse(s); } catch { return null; }
+  }).filter(Boolean);
 
   // Extract unique assignee / person options
-  const assigneeOptions = Array.from(new Set(tasks.map(t => t.assignee).filter(Boolean))).sort();
+  const assigneeOptions = Array.from(
+    new Set(
+      (tasks || [])
+        .map(t => (t && t.assignee ? String(t.assignee).trim() : ''))
+        .filter(Boolean)
+    )
+  ).sort();
 
   // Filter Tasks
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = (tasks || []).filter(task => {
+    if (!task) return false;
+
     // Sprint Filter
-    if (selectedSprint !== 'all' && (task.sprint_name || 'Sprint 10') !== selectedSprint) return false;
+    if (selectedSprint !== 'all' && String(task.sprint_name || 'Sprint 10') !== selectedSprint) return false;
 
     // Project Filter
-    if (projectFilter !== 'all' && task.project_id !== projectFilter) return false;
+    if (projectFilter !== 'all' && String(task.project_id || '') !== projectFilter) return false;
 
     // Assignee / Person Filter
-    if (assigneeFilter !== 'all' && (task.assignee || 'تخصیص‌نیافته') !== assigneeFilter) return false;
+    if (assigneeFilter !== 'all' && String(task.assignee || 'تخصیص‌نیافته') !== assigneeFilter) return false;
 
     // Status Filter
     if (statusFilter === 'active' && !(task.status === 'In Progress' || task.status === 'in_progress')) return false;
@@ -104,23 +172,23 @@ const SprintsPage = () => {
     if (statusFilter === 'todo' && !(task.status === 'To Do' || task.status === 'to_do')) return false;
 
     // Component Filter
-    if (componentFilter !== 'all' && (task.component || 'dev') !== componentFilter) return false;
+    if (componentFilter !== 'all' && String(task.component || 'dev') !== componentFilter) return false;
 
     // Search Query
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
-      const matchKey = (task.id || '').toLowerCase().includes(q);
-      const matchTitle = (task.title || '').toLowerCase().includes(q);
-      const matchDesc = (task.description || '').toLowerCase().includes(q);
-      const matchProj = (task.project_title || '').toLowerCase().includes(q);
-      const matchAssignee = (task.assignee || '').toLowerCase().includes(q);
+      const matchKey = String(task.id || '').toLowerCase().includes(q);
+      const matchTitle = String(task.title || '').toLowerCase().includes(q);
+      const matchDesc = String(task.description || '').toLowerCase().includes(q);
+      const matchProj = String(task.project_title || '').toLowerCase().includes(q);
+      const matchAssignee = String(task.assignee || '').toLowerCase().includes(q);
       if (!matchKey && !matchTitle && !matchDesc && !matchProj && !matchAssignee) return false;
     }
 
     return true;
   });
 
-  // Calculate Sprint Stats with Strict Mutual Exclusivity (Sum MUST equal totalSprintTasks)
+  // Calculate Sprint Stats with Strict Mutual Exclusivity
   const totalSprintTasks = filteredTasks.length;
 
   let doneCount = 0;
@@ -129,6 +197,7 @@ const SprintsPage = () => {
   let todoCount = 0;
 
   for (const t of filteredTasks) {
+    if (!t) continue;
     if (t.status === 'Done' || t.status === 'done') {
       doneCount++;
     } else if (t.is_waiting || t.status === 'Waiting' || t.status === 'OnHolding') {
@@ -140,26 +209,21 @@ const SprintsPage = () => {
     }
   }
 
-  const totalSpentHours = Math.round(filteredTasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0));
-  const totalEstHours = Math.round(filteredTasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0));
+  const totalSpentHours = Math.round(filteredTasks.reduce((sum, t) => sum + (Number(t?.spent_hours) || 0), 0));
+  const totalEstHours = Math.round(filteredTasks.reduce((sum, t) => sum + (Number(t?.estimate_hours) || 0), 0));
   const sprintProgress = totalEstHours > 0 
     ? Math.min(100, Math.round((totalSpentHours / totalEstHours) * 100))
     : (totalSprintTasks > 0 ? Math.round((doneCount / totalSprintTasks) * 100) : 0);
 
-  // Percentages for status bar
-  const donePct = totalSprintTasks > 0 ? Math.round((doneCount / totalSprintTasks) * 100) : 0;
-  const activePct = totalSprintTasks > 0 ? Math.round((activeCount / totalSprintTasks) * 100) : 0;
-  const waitingPct = totalSprintTasks > 0 ? Math.round((waitingCount / totalSprintTasks) * 100) : 0;
-  const todoPct = totalSprintTasks > 0 ? Math.round((todoCount / totalSprintTasks) * 100) : 0;
-
   // Group filtered tasks by Project for the Sprint Board View
   const tasksByProjectMap = new Map();
   for (const t of filteredTasks) {
-    const pKey = t.project_id;
+    if (!t) continue;
+    const pKey = String(t.project_id || 'GENERAL');
     if (!tasksByProjectMap.has(pKey)) {
       tasksByProjectMap.set(pKey, {
         projectId: pKey,
-        projectTitle: t.project_title,
+        projectTitle: String(t.project_title || pKey),
         tasks: []
       });
     }
@@ -168,6 +232,8 @@ const SprintsPage = () => {
 
   const projectGroups = Array.from(tasksByProjectMap.values());
   const selectedDates = sprintDates[selectedSprint] || { start: '---', due: '---' };
+
+  const token = localStorage.getItem('token') || '';
 
   return (
     <motion.div 
@@ -192,7 +258,7 @@ const SprintsPage = () => {
         <div className="sp-export-btns-group">
           <button 
             className="sp-export-btn" 
-            onClick={() => window.open(`/api/reports/sprints-html?sprint=${encodeURIComponent(selectedSprint)}&token=${localStorage.getItem('token')}`, '_blank')} 
+            onClick={() => window.open(`/api/reports/sprints-html?sprint=${encodeURIComponent(selectedSprint)}${token ? `&token=${token}` : ''}`, '_blank')} 
             title="خروجی و چاپ گزارش رسمی تحویل‌دادنی‌ها (PDF Printable)"
           >
             <Printer size={15} />
@@ -202,8 +268,8 @@ const SprintsPage = () => {
           {selectedSprint !== 'all' && (
             <button 
               className="sp-export-btn secondary" 
-              onClick={() => window.open(`/api/reports/sprints-html?sprint=all&token=${localStorage.getItem('token')}`, '_blank')} 
-              title="خروجی و چاپ گزارش تمام اسپرین‌ها"
+              onClick={() => window.open(`/api/reports/sprints-html?sprint=all${token ? `&token=${token}` : ''}`, '_blank')} 
+              title="خروجی و چاپ گزارش تمام اسپرینت‌ها"
             >
               <FileText size={15} />
               <span>گزارش جامع تمام اسپرینت‌ها</span>
@@ -271,7 +337,7 @@ const SprintsPage = () => {
 
         <div className="glass-card sp-kpi-card status-breakdown-card">
           <div className="sp-status-grid-mini">
-            <div className="sp-mini-chip done" title="تسکس که کامل انجام شده‌اند">
+            <div className="sp-mini-chip done" title="تسک‌هایی که کامل انجام شده‌اند">
               <span className="dot green"></span>
               <span className="lbl">✅ انجام‌شده:</span>
               <strong>{doneCount}</strong>
@@ -313,8 +379,6 @@ const SprintsPage = () => {
           </div>
         </div>
       </div>
-
-
 
       {/* Filter & Search Bar */}
       <div className="glass-card sp-filter-bar">
@@ -432,8 +496,8 @@ const SprintsPage = () => {
 
               <div className="sp-tasks-grid">
                 {group.tasks.map(task => {
-                  const est = task.estimate_hours || 0;
-                  const spent = task.spent_hours || 0;
+                  const est = Number(task.estimate_hours) || 0;
+                  const spent = Number(task.spent_hours) || 0;
                   const timeProg = est > 0 ? Math.min(100, Math.round((spent / est) * 100)) : (task.status === 'Done' ? 100 : 0);
                   const jiraUrl = `${JIRA_BASE_URL}/browse/${task.id}`;
 
