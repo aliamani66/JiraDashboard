@@ -586,8 +586,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   `);
 
   const cfg = jiraService.getJiraConfig();
-  const projKeys = cfg.projectKey ? cfg.projectKey.split(',').map(k => k.trim()).filter(Boolean) : [];
-  const projectJqlClause = projKeys.length > 0 ? `project IN (${projKeys.join(',')}) AND ` : '';
+  const projKeys = cfg.projectKey ? cfg.projectKey.split(',').map(k => k.trim().toUpperCase()).filter(Boolean) : [];
+  const projectJqlClause = projKeys.length > 0 ? `project IN (${projKeys.map(k => `"${k}"`).join(',')}) AND ` : '';
 
   let effectiveJalaliStart = jalaliStartStr;
   let effectiveJalaliEnd = jalaliEndStr;
@@ -608,6 +608,10 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     }
   }
 
+  const gregorianWithTime = `${projectJqlClause}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC`;
+  const gregorianDateOnly = `${projectJqlClause}created >= "${startStr.split(' ')[0]}" AND created <= "${endStr.split(' ')[0]}" ORDER BY created ASC`;
+  const gregorianSlashDateOnly = `${projectJqlClause}created >= "${startStr.split(' ')[0].replace(/-/g, '/')}" AND created <= "${endStr.split(' ')[0].replace(/-/g, '/')}" ORDER BY created ASC`;
+
   const jalaliSlashWithTime = effectiveJalaliStart && effectiveJalaliEnd ? `${projectJqlClause}created >= "${effectiveJalaliStart}" AND created <= "${effectiveJalaliEnd}" ORDER BY created ASC` : null;
   const jalaliDashWithTime = effectiveJalaliStart && effectiveJalaliEnd ? `${projectJqlClause}created >= "${effectiveJalaliStart.replace(/\//g, '-')}" AND created <= "${effectiveJalaliEnd.replace(/\//g, '-')}" ORDER BY created ASC` : null;
   
@@ -616,7 +620,10 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   const jalaliSlashDateOnly = startOnlyDateSlash && endOnlyDateSlash ? `${projectJqlClause}created >= "${startOnlyDateSlash}" AND created <= "${endOnlyDateSlash}" ORDER BY created ASC` : null;
   const jalaliDashDateOnly = startOnlyDateSlash && endOnlyDateSlash ? `${projectJqlClause}created >= "${startOnlyDateSlash.replace(/\//g, '-')}" AND created <= "${endOnlyDateSlash.replace(/\//g, '-')}" ORDER BY created ASC` : null;
 
-  const jalaliQueries = [
+  const queriesToTry = [
+    gregorianWithTime,
+    gregorianDateOnly,
+    gregorianSlashDateOnly,
     jalaliSlashWithTime,
     jalaliDashWithTime,
     jalaliSlashDateOnly,
@@ -624,18 +631,18 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   ].filter(Boolean);
 
   let searchRes = null;
-  let jql = jalaliSlashWithTime || `${projectJqlClause}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC`;
+  let jql = gregorianWithTime;
   let lastError = null;
 
   try {
-    for (const query of jalaliQueries) {
+    for (const query of queriesToTry) {
       try {
         jql = query;
         const res = await jiraService.jiraSearch(query);
         if (res && Array.isArray(res.issues)) {
           searchRes = res;
           if (res.issues.length > 0) {
-            break; // Stop immediately when issues are returned!
+            break; // Stop immediately when issues are found!
           }
         }
       } catch (err) {
