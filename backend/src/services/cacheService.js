@@ -621,42 +621,54 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   const jalaliDashDateOnly = startOnlyDateSlash && endOnlyDateSlash ? `${projectJqlClause}created >= "${startOnlyDateSlash.replace(/\//g, '-')}" AND created <= "${endOnlyDateSlash.replace(/\//g, '-')}" ORDER BY created ASC` : null;
 
   const queriesToTry = [
-    gregorianWithTime,
-    gregorianDateOnly,
-    gregorianSlashDateOnly,
-    jalaliSlashWithTime,
-    jalaliDashWithTime,
-    jalaliSlashDateOnly,
-    jalaliDashDateOnly
-  ].filter(Boolean);
+    { id: 1, name: 'میلادی با ساعت', jql: gregorianWithTime },
+    { id: 2, name: 'میلادی تاریخ تنها', jql: gregorianDateOnly },
+    { id: 3, name: 'میلادی با اسلش', jql: gregorianSlashDateOnly },
+    { id: 4, name: 'شمسی اسلش با ساعت', jql: jalaliSlashWithTime },
+    { id: 5, name: 'شمسی دش با ساعت', jql: jalaliDashWithTime },
+    { id: 6, name: 'شمسی اسلش تاریخ تنها', jql: jalaliSlashDateOnly },
+    { id: 7, name: 'شمسی دش تاریخ تنها', jql: jalaliDashDateOnly }
+  ].filter(q => q.jql);
 
-  let searchRes = null;
-  let jql = gregorianWithTime;
-  let lastError = null;
+  const queryAuditResults = [];
+  let winningSearchRes = null;
+  let winningJql = gregorianWithTime;
+  let winningVariant = null;
 
   try {
-    for (const query of queriesToTry) {
+    for (const qItem of queriesToTry) {
       try {
-        jql = query;
-        const res = await jiraService.jiraSearch(query);
-        if (res && Array.isArray(res.issues)) {
-          searchRes = res;
-          if (res.issues.length > 0) {
-            break; // Stop immediately when issues are found!
-          }
+        const res = await jiraService.jiraSearch(qItem.jql);
+        const count = (res && res.issues) ? res.issues.length : 0;
+        
+        const auditItem = {
+          variant: qItem.id,
+          name: qItem.name,
+          jql: qItem.jql,
+          taskCount: count,
+          status: count > 0 ? 'success' : 'zero'
+        };
+        queryAuditResults.push(auditItem);
+
+        if (count > 0 && !winningSearchRes) {
+          winningSearchRes = res;
+          winningJql = qItem.jql;
+          winningVariant = qItem.name;
         }
       } catch (err) {
-        lastError = err;
+        queryAuditResults.push({
+          variant: qItem.id,
+          name: qItem.name,
+          jql: qItem.jql,
+          taskCount: 0,
+          status: 'error',
+          error: err.message || 'خطا در اجرای JQL'
+        });
       }
     }
 
-    if (!searchRes) {
-      if (lastError) throw lastError;
-      searchRes = { issues: [] };
-    }
-
-    const rawIssues = searchRes.issues || [];
-    const parsedTasks = rawIssues.map((issue, idx) => jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue);
+    const finalIssues = (winningSearchRes && winningSearchRes.issues) ? winningSearchRes.issues : [];
+    const parsedTasks = finalIssues.map((issue, idx) => jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue);
 
     db.transaction(() => {
       for (const task of parsedTasks) {
@@ -682,10 +694,12 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       monthIndex,
       monthLabel,
       dateRange: `${startStr.split(' ')[0]} تا ${endStr.split(' ')[0]}`,
-      jql,
+      jql: winningJql,
+      winningVariant: winningVariant || 'هیچ‌کدام تسک نداشت',
       taskCount: parsedTasks.length,
       status: parsedTasks.length > 0 ? 'success' : 'empty',
-      message: parsedTasks.length > 0 ? `${parsedTasks.length} تسک دریافت شد` : '۰ تسک (بدون نتیجه)'
+      message: parsedTasks.length > 0 ? `${parsedTasks.length} تسک دریافت شد` : '۰ تسک (بدون نتیجه)',
+      queryAuditResults
     };
   } catch (err) {
     const errCode = err.code || (err.response ? `HTTP_${err.response.status}` : 'TIMEOUT_OR_NETWORK');

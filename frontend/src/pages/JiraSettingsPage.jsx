@@ -992,29 +992,64 @@ const JiraSettingsPage = () => {
               </thead>
               <tbody>
                 {monthlyResults.monthlyResults?.map((m) => (
-                  <tr key={m.monthIndex}>
-                    <td><strong>ماه {m.monthIndex}</strong></td>
-                    <td>
-                      <strong style={{ color: '#F8FAFC' }}>{m.jalaliName}</strong>
-                      <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>{m.gregorianName}</div>
-                    </td>
-                    <td><code className="mono-code" style={{ fontSize: '0.8rem' }}>{m.dateRange}</code></td>
-                    <td>
-                      <span className={`diag-status-pill ${m.status === 'success' ? 'matched' : m.status === 'empty' ? 'warning' : 'missing'}`}>
-                        {m.status === 'success' ? '✅ موفق' : m.status === 'empty' ? '⚠️ ۰ تسک (بدون نتیجه)' : '❌ خطا'}
-                      </span>
-                    </td>
-                    <td>
-                      <strong style={{ color: m.taskCount > 0 ? '#38BDF8' : '#64748B', fontSize: '0.95rem' }}>
-                        {m.taskCount} تسک
-                      </strong>
-                    </td>
-                    <td>
-                      <code className="diag-val-code accent" style={{ fontSize: '0.76rem', whiteSpace: 'nowrap', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block' }} title={m.jql}>
-                        {m.jql}
-                      </code>
-                    </td>
-                  </tr>
+                  <React.Fragment key={m.monthIndex}>
+                    <tr>
+                      <td><strong>ماه {m.monthIndex}</strong></td>
+                      <td>
+                        <strong style={{ color: '#F8FAFC' }}>{m.jalaliName}</strong>
+                        <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>{m.gregorianName}</div>
+                      </td>
+                      <td><code className="mono-code" style={{ fontSize: '0.8rem' }}>{m.dateRange}</code></td>
+                      <td>
+                        <span className={`diag-status-pill ${m.status === 'success' ? 'matched' : m.status === 'empty' ? 'warning' : 'missing'}`}>
+                          {m.status === 'success' ? '✅ موفق' : m.status === 'empty' ? '⚠️ ۰ تسک (بدون نتیجه)' : '❌ خطا'}
+                        </span>
+                      </td>
+                      <td>
+                        <strong style={{ color: m.taskCount > 0 ? '#38BDF8' : '#64748B', fontSize: '0.95rem' }}>
+                          {m.taskCount} تسک
+                        </strong>
+                      </td>
+                      <td>
+                        <code className="diag-val-code accent" style={{ fontSize: '0.76rem', whiteSpace: 'nowrap', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block' }} title={m.jql}>
+                          {m.jql}
+                        </code>
+                      </td>
+                    </tr>
+                    {/* 📊 7-VARIANT JQL QUERY AUDIT BADGES */}
+                    {m.queryAuditResults && m.queryAuditResults.length > 0 && (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '0.5rem 1rem 0.85rem 1rem', background: 'rgba(15, 23, 42, 0.4)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                          <div style={{ fontSize: '0.76rem', fontWeight: 'bold', color: '#6EE7B7', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span>📊 پایش زنده ۷ مدل کوئری JQL برای {m.jalaliName}:</span>
+                            {m.winningVariant && <span style={{ color: '#38BDF8' }}>(کوئری برنده: {m.winningVariant})</span>}
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                            {m.queryAuditResults.map(q => (
+                              <span
+                                key={q.variant}
+                                style={{
+                                  background: q.taskCount > 0 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+                                  border: q.taskCount > 0 ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.08)',
+                                  color: q.taskCount > 0 ? '#6EE7B7' : '#94A3B8',
+                                  borderRadius: '8px',
+                                  padding: '0.25rem 0.6rem',
+                                  fontSize: '0.73rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem'
+                                }}
+                                title={`${q.name}: ${q.jql}`}
+                              >
+                                <span>{q.taskCount > 0 ? '✅' : '⚪'} #{q.variant} {q.name}:</span>
+                                <strong style={{ color: q.taskCount > 0 ? '#FFFFFF' : '#CBD5E1' }}>{q.taskCount} تسک</strong>
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
