@@ -55,6 +55,28 @@ async function syncFromJira() {
 
     console.log(`Epics saved: ${projectsSynced}. Now fetching tasks per epic...`);
 
+    // First query total task count directly from Jira API for configured projects
+    let totalJiraCount = 0;
+    try {
+      const cfg = jiraService.getJiraConfig();
+      const projKeyStr = cfg.projectKey;
+      let projectFilter = '';
+      if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
+        const projects = projKeyStr.split(',').map(p => p.trim().toUpperCase()).filter(Boolean);
+        if (projects.length > 1) {
+          projectFilter = `project IN (${projects.join(',')})`;
+        } else if (projects.length === 1) {
+          projectFilter = `project = ${projects[0]}`;
+        }
+      }
+      const countJql = projectFilter ? `${projectFilter} AND issuetype != Epic` : `issuetype != Epic`;
+      const countRes = await jiraService.jiraSearch(countJql, ['key'], { maxResults: 1 });
+      totalJiraCount = countRes.total || 0;
+      console.log(`[JIRA COUNT CHECK] Total tasks in Jira for ${projKeyStr}: ${totalJiraCount}`);
+    } catch (countErr) {
+      console.error('Error fetching total Jira task count:', countErr.message);
+    }
+
     // Step 2: Fetch tasks per epic (correct project_id guaranteed)
     const insertTask = db.prepare(`
       INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, last_synced)
@@ -121,14 +143,15 @@ async function syncFromJira() {
     const logInsert = db.prepare('INSERT INTO sync_log (synced_at, status, message, projects_synced, tasks_synced) VALUES (?, ?, ?, ?, ?)');
     logInsert.run(syncTime, 'Success', 'Full sync completed', projectsSynced, dbTotalTasks);
 
-    console.log(`Full sync complete. Epics: ${projectsSynced}, Tasks fetched: ${tasksSynced}, DB total: ${dbTotalTasks} (regular: ${dbRegularTasks}, subtasks: ${dbSubtasks})`);
+    console.log(`Full sync complete. Epics: ${projectsSynced}, Jira total report: ${totalJiraCount}, Tasks fetched: ${tasksSynced}, DB total: ${dbTotalTasks} (regular: ${dbRegularTasks}, subtasks: ${dbSubtasks})`);
     return {
       success: true,
       projectsSynced,
+      jiraTotalCount: totalJiraCount,
       tasksSynced: dbTotalTasks,
       dbRegularTasks,
       dbSubtasks,
-      message: `بازسازی کامل انجام شد (${projectsSynced} اپیک، ${dbRegularTasks} تسک + ${dbSubtasks} زیرتسک = ${dbTotalTasks} کل)`
+      message: `بازسازی کامل انجام شد (${projectsSynced} اپیک، کل جیرا: ${totalJiraCount} تسک | دیتابیس: ${dbRegularTasks} تسک + ${dbSubtasks} زیرتسک = ${dbTotalTasks} کل)`
     };
 
   } catch (err) {
