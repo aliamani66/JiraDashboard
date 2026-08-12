@@ -1511,6 +1511,37 @@ const JiraSettingsPage = () => {
               <strong style={{ fontSize: '1.35rem', color: '#38BDF8', fontWeight: 800 }}>{dbStats?.dbSizeMb ?? '0.00'} <small style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>MB</small></strong>
             </div>
           </div>
+
+          {/* 🏷️ COMPONENTS BREAKDOWN */}
+          <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px dashed rgba(255, 255, 255, 0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                🏷️ کامپوننت‌های شناسایی‌شده در تسک‌های دیتابیس ({dbStats?.totalComponents || 0} نوع):
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+              {dbStats?.componentsList && dbStats.componentsList.length > 0 ? (
+                dbStats.componentsList.map(comp => (
+                  <span key={comp.name} style={{
+                    background: 'rgba(236, 72, 153, 0.12)',
+                    border: '1px solid rgba(236, 72, 153, 0.35)',
+                    color: '#F472B6',
+                    padding: '0.25rem 0.65rem',
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem'
+                  }}>
+                    {comp.name} <span style={{ background: 'rgba(236, 72, 153, 0.25)', padding: '0.1rem 0.4rem', borderRadius: '6px', fontSize: '0.7rem', color: '#FFFFFF' }}>{comp.count} تسک</span>
+                  </span>
+                ))
+              ) : (
+                <span style={{ fontSize: '0.78rem', color: '#64748B' }}>کامپوننتی یافت نشد. با زدن دکمه همگام‌سازی یا استخراج بازه‌ای، کامپوننت‌های جیرا لود خواهند شد.</span>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="jsp-grid-2">

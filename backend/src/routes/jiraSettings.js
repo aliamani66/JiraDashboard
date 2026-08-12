@@ -699,8 +699,23 @@ router.get('/db-stats', (req, res) => {
       }
     } catch (_) {}
 
-    const lastSyncedRow = db.prepare("SELECT MAX(last_synced) as max_sync FROM tasks").get();
-    const lastSynced = lastSyncedRow?.max_sync || null;
+    // Extract distinct components from tasks in DB
+    const componentRows = db.prepare("SELECT component FROM tasks WHERE component IS NOT NULL AND component != ''").all();
+    const componentCountsMap = new Map();
+
+    for (const r of componentRows) {
+      if (r.component) {
+        // split by comma or vertical bar if multiple components stored
+        const parts = String(r.component).split(/[,|]/).map(c => c.trim()).filter(Boolean);
+        for (const p of parts) {
+          componentCountsMap.set(p, (componentCountsMap.get(p) || 0) + 1);
+        }
+      }
+    }
+
+    const componentsList = Array.from(componentCountsMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
 
     res.json({
       success: true,
@@ -711,7 +726,9 @@ router.get('/db-stats', (req, res) => {
       inProgressTasks,
       todoTasks,
       dbSizeMb,
-      lastSynced
+      lastSynced,
+      totalComponents: componentsList.length,
+      componentsList
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'خطا در دریافت آمار دیتابیس: ' + err.message });
