@@ -43,11 +43,13 @@ async function syncFromJira() {
         epic.last_synced = syncTime;
         if (!epic.capabilities) epic.capabilities = '';
         if (!epic.confluence_link) epic.confluence_link = null;
-
         insertProject.run(epic);
         projectsSynced++;
       }
     })();
+
+    // Link any previously-saved tasks to these newly-fetched epics
+    autoLinkTasksToEpics();
 
     const logInsert = db.prepare('INSERT INTO sync_log (synced_at, status, message, projects_synced, tasks_synced) VALUES (?, ?, ?, ?, ?)');
     logInsert.run(syncTime, 'Success', 'Epic extraction completed successfully', projectsSynced, tasksSynced);
@@ -489,6 +491,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
           insertProject.run(epic);
         }
       })();
+      // Link any previously-saved tasks to these newly-fetched epics
+      autoLinkTasksToEpics();
     } catch (err) {
       console.error('Fetching epics failed during single month sync:', err.message);
     }
@@ -568,8 +572,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     const gregEndDateOnly = (endStr || '').split(' ')[0];
 
     const confirmedJql = projectClause
-      ? `${projectClause} AND created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`
-      : `created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
+      ? `${projectClause} AND issuetype != Epic AND created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`
+      : `issuetype != Epic AND created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
 
     const configuredProjKeys = new Set(
       projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
