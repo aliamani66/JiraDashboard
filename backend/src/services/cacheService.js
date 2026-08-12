@@ -587,8 +587,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 
   const cfg = jiraService.getJiraConfig();
   const projKeys = cfg.projectKey ? cfg.projectKey.split(',').map(k => k.trim().toUpperCase()).filter(Boolean) : [];
-  const projectInNoQuotes = projKeys.length > 0 ? `project IN (${projKeys.join(',')}) AND ` : '';
-  const projectEqNoQuotes = projKeys.length === 1 ? `project = ${projKeys[0]} AND ` : projectInNoQuotes;
+  const primaryProj = projKeys[0] || 'ORD';
+  const projInList = projKeys.length > 0 ? projKeys.join(',') : 'ORD';
 
   let effectiveJalaliStart = jalaliStartStr;
   let effectiveJalaliEnd = jalaliEndStr;
@@ -609,14 +609,30 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     }
   }
 
+  const jalaliSlashDateOnly = effectiveJalaliStart && effectiveJalaliEnd ? effectiveJalaliStart.split(' ')[0] : '';
+  const jalaliSlashDateEndOnly = effectiveJalaliStart && effectiveJalaliEnd ? effectiveJalaliEnd.split(' ')[0] : '';
+  const jalaliDashDateOnly = jalaliSlashDateOnly ? jalaliSlashDateOnly.replace(/\//g, '-') : '';
+  const jalaliDashDateEndOnly = jalaliSlashDateEndOnly ? jalaliSlashDateEndOnly.replace(/\//g, '-') : '';
+
+  const gregStartDateOnly = startStr.split(' ')[0];
+  const gregEndDateOnly = endStr.split(' ')[0];
+  const gregStartSlashOnly = gregStartDateOnly.replace(/-/g, '/');
+  const gregEndSlashOnly = gregEndDateOnly.replace(/-/g, '/');
+
   const queriesToTry = [
-    { id: 1, name: 'پروژه تک با تاریخ میلادی (project = ORD)', jql: projKeys.length > 0 ? `project = ${projKeys[0]} AND created >= "${startStr.split(' ')[0]}" AND created <= "${endStr.split(' ')[0]}" ORDER BY created ASC` : null },
-    { id: 2, name: 'پروژه IN با تاریخ میلادی (project IN (ORD))', jql: projKeys.length > 0 ? `project IN (${projKeys.join(',')}) AND created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC` : null },
-    { id: 3, name: 'پروژه با تاریخ شمسی اسلش (1403/06/01)', jql: (effectiveJalaliStart && projKeys.length > 0) ? `project IN (${projKeys.join(',')}) AND created >= "${effectiveJalaliStart.split(' ')[0]}" AND created <= "${effectiveJalaliEnd.split(' ')[0]}" ORDER BY created ASC` : null },
-    { id: 4, name: 'پروژه با تاریخ شمسی دش (1403-06-01)', jql: (effectiveJalaliStart && projKeys.length > 0) ? `project IN (${projKeys.join(',')}) AND created >= "${effectiveJalaliStart.split(' ')[0].replace(/\//g, '-')}" AND created <= "${effectiveJalaliEnd.split(' ')[0].replace(/\//g, '-')}" ORDER BY created ASC` : null },
-    { id: 5, name: 'استخراج کامل پروژه (project = ORD)', jql: projKeys.length > 0 ? `project = ${projKeys[0]} ORDER BY created DESC` : null },
-    { id: 6, name: 'استخراج کامل پروژه‌ها (project IN (ORD))', jql: projKeys.length > 0 ? `project IN (${projKeys.join(',')}) ORDER BY created DESC` : null },
-    { id: 7, name: 'استخراج عمومی کلیه تسک‌ها (ORDER BY created DESC)', jql: `ORDER BY created DESC` }
+    { id: 1, name: 'میلادی با ساعت (project = ORD AND created >= "YYYY-MM-DD HH:mm")', jql: `project = ${primaryProj} AND created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC` },
+    { id: 2, name: 'میلادی تاریخ تنها (project = ORD AND created >= "YYYY-MM-DD")', jql: `project = ${primaryProj} AND created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC` },
+    { id: 3, name: 'میلادی با اسلش (project = ORD AND created >= "YYYY/MM/DD")', jql: `project = ${primaryProj} AND created >= "${gregStartSlashOnly}" AND created <= "${gregEndSlashOnly}" ORDER BY created ASC` },
+    { id: 4, name: 'شمسی اسلش با ساعت (created >= "1403/01/01 00:00")', jql: effectiveJalaliStart ? `project = ${primaryProj} AND created >= "${effectiveJalaliStart}" AND created <= "${effectiveJalaliEnd}" ORDER BY created ASC` : null },
+    { id: 5, name: 'شمسی دش با ساعت (created >= "1403-01-01 00:00")', jql: effectiveJalaliStart ? `project = ${primaryProj} AND created >= "${effectiveJalaliStart.replace(/\//g, '-')}" AND created <= "${effectiveJalaliEnd.replace(/\//g, '-')}" ORDER BY created ASC` : null },
+    { id: 6, name: 'شمسی اسلش تاریخ تنها (created >= "1403/01/01")', jql: jalaliSlashDateOnly ? `project = ${primaryProj} AND created >= "${jalaliSlashDateOnly}" AND created <= "${jalaliSlashDateEndOnly}" ORDER BY created ASC` : null },
+    { id: 7, name: 'شمسی دش تاریخ تنها (created >= "1403-01-01")', jql: jalaliDashDateOnly ? `project = ${primaryProj} AND created >= "${jalaliDashDateOnly}" AND created <= "${jalaliDashDateEndOnly}" ORDER BY created ASC` : null },
+    { id: 8, name: 'بازه زمانی نسبی (created >= -365d)', jql: `project = ${primaryProj} AND created >= -365d ORDER BY created DESC` },
+    { id: 9, name: 'پروژه خالص بدون گیومه (project = ORD)', jql: `project = ${primaryProj} ORDER BY created DESC` },
+    { id: 10, name: 'پروژه خالص با گیومه (project = "ORD")', jql: `project = "${primaryProj}" ORDER BY created DESC` },
+    { id: 11, name: 'پروژه خالص با IN (project IN (ORD))', jql: `project IN (${projInList}) ORDER BY created DESC` },
+    { id: 12, name: 'کلید تسک پروژه (key >= ORD-1)', jql: `key >= ${primaryProj}-1 ORDER BY created DESC` },
+    { id: 13, name: 'استخراج کلیه تسک‌های سرور جیرا (ORDER BY created DESC)', jql: `ORDER BY created DESC` }
   ].filter(q => q.jql);
 
   const queryAuditResults = [];
