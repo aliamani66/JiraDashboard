@@ -299,7 +299,7 @@ const ManagerReportPage = () => {
           {availableProjectKeys.length > 0 && (
             <div className="mr-fp-group" style={{ marginTop: '0.85rem' }}>
               <span className="mr-fp-title"><Layers size={16} /> فیلتر پروژه جیرا:</span>
-              <div className="mr-pills-wrap">
+              <div className="mr-pills-wrap scrollable">
                 {availableProjectKeys.map(key => {
                   const isSel = selectedProjectKeys.includes(key);
                   return (
