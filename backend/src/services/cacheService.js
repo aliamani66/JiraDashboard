@@ -674,7 +674,7 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue;
       if (parsed && !parsed.project_id) {
         const projKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
-        const proj = db.prepare('SELECT id FROM projects WHERE UPPER(key) = ? OR UPPER(id) = ? LIMIT 1').get(projKey, projKey);
+        const proj = db.prepare('SELECT id FROM projects WHERE UPPER(id) = ? LIMIT 1').get(projKey);
         parsed.project_id = proj ? proj.id : projKey;
       }
       return parsed;
@@ -687,7 +687,7 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
           if (task.project_id) {
             const projExists = db.prepare('SELECT id FROM projects WHERE id = ?').get(task.project_id);
             if (!projExists) {
-              db.prepare('INSERT OR IGNORE INTO projects (id, name, key) VALUES (?, ?, ?)').run(task.project_id, `پروژه ${task.project_id}`, task.project_id);
+              db.prepare('INSERT OR IGNORE INTO projects (id, title) VALUES (?, ?)').run(task.project_id, `پروژه ${task.project_id}`);
             }
           }
           insertTask.run(task);
