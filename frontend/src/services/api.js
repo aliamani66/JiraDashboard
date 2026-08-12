@@ -59,4 +59,5 @@ export const api = {
   resetDatabase: () => fetchWithAuth('/jira/reset-db', { method: 'POST' }),
   getManagerAuditReport: () => fetchWithAuth('/reports/manager-audit'),
   getAllSprints: () => fetchWithAuth('/all-sprints'),
+  getDbStats: () => fetchWithAuth('/jira/db-stats'),
 };

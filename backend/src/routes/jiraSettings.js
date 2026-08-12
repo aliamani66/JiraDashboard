@@ -676,4 +676,46 @@ function cleanErrorMessage(e) {
   }
 });
 
+// GET Database Statistics Tile Data
+router.get('/db-stats', (req, res) => {
+  try {
+    const db = getDb();
+    const totalTasks = db.prepare('SELECT COUNT(*) as count FROM tasks').get()?.count || 0;
+    const totalProjects = db.prepare('SELECT COUNT(*) as count FROM projects').get()?.count || 0;
+    const doneTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'Done' OR status = 'Completed'").get()?.count || 0;
+    const waitingTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE is_waiting = 1 OR status = 'Waiting' OR status = 'OnHolding'").get()?.count || 0;
+    const inProgressTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'In Progress' OR status = 'in_progress'").get()?.count || 0;
+    const todoTasks = Math.max(0, totalTasks - doneTasks - waitingTasks - inProgressTasks);
+
+    // Get database file size in MB
+    let dbSizeMb = '0.00';
+    try {
+      const volumeDir = '/app/data_volume';
+      const defaultDbPath = path.join(__dirname, '../../database.sqlite');
+      const dbPath = fs.existsSync(volumeDir) ? path.join(volumeDir, 'database.sqlite') : defaultDbPath;
+      if (fs.existsSync(dbPath)) {
+        const stats = fs.statSync(dbPath);
+        dbSizeMb = (stats.size / (1024 * 1024)).toFixed(2);
+      }
+    } catch (_) {}
+
+    const lastSyncedRow = db.prepare("SELECT MAX(last_synced) as max_sync FROM tasks").get();
+    const lastSynced = lastSyncedRow?.max_sync || null;
+
+    res.json({
+      success: true,
+      totalTasks,
+      totalProjects,
+      doneTasks,
+      waitingTasks,
+      inProgressTasks,
+      todoTasks,
+      dbSizeMb,
+      lastSynced
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در دریافت آمار دیتابیس: ' + err.message });
+  }
+});
+
 module.exports = router;

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Server, Cpu, GitBranch, Tag, Calendar,
   RefreshCw, Save, CheckCircle2, AlertTriangle, X,
-  ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap
+  ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap, Database
 } from 'lucide-react';
 import { api } from '../services/api';
 import JalaliDatePicker from '../components/common/JalaliDatePicker';
@@ -320,17 +320,35 @@ const JiraSettingsPage = () => {
     setTimeout(() => setToast(null), 5000);
   };
 
+  const [dbStats, setDbStats] = useState(null);
+  const [dbStatsLoading, setDbStatsLoading] = useState(false);
+
+  const fetchDbStats = useCallback(async () => {
+    try {
+      setDbStatsLoading(true);
+      const res = await api.getDbStats();
+      if (res.success) {
+        setDbStats(res);
+      }
+    } catch (e) {
+      console.error('Failed to fetch DB stats:', e);
+    } finally {
+      setDbStatsLoading(false);
+    }
+  }, []);
+
   const fetchConfig = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getJiraConfig();
       setCfg(data);
+      fetchDbStats();
     } catch (e) {
       showToast('خطا در دریافت تنظیمات جیرا: ' + (e.message || ''), 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchDbStats]);
 
   useEffect(() => { fetchConfig(); }, [fetchConfig]);
 
@@ -1435,8 +1453,66 @@ const JiraSettingsPage = () => {
       </Section>
 
       {/* ── 1.8. SERVER & DATABASE MANAGEMENT ── */}
-      <Section icon={Server} title="تنظیمات سرور و دیتابیس (Server & Database Management)" color="#10B981" defaultOpen={false}>
-        <p className="jsp-section-desc">مدیریت پورت سرویس‌دهنده، کلیدهای امنیتی و بازنشانی دیتابیسSQLite متصل به سیستم.</p>
+      <Section icon={Server} title="تنظیمات سرور و دیتابیس (Server & Database Management)" color="#10B981" defaultOpen={true}>
+        <p className="jsp-section-desc">پایش زنده وضعیت دیتابیس SQLite، تعداد کل تسک‌های ثبت‌شده، حجم فایل و به‌روزرسانی سیستم.</p>
+        
+        {/* 📊 DATABASE STATS TILE CARD */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
+          border: '1px solid rgba(16, 185, 129, 0.4)',
+          borderRadius: '20px',
+          padding: '1.25rem 1.6rem',
+          marginBottom: '1.5rem',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(16, 185, 129, 0.15)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10B981', color: '#6EE7B7', width: '38px', height: '38px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Database size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#6EE7B7' }}>📊 پایش و آمار زنده دیتابیس سیستم (SQLite)</h3>
+                <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>وضعیت ذخیره‌سازی تسک‌ها، حجم فایل دیتابیس و ظرفیت سیستم</span>
+              </div>
+            </div>
+            <button
+              onClick={fetchDbStats}
+              disabled={dbStatsLoading}
+              style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#38BDF8', padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              <RefreshCw size={14} className={dbStatsLoading ? 'spin' : ''} />
+              {dbStatsLoading ? 'بروزرسانی...' : 'بروزرسانی آمار دیتابیس'}
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
+            <div style={{ background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '14px', padding: '0.85rem 1rem' }}>
+              <span style={{ fontSize: '0.76rem', color: '#94A3B8', display: 'block', marginBottom: '0.25rem' }}>📝 کل تسک‌های دیتابیس:</span>
+              <strong style={{ fontSize: '1.35rem', color: '#38BDF8', fontWeight: 800 }}>{dbStats?.totalTasks ?? '—'} <small style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>تسک</small></strong>
+            </div>
+
+            <div style={{ background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.25)', borderRadius: '14px', padding: '0.85rem 1rem' }}>
+              <span style={{ fontSize: '0.76rem', color: '#94A3B8', display: 'block', marginBottom: '0.25rem' }}>📂 پروژه‌های ثبت‌شده:</span>
+              <strong style={{ fontSize: '1.35rem', color: '#C084FC', fontWeight: 800 }}>{dbStats?.totalProjects ?? '—'} <small style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>پروژه</small></strong>
+            </div>
+
+            <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '14px', padding: '0.85rem 1rem' }}>
+              <span style={{ fontSize: '0.76rem', color: '#94A3B8', display: 'block', marginBottom: '0.25rem' }}>✅ تسک‌های انجام‌شده (Done):</span>
+              <strong style={{ fontSize: '1.35rem', color: '#6EE7B7', fontWeight: 800 }}>{dbStats?.doneTasks ?? '—'} <small style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>تسک</small></strong>
+            </div>
+
+            <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '14px', padding: '0.85rem 1rem' }}>
+              <span style={{ fontSize: '0.76rem', color: '#94A3B8', display: 'block', marginBottom: '0.25rem' }}>⏳ تسک‌های منتظر (Waiting):</span>
+              <strong style={{ fontSize: '1.35rem', color: '#FBBF24', fontWeight: 800 }}>{dbStats?.waitingTasks ?? '—'} <small style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>تسک</small></strong>
+            </div>
+
+            <div style={{ background: 'rgba(14, 165, 233, 0.08)', border: '1px solid rgba(14, 165, 233, 0.25)', borderRadius: '14px', padding: '0.85rem 1rem' }}>
+              <span style={{ fontSize: '0.76rem', color: '#94A3B8', display: 'block', marginBottom: '0.25rem' }}>💾 حجم فایل دیتابیس:</span>
+              <strong style={{ fontSize: '1.35rem', color: '#38BDF8', fontWeight: 800 }}>{dbStats?.dbSizeMb ?? '0.00'} <small style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>MB</small></strong>
+            </div>
+          </div>
+        </div>
+
         <div className="jsp-grid-2">
           <Field label="پورت سرور بک‌اند (Port)" hint="پورت سرویس‌دهنده Node.js">
             <Input value={cfg.serverAndDb?.port} onChange={v => set('serverAndDb', 'port', v)} placeholder="3001" mono />
