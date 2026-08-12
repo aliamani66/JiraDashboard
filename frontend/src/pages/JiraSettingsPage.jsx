@@ -354,40 +354,129 @@ const JiraSettingsPage = () => {
     }
   };
 
-  const handleMonthlySync = async () => {
-    try {
-      setMonthlySyncing(true);
-      setMonthlyResults(null);
+  const PERSIAN_MONTH_NAMES = [
+    'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+    'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+  ];
+
+  const getJalaliMonthLabel = (year, monthZeroIndexed) => {
+    const gMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const gName = gMonthNames[monthZeroIndexed];
+    let jMonthIdx = (monthZeroIndexed + 9) % 12;
+    let jYear = monthZeroIndexed >= 2 ? year - 621 : year - 622;
+    return {
+      jalali: `${PERSIAN_MONTH_NAMES[jMonthIdx]} ${jYear}`,
+      gregorian: `${gName} ${year}`
+    };
+  };
+
+  const executeStepByStepSync = async (monthRanges, titlePrefix) => {
+    setMonthlySyncing(true);
+    setMonthlyResults({ totalTasksSynced: 0, monthlyResults: [] });
+
+    let totalTasksSynced = 0;
+    const results = [];
+
+    await api.saveJiraConfig(cfg);
+
+    for (let i = 0; i < monthRanges.length; i++) {
+      const mRange = monthRanges[i];
+      const stepNum = i + 1;
+      const totalSteps = monthRanges.length;
+
       setActiveModal({
         status: 'loading',
-        title: '🗓️ در حال همگام‌سازی ۱۲ ماهه (یک سال گذشته)',
-        message: 'سیستم در حال ارسال ۱۲ کوئری مجزا به ازای هر ماه گذشته به سرور جیرا می‌باشد تا تمامی تسک‌های یک سال اخیر دریافت و گزارش تفکیکی آن آماده گردد...'
+        title: `${titlePrefix} (ماه ${stepNum} از ${totalSteps})`,
+        message: `در حال دریافت اطلاعات ماه ${mRange.jalaliName} (${mRange.startStr.split(' ')[0]} تا ${mRange.endStr.split(' ')[0]})... لطفاً صبور باشید.`
       });
-      await api.saveJiraConfig(cfg);
-      const res = await api.syncMonthlyJiraConfig();
-      if (res && res.monthlyResults) {
-        setMonthlyResults(res);
-        setActiveModal({
-          status: 'success',
-          title: '✅ همگام‌سازی ۱۲ ماهه با موفقیت تکمیل شد',
-          message: `مجموع ${res.totalTasksSynced || 0} تسک از ۱۲ ماه گذشته دریافت و در جدول گزارش تفکیکی ثبت گردید.`
+
+      try {
+        const res = await api.syncSingleMonthJiraConfig({
+          startStr: mRange.startStr,
+          endStr: mRange.endStr,
+          monthLabel: mRange.jalaliName,
+          monthIndex: stepNum
         });
-      } else {
-        setActiveModal({
+
+        const monthRes = res.success ? res : {
+          monthIndex: stepNum,
+          monthLabel: mRange.jalaliName,
+          jalaliName: mRange.jalaliName,
+          gregorianName: mRange.gregorianName,
+          dateRange: `${mRange.startStr.split(' ')[0]} تا ${mRange.endStr.split(' ')[0]}`,
           status: 'error',
-          title: '❌ خطا در همگام‌سازی ۱۲ ماهه',
-          message: res.message || 'پاسخی از سرور دریافت نشد.'
+          taskCount: 0,
+          jql: res.jql || '',
+          message: res.message || 'خطا در شبکه'
+        };
+
+        if (!monthRes.jalaliName) monthRes.jalaliName = mRange.jalaliName;
+        if (!monthRes.gregorianName) monthRes.gregorianName = mRange.gregorianName;
+
+        totalTasksSynced += (monthRes.taskCount || 0);
+        results.push(monthRes);
+
+        setMonthlyResults({
+          totalTasksSynced,
+          monthlyResults: [...results]
+        });
+
+      } catch (err) {
+        results.push({
+          monthIndex: stepNum,
+          monthLabel: mRange.jalaliName,
+          jalaliName: mRange.jalaliName,
+          gregorianName: mRange.gregorianName,
+          dateRange: `${mRange.startStr.split(' ')[0]} تا ${mRange.endStr.split(' ')[0]}`,
+          status: 'error',
+          taskCount: 0,
+          jql: '',
+          message: err.message || 'خطا'
+        });
+
+        setMonthlyResults({
+          totalTasksSynced,
+          monthlyResults: [...results]
         });
       }
-    } catch (e) {
-      setActiveModal({
-        status: 'error',
-        title: '❌ خطا در همگام‌سازی ۱۲ ماهه',
-        message: e.message || 'همگام‌سازی ۱۲ ماه گذشته با خطا مواجه شد.'
-      });
-    } finally {
-      setMonthlySyncing(false);
     }
+
+    setActiveModal({
+      status: 'success',
+      title: '✅ همگام‌سازی با موفقیت کامل گردید',
+      message: `مجموع ${totalTasksSynced} تسک از ${monthRanges.length} ماه بررسی‌شده دریافت و ثبت گردید.`
+    });
+    setMonthlySyncing(false);
+  };
+
+  const handleMonthlySync = async () => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const monthRanges = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(currentYear, currentMonth - i, 1);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const lastDay = new Date(y, m + 1, 0);
+
+      const startStr = `${y}-${String(m + 1).padStart(2, '0')}-01 00:00`;
+      const endStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')} 23:59`;
+      const monthInfo = getJalaliMonthLabel(y, m);
+
+      monthRanges.push({
+        monthIndex: 12 - i,
+        year: y,
+        month: m + 1,
+        jalaliName: monthInfo.jalali,
+        gregorianName: monthInfo.gregorian,
+        startStr,
+        endStr
+      });
+    }
+
+    await executeStepByStepSync(monthRanges, '🗓️ در حال همگام‌سازی ۱۲ ماه گذشته');
   };
 
   const handleRangeSync = async () => {
@@ -396,39 +485,40 @@ const JiraSettingsPage = () => {
       return;
     }
     setShowRangeModal(false);
-    try {
-      setMonthlySyncing(true);
-      setMonthlyResults(null);
-      setActiveModal({
-        status: 'loading',
-        title: '📅 در حال همگام‌سازی بازه زمانی انتخاب‌شده',
-        message: `سیستم در حال ارسال کوئری‌های ماهانه برای بازه ${rangeStartDate} تا ${rangeEndDate} به سرور جیرا می‌باشد...`
+
+    const startDt = new Date(rangeStartDate);
+    const endDt = new Date(rangeEndDate);
+
+    const monthRanges = [];
+    let curr = new Date(startDt.getFullYear(), startDt.getMonth(), 1);
+    let stepIndex = 1;
+
+    while (curr <= endDt) {
+      const y = curr.getFullYear();
+      const m = curr.getMonth();
+      const lastDayOfMonth = new Date(y, m + 1, 0);
+
+      const chunkStart = (y === startDt.getFullYear() && m === startDt.getMonth()) ? startDt : new Date(y, m, 1);
+      const chunkEnd = (y === endDt.getFullYear() && m === endDt.getMonth()) ? endDt : lastDayOfMonth;
+
+      const startStr = `${chunkStart.getFullYear()}-${String(chunkStart.getMonth() + 1).padStart(2, '0')}-${String(chunkStart.getDate()).padStart(2, '0')} 00:00`;
+      const endStr = `${chunkEnd.getFullYear()}-${String(chunkEnd.getMonth() + 1).padStart(2, '0')}-${String(chunkEnd.getDate()).padStart(2, '0')} 23:59`;
+      const monthInfo = getJalaliMonthLabel(y, m);
+
+      monthRanges.push({
+        monthIndex: stepIndex++,
+        year: y,
+        month: m + 1,
+        jalaliName: monthInfo.jalali,
+        gregorianName: monthInfo.gregorian,
+        startStr,
+        endStr
       });
-      await api.saveJiraConfig(cfg);
-      const res = await api.syncRangeJiraConfig({ startDate: rangeStartDate, endDate: rangeEndDate });
-      if (res && res.monthlyResults) {
-        setMonthlyResults(res);
-        setActiveModal({
-          status: 'success',
-          title: '✅ همگام‌سازی بازه زمانی با موفقیت انجام شد',
-          message: `مجموع ${res.totalTasksSynced || 0} تسک درون ${res.totalMonths || 0} ماه فیلترشده از سرور جیرا دریافت و ثبت گردید.`
-        });
-      } else {
-        setActiveModal({
-          status: 'error',
-          title: '❌ خطا در همگام‌سازی بازه تاریخ',
-          message: res.message || 'پاسخی از سرور دریافت نشد.'
-        });
-      }
-    } catch (e) {
-      setActiveModal({
-        status: 'error',
-        title: '❌ خطا در همگام‌سازی بازه تاریخ',
-        message: e.message || 'همگام‌سازی بازه تاریخ با خطا مواجه شد.'
-      });
-    } finally {
-      setMonthlySyncing(false);
+
+      curr = new Date(y, m + 1, 1);
     }
+
+    await executeStepByStepSync(monthRanges, '📅 در حال همگام‌سازی بازه تاریخ انتخاب‌شده');
   };
 
   const handleDiagnose = async () => {

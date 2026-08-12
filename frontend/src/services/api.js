@@ -53,6 +53,7 @@ export const api = {
   runJiraDiagnostic: (params) => fetchWithAuth('/jira/diagnose', { method: 'POST', body: JSON.stringify(params || {}) }),
   syncMonthlyJiraConfig: () => fetchWithAuth('/jira/sync-monthly', { method: 'POST' }),
   syncRangeJiraConfig: (dates) => fetchWithAuth('/jira/sync-range', { method: 'POST', body: JSON.stringify(dates) }),
+  syncSingleMonthJiraConfig: (data) => fetchWithAuth('/jira/sync-single-month', { method: 'POST', body: JSON.stringify(data) }),
   resetDatabase: () => fetchWithAuth('/jira/reset-db', { method: 'POST' }),
   getManagerAuditReport: () => fetchWithAuth('/reports/manager-audit'),
   getAllSprints: () => fetchWithAuth('/all-sprints'),

@@ -275,6 +275,17 @@ router.post('/sync-range', async (req, res) => {
   }
 });
 
+// POST Single Month Chunk Sync (prevents 504 Gateway Timeout)
+router.post('/sync-single-month', async (req, res) => {
+  try {
+    const cacheService = require('../services/cacheService');
+    const result = await cacheService.syncSingleMonthFromJira(req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در همگام‌سازی ماه: ' + err.message });
+  }
+});
+
 // GET All Jira Projects from live Jira Server for multi-select combo
 router.get('/fetch-jira-projects', async (req, res) => {
   try {
