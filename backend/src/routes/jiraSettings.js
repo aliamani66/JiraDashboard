@@ -482,26 +482,17 @@ router.get('/fetch-jira-projects', async (req, res) => {
   }
 });
 
-// POST Clear / Wipe all tasks and projects from SQLite database (Protects users table)
+// POST Clear / Wipe all tasks and projects from SQLite database (LEAVES USERS TABLE UNTOUCHED)
 router.post('/clear-db', async (req, res) => {
   try {
     const db = getDb();
+    // Only delete task and project data (USERS TABLE IS NEVER TOUCHED)
     db.prepare('DELETE FROM tasks').run();
     db.prepare('DELETE FROM projects').run();
     db.prepare('DELETE FROM task_estimate_history').run();
     
-    // Always preserve or recreate admin user
-    const adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
-    if (!adminUser) {
-      const { hashPassword } = require('../services/authService');
-      const hash = await hashPassword('admin123');
-      const allPerms = JSON.stringify(["dashboard", "overall_timeline", "waiting_tasks", "user_management", "jira_settings"]);
-      db.prepare('INSERT INTO users (username, password_hash, display_name, role, permissions) VALUES (?, ?, ?, ?, ?)').run(
-        'admin', hash, 'مدیر سیستم', 'admin', allPerms
-      );
-    }
     saveDb();
-    res.json({ success: true, message: 'داده‌های تسک‌ها و پروژه‌ها پاک شدند (حساب کاربری مدیر admin سیستم حفظ گردید).' });
+    res.json({ success: true, message: 'داده‌های تسک‌ها، اسپرینت‌ها و پروژه‌ها پاک شدند (جدول کاربران و دسترسی‌ها دست‌نخورده باقی ماند).' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'خطا در خالی کردن دیتابیس: ' + err.message });
   }
