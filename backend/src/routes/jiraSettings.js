@@ -499,7 +499,7 @@ router.post('/reset-db', async (req, res) => {
   try {
     const syncRes = await cacheService.syncFromJira();
     if (syncRes.success) {
-      res.json({ success: true, message: `دیتابیس با موفقیت بازسازی شد (${syncRes.projectsSynced} پروژه و ${syncRes.tasksSynced} تسک از جیرا دریافت شد).` });
+      res.json({ success: true, message: syncRes.message });
     } else {
       res.status(400).json({ success: false, message: `خطا در بازسازی دیتابیس از Jira: ${syncRes.message}` });
     }
