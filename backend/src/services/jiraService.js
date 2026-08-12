@@ -57,53 +57,51 @@ function extractDateField(issue, fieldName) {
 }
 
 // Perform JQL Search with retry logic for network stability
-async function jiraSearch(jql, fields = [], retries = 5) {
+async function jiraSearch(jql, fields = [], retries = 2) {
   const cfg = getJiraConfig();
-  let headers = { 
-    Authorization: getAuthHeader(),
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  };
-
+  const authVariants = getAuthHeaderVariants(cfg.username, cfg.token);
   const validFields = fields.filter(Boolean);
   const isCloud = cfg.baseUrl && cfg.baseUrl.includes('.atlassian.net');
 
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      if (isCloud) {
-        const urlCloud = `${cfg.baseUrl}/rest/api/3/search/jql`;
-        const response = await axios.post(urlCloud, { jql, fields: validFields }, { headers, httpsAgent, timeout: 15000 });
+  let lastError = null;
+
+  for (const authHeader of authVariants) {
+    let headers = { 
+      Authorization: authHeader,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const endpoint = isCloud ? `${cfg.baseUrl}/rest/api/3/search/jql` : `${cfg.baseUrl}/rest/api/2/search`;
+        const response = await axios.post(endpoint, { jql, fields: validFields }, { headers, httpsAgent, timeout: 15000 });
         return response.data;
-      } else {
-        const urlServer = `${cfg.baseUrl}/rest/api/2/search`;
-        const response = await axios.post(urlServer, { jql, fields: validFields }, { headers, httpsAgent, timeout: 15000 });
-        return response.data;
-      }
-    } catch (err) {
-      if (err.response && err.response.status === 401 && !headers.Authorization.startsWith('Bearer')) {
-        console.log(`[JiraSearch 401 Auth Retry] Switching from Basic to Bearer Token...`);
-        headers.Authorization = `Bearer ${cfg.token}`;
-        attempt--;
-        continue;
-      }
-      console.log(`[JiraSearch Attempt ${attempt + 1}/${retries}] Error: ${err.code || err.message}`);
-      if (attempt === retries - 1) {
-        try {
-          const urlFallback = `${cfg.baseUrl}/rest/api/2/search`;
-          const response = await axios.get(urlFallback, {
-            headers,
-            httpsAgent,
-            params: { jql, fields: validFields.join(',') },
-            timeout: 15000
-          });
-          return response.data;
-        } catch (e) {
-          throw err;
+      } catch (err) {
+        lastError = err;
+        if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+          // Try GET fallback before switching auth variant
+          try {
+            const urlFallback = isCloud ? `${cfg.baseUrl}/rest/api/3/search/jql` : `${cfg.baseUrl}/rest/api/2/search`;
+            const getRes = await axios.get(urlFallback, {
+              headers,
+              httpsAgent,
+              params: { jql, fields: validFields.join(',') },
+              timeout: 10000
+            });
+            return getRes.data;
+          } catch (_) {}
+          // Switch to next auth format
+          break;
         }
+        console.log(`[JiraSearch Attempt ${attempt + 1}/${retries}] Error: ${err.code || err.message}`);
+        await new Promise(r => setTimeout(r, 1000));
       }
-      await new Promise(r => setTimeout(r, 2000));
     }
   }
+
+  if (lastError) throw lastError;
+  throw new Error('Jira search failed due to authentication or network error');
 }
 
 function parseJiraDescription(desc) {
