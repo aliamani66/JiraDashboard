@@ -207,6 +207,12 @@ async function initDb() {
     console.error('Error ensuring admin user in database:', err.message);
   }
 
+  // Permanent automatic purge of any legacy fake demo projects (ORD-1..8 / GTX / fake titles)
+  try {
+    db.run("DELETE FROM tasks WHERE project_id IN ('ORD-1','ORD-2','ORD-3','ORD-4','ORD-5','ORD-6','ORD-7','ORD-8','GTX-1','GTX-2','GTX-3','GTX-4','GTX-5','GTX-6','GTX-7','GTX-8') OR id LIKE 'ORD-1-%' OR id LIKE 'ORD-2-%' OR id LIKE 'ORD-3-%' OR id LIKE 'ORD-4-%' OR id LIKE 'ORD-5-%' OR id LIKE 'ORD-6-%' OR id LIKE 'ORD-7-%' OR id LIKE 'ORD-8-%' OR id LIKE 'GTX-%'");
+    db.run("DELETE FROM projects WHERE id IN ('ORD-1','ORD-2','ORD-3','ORD-4','ORD-5','ORD-6','ORD-7','ORD-8','GTX-1','GTX-2','GTX-3','GTX-4','GTX-5','GTX-6','GTX-7','GTX-8') OR title IN ('پایپلاین CI/CD','استک مانیتورینگ','مهاجرت به کوبرنتیز','خودکارسازی امنیت','یکپارچه‌سازی AI با ورکفلوها','برنامه آموزش تیم‌ها','طرح بازیابی از بحران','مدیریت متمرکز لاگ‌ها')");
+  } catch (_) {}
+
   saveDb();
 
   dbWrapper = createDbWrapper();
