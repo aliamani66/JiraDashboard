@@ -1109,16 +1109,16 @@ const JiraSettingsPage = () => {
       </AnimatePresence>
 
 
-      {/* ── 12-MONTH BATCH SYNC RESULTS ── */}
+      {/* ── BATCH SYNC RESULTS REPORT ── */}
       {monthlyResults && (
         <motion.div className="glass-card jsp-diag-card" style={{ borderColor: 'rgba(139, 92, 246, 0.4)', background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.4), rgba(15, 23, 42, 0.85))' }} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <div className="jsp-diag-header">
             <div>
               <h2 style={{ color: '#C084FC', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                <Calendar size={22} /> گزارش تفکیکی همگام‌سازی ۱۲ ماه گذشته (یک سال اخیر)
+                <Calendar size={22} /> گزارش تفکیکی همگام‌سازی داده‌های Jira
               </h2>
               <p className="jsp-diag-sub" style={{ marginTop: '0.45rem' }}>
-                تعداد کل تسک‌های دریافت‌شده: <strong style={{ color: '#38BDF8', fontSize: '1.05rem' }}>{monthlyResults.totalTasksSynced || 0} تسک</strong> | تعداد ماه بررسی‌شده: <strong>۱۲ ماه</strong>
+                تعداد کل تسک‌های دریافت‌شده: <strong style={{ color: '#38BDF8', fontSize: '1.05rem' }}>{monthlyResults.totalTasksSynced || 0} تسک</strong> | تعداد بازه/ماه بررسی‌شده: <strong>{monthlyResults.monthlyResults?.length || 0} بازه</strong>
               </p>
             </div>
             <button className="jsp-delete-row" style={{ color: '#A78BFA', cursor: 'pointer' }} onClick={() => setMonthlyResults(null)} title="بستن این گزارش">
@@ -1140,67 +1140,32 @@ const JiraSettingsPage = () => {
               </thead>
               <tbody>
                 {monthlyResults.monthlyResults?.map((m) => (
-                  <React.Fragment key={m.monthIndex}>
-                    <tr>
-                      <td><strong>ماه {m.monthIndex}</strong></td>
-                      <td>
-                        <strong style={{ color: '#F8FAFC' }}>{m.jalaliName}</strong>
-                        <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>{m.gregorianName}</div>
-                      </td>
-                      <td><code className="mono-code" style={{ fontSize: '0.8rem' }}>{m.dateRange}</code></td>
-                      <td>
-                        <span className={`diag-status-pill ${m.status === 'success' ? 'matched' : m.status === 'empty' ? 'warning' : 'missing'}`}>
-                          {m.status === 'success' ? '✅ موفق' : m.status === 'empty' ? '⚠️ ۰ تسک (بدون نتیجه)' : '❌ خطا'}
-                        </span>
-                      </td>
-                      <td>
-                        <strong style={{ color: m.taskCount > 0 ? '#38BDF8' : '#64748B', fontSize: '0.95rem' }}>
-                          {m.taskCount} تسک
-                        </strong>
-                      </td>
-                      <td>
-                        <code className="diag-val-code accent" style={{ fontSize: '0.78rem', color: m.status === 'error' ? '#FCA5A5' : '#38BDF8', wordBreak: 'break-all', display: 'inline-block', padding: '0.2rem 0.5rem', background: m.status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(56, 189, 248, 0.1)', border: m.status === 'error' ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '6px' }} title={m.jql || m.message}>
-                          {m.jql || 'مشخص نشده'}
-                        </code>
-                        {m.status === 'error' && m.message && (
-                          <div style={{ fontSize: '0.72rem', color: '#FCA5A5', marginTop: '0.25rem' }}>{m.message}</div>
-                        )}
-                      </td>
-                    </tr>
-                    {/* 📊 JQL QUERY AUDIT BADGES */}
-                    {m.queryAuditResults && m.queryAuditResults.length > 0 && (
-                      <tr>
-                        <td colSpan={6} style={{ padding: '0.5rem 1rem 0.85rem 1rem', background: 'rgba(15, 23, 42, 0.4)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                          <div style={{ fontSize: '0.76rem', fontWeight: 'bold', color: '#6EE7B7', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span>📊 پایش زنده ۷ مدل کوئری JQL برای {m.jalaliName}:</span>
-                            {m.winningVariant && <span style={{ color: '#38BDF8' }}>(کوئری برنده: {m.winningVariant})</span>}
-                          </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                            {m.queryAuditResults.map(q => (
-                              <span
-                                key={q.variant}
-                                style={{
-                                  background: q.taskCount > 0 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.04)',
-                                  border: q.taskCount > 0 ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.08)',
-                                  color: q.taskCount > 0 ? '#6EE7B7' : '#94A3B8',
-                                  borderRadius: '8px',
-                                  padding: '0.25rem 0.6rem',
-                                  fontSize: '0.73rem',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.35rem'
-                                }}
-                                title={`${q.name}: ${q.jql}`}
-                              >
-                                <span>{q.taskCount > 0 ? '✅' : '⚪'} #{q.variant} {q.name}:</span>
-                                <strong style={{ color: q.taskCount > 0 ? '#FFFFFF' : '#CBD5E1' }}>{q.taskCount} تسک</strong>
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
+                  <tr key={m.monthIndex}>
+                    <td><strong>ماه {m.monthIndex}</strong></td>
+                    <td>
+                      <strong style={{ color: '#F8FAFC' }}>{m.jalaliName}</strong>
+                      <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>{m.gregorianName}</div>
+                    </td>
+                    <td><code className="mono-code" style={{ fontSize: '0.8rem' }}>{m.dateRange}</code></td>
+                    <td>
+                      <span className={`diag-status-pill ${m.status === 'success' ? 'matched' : m.status === 'empty' ? 'warning' : 'missing'}`}>
+                        {m.status === 'success' ? '✅ موفق' : m.status === 'empty' ? '⚠️ ۰ تسک (بدون نتیجه)' : '❌ خطا'}
+                      </span>
+                    </td>
+                    <td>
+                      <strong style={{ color: m.taskCount > 0 ? '#38BDF8' : '#64748B', fontSize: '0.95rem' }}>
+                        {m.taskCount} تسک
+                      </strong>
+                    </td>
+                    <td>
+                      <code className="diag-val-code accent" style={{ fontSize: '0.78rem', color: m.status === 'error' ? '#FCA5A5' : '#38BDF8', wordBreak: 'break-all', display: 'inline-block', padding: '0.2rem 0.5rem', background: m.status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(56, 189, 248, 0.1)', border: m.status === 'error' ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '6px' }} title={m.jql || m.message}>
+                        {m.jql || 'مشخص نشده'}
+                      </code>
+                      {m.status === 'error' && m.message && (
+                        <div style={{ fontSize: '0.72rem', color: '#FCA5A5', marginTop: '0.25rem' }}>{m.message}</div>
+                      )}
+                    </td>
+                  </tr>
                 ))}
               </tbody>
             </table>
