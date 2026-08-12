@@ -57,6 +57,7 @@ export const api = {
   previewJqlQueries: (data) => fetchWithAuth('/jira/preview-jql', { method: 'POST', body: JSON.stringify(data) }),
   testAllJqlQueries: (data) => fetchWithAuth('/jira/test-all-jql', { method: 'POST', body: JSON.stringify(data) }),
   resetDatabase: () => fetchWithAuth('/jira/reset-db', { method: 'POST' }),
+  clearDatabase: () => fetchWithAuth('/jira/clear-db', { method: 'POST' }),
   getManagerAuditReport: () => fetchWithAuth('/reports/manager-audit'),
   getAllSprints: () => fetchWithAuth('/all-sprints'),
   getDbStats: () => fetchWithAuth('/jira/db-stats'),

@@ -1554,10 +1554,30 @@ const JiraSettingsPage = () => {
           <Field label="نوع و شناسه دیتابیس متصل" hint="موتور دیتابیس ذخیره‌سازی محلی">
             <Input value={cfg.serverAndDb?.dbDriver || 'SQLite 3 (database.sqlite)'} onChange={() => {}} placeholder="SQLite 3" mono />
           </Field>
-          <Field label="وضعیت دیتابیس" hint="وضعیت اتصال به فایل database.sqlite">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '0.3rem' }}>
+          <Field label="وضعیت دیتابیس و مدیریت داده‌ها" hint="مدیریت پاکسازی و بازسازی فایل database.sqlite">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '0.3rem', flexWrap: 'wrap' }}>
               <span className="diag-status-pill matched">✅ متصل و فعال</span>
               <button 
+                type="button"
+                className="jsp-add-mapping-btn" 
+                style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.45)', color: '#FCA5A5' }}
+                onClick={async () => {
+                  if (window.confirm('⚠️ آیا مطمئن هستید که می‌خواهید دیتابیس را کاملاً خالی کنید؟ (تمام تسک‌ها و داده‌ها حذف خواهند شد تا بتوانید دوباره دیتای تازه سینک کنید)')) {
+                    try {
+                      showToast('در حال پاکسازی و خالی کردن دیتابیس...');
+                      const res = await api.clearDatabase();
+                      showToast(res.message || 'دیتابیس کاملاً خالی شد.', 'success');
+                      fetchDbStats();
+                    } catch (e) {
+                      showToast('خطا در پاکسازی دیتابیس', 'error');
+                    }
+                  }
+                }}
+              >
+                🗑️ خالی کردن کامل دیتابیس (حذف تمام تسک‌ها)
+              </button>
+              <button 
+                type="button"
                 className="jsp-add-mapping-btn" 
                 style={{ background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#38BDF8' }}
                 onClick={async () => {
@@ -1573,7 +1593,7 @@ const JiraSettingsPage = () => {
                   }
                 }}
               >
-                🔄 همگام‌سازی و بازسازی دیتابیس از Jira Cloud
+                🔄 همگام‌سازی و بازسازی دیتابیس از Jira
               </button>
             </div>
           </Field>

@@ -482,6 +482,20 @@ router.get('/fetch-jira-projects', async (req, res) => {
   }
 });
 
+// POST Clear / Wipe all tasks and projects from SQLite database
+router.post('/clear-db', (req, res) => {
+  try {
+    const db = getDb();
+    db.prepare('DELETE FROM tasks').run();
+    db.prepare('DELETE FROM projects').run();
+    db.prepare('DELETE FROM task_estimate_history').run();
+    saveDb();
+    res.json({ success: true, message: 'تمام داده‌ها و تسک‌های دیتابیس با موفقیت و کاملاً پاکسازی شدند (دیتابیس کاملاً خالی شد).' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در خالی کردن دیتابیس: ' + err.message });
+  }
+});
+
 // POST Reset Database directly from Jira live
 router.post('/reset-db', async (req, res) => {
   try {
