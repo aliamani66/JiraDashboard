@@ -6,6 +6,9 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptDir
 
+if (Test-Path "JiraDashboard") { Set-Location "JiraDashboard" }
+if (Test-Path "ops-showcase-dashboard") { Set-Location "ops-showcase-dashboard" }
+
 Write-Host "======================================================" -ForegroundColor Cyan
 Write-Host "🚀 Automated Server Deployment Script (Jira Dashboard)" -ForegroundColor Cyan
 Write-Host "======================================================" -ForegroundColor Cyan
