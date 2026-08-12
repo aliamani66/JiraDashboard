@@ -269,21 +269,6 @@ const JiraSettingsPage = () => {
     }
   };
 
-  const selectedProjectKeys = (cfg.connection?.projectKey || '')
-    .split(',')
-    .map(k => k.trim())
-    .filter(Boolean);
-
-  const toggleProjectKey = (keyToToggle) => {
-    let current = [...selectedProjectKeys];
-    if (current.includes(keyToToggle)) {
-      current = current.filter(k => k !== keyToToggle);
-    } else {
-      current.push(keyToToggle);
-    }
-    set('connection', 'projectKey', current.join(', '));
-  };
-
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -299,7 +284,7 @@ const JiraSettingsPage = () => {
   const handleSync = async () => {
     try {
       setSyncing(true);
-      showToast(`در حال ذخیره تنظیمات و دریافت داده‌های پروژه (${cfg.connection?.projectKey || 'اصلی'})...`);
+      showToast(`در حال ذخیره تنظیمات و دریافت داده‌های پروژه (${cfg?.connection?.projectKey || 'اصلی'})...`);
       // Auto-save current config first so newly entered Project Key is immediately active
       await api.saveJiraConfig(cfg);
       // Execute live sync from Jira
@@ -317,7 +302,7 @@ const JiraSettingsPage = () => {
     try {
       setDiagLoading(true);
       setDiagResult(null);
-      const res = await api.runJiraDiagnostic(cfg.connection || {});
+      const res = await api.runJiraDiagnostic(cfg?.connection || {});
       setDiagResult(res);
     } catch (e) {
       setDiagResult({ success: false, message: e.message });
@@ -327,10 +312,25 @@ const JiraSettingsPage = () => {
   };
 
   const set = (section, key, val) =>
-    setCfg(prev => ({ ...prev, [section]: { ...prev[section], [key]: val } }));
+    setCfg(prev => ({ ...prev, [section]: { ...prev?.[section], [key]: val } }));
 
   if (loading) return <div className="loading-screen">در حال دریافت تنظیمات جیرا...</div>;
   if (!cfg) return <div className="loading-screen">داده‌ای یافت نشد.</div>;
+
+  const selectedProjectKeys = (cfg?.connection?.projectKey || '')
+    .split(',')
+    .map(k => k.trim())
+    .filter(Boolean);
+
+  const toggleProjectKey = (keyToToggle) => {
+    let current = [...selectedProjectKeys];
+    if (current.includes(keyToToggle)) {
+      current = current.filter(k => k !== keyToToggle);
+    } else {
+      current.push(keyToToggle);
+    }
+    set('connection', 'projectKey', current.join(', '));
+  };
 
   return (
     <motion.div className="jira-settings-page" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
