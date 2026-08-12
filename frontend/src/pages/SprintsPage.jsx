@@ -34,7 +34,7 @@ const SprintsPage = () => {
     'Sprint 10': { start: '۱۴۰۵/۰۵/۲۹', due: '۱۴۰۵/۰۷/۰۳' },
   };
 
-  const [allProjects, setAllProjects] = useState([]);
+  const [jiraConfiguredKeys, setJiraConfiguredKeys] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -42,14 +42,19 @@ const SprintsPage = () => {
       try {
         setLoading(true);
         setError(null);
-        const [data, projData] = await Promise.all([
+        const [data, projData, jiraCfgData] = await Promise.all([
           api.getAllSprints().catch(() => ({ tasks: [] })),
-          api.getProjects().catch(() => [])
+          api.getProjects().catch(() => []),
+          api.getJiraConfig().catch(() => null)
         ]);
         if (!isMounted) return;
         const tList = Array.isArray(data?.tasks) ? data.tasks : [];
         setTasks(tList);
         setAllProjects(Array.isArray(projData) ? projData : []);
+
+        const projStr = jiraCfgData?.config?.connection?.projectKey || 'ORD';
+        const parsedKeys = projStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean);
+        setJiraConfiguredKeys(parsedKeys);
 
         if (tList.length > 0) {
           const sNames = Array.from(new Set(tList.map(t => String(t?.sprint_name || 'Sprint 10')))).sort((a, b) => {
@@ -116,12 +121,12 @@ const SprintsPage = () => {
 
   const defaultSprintList = ['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4', 'Sprint 5', 'Sprint 6', 'Sprint 7', 'Sprint 8', 'Sprint 9', 'Sprint 10'];
 
-  // Extract unique Jira Project Keys from both projects list and existing tasks
+  // Extract unique Jira Project Keys from configured settings, database projects, and existing tasks
   const taskProjKeys = (tasks || []).map(t => (t.project_key || (t.project_id ? String(t.project_id).split('-')[0] : ''))).filter(Boolean);
   const dbProjKeys = (allProjects || []).map(p => (p.key || p.id)).filter(Boolean);
 
   const jiraProjectOptions = Array.from(
-    new Set([...dbProjKeys, ...taskProjKeys])
+    new Set([...jiraConfiguredKeys, ...dbProjKeys, ...taskProjKeys])
   ).sort();
 
   // Dynamically extract all unique sprint names from backend tasks with fallback
