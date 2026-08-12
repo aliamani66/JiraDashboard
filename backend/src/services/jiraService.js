@@ -92,7 +92,7 @@ function extractDateField(issue, fieldName) {
 async function jiraSearch(jql, fields = [], options = {}) {
   const cfg = getJiraConfig();
   const authVariants = getAuthHeaderVariants(cfg.username, cfg.token);
-  const standardFields = ['summary', 'description', 'status', 'assignee', 'created', 'duedate', 'project', 'priority', 'labels', 'components', 'issuelinks', 'parent', 'issuetype', 'timeoriginalestimate', 'timespent', 'aggregatetimeoriginalestimate', 'aggregatetimespent', 'sprint', 'customfield_10004', 'customfield_10020'];
+  const standardFields = ['summary', 'description', 'status', 'assignee', 'created', 'duedate', 'project', 'priority', 'labels', 'components', 'issuelinks', 'parent', 'issuetype', 'epic', 'customfield_10014', 'customfield_10008', 'timeoriginalestimate', 'timespent', 'aggregatetimeoriginalestimate', 'aggregatetimespent', 'sprint', 'customfield_10004', 'customfield_10020'];
   if (cfg.mapping?.customFields?.sprintField) {
     standardFields.push(cfg.mapping.customFields.sprintField);
   }
@@ -579,9 +579,13 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0) {
     if (issue.fields?.epic?.key) {
       epicKey = issue.fields.epic.key;
     } else if (issue.fields?.customfield_10014) {
-      epicKey = issue.fields.customfield_10014;
-    } else if (issue.fields?.parent && issue.fields.parent.fields?.issuetype?.name === 'Epic') {
+      epicKey = typeof issue.fields.customfield_10014 === 'object' ? issue.fields.customfield_10014.key : issue.fields.customfield_10014;
+    } else if (issue.fields?.customfield_10008) {
+      epicKey = typeof issue.fields.customfield_10008 === 'object' ? issue.fields.customfield_10008.key : issue.fields.customfield_10008;
+    } else if (issue.fields?.parent?.key) {
       epicKey = issue.fields.parent.key;
+    } else {
+      epicKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
     }
   }
 
