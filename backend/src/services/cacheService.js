@@ -517,25 +517,28 @@ async function syncSingleMonthFromJira({ startStr, endStr, monthLabel, monthInde
   const db = getDb();
   const syncTime = new Date().toISOString();
 
-  try {
-    const epics = await jiraService.fetchEpics();
-    db.transaction(() => {
-      const insertProject = db.prepare(`
-        INSERT INTO projects (id, title, description, status, capabilities, category, confluence_link, start_date, due_date, last_synced)
-        VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @last_synced)
-        ON CONFLICT(id) DO UPDATE SET
-          title=excluded.title,
-          description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE projects.description END,
-          status=excluded.status,
-          last_synced=excluded.last_synced
-      `);
-      for (const epic of epics) {
-        epic.last_synced = syncTime;
-        insertProject.run(epic);
-      }
-    })();
-  } catch (err) {
-    console.error('Fetching epics failed during single month sync:', err.message);
+  // Only fetch Epics on step 1 to eliminate network overhead for subsequent steps
+  if (Number(monthIndex) === 1) {
+    try {
+      const epics = await jiraService.fetchEpics();
+      db.transaction(() => {
+        const insertProject = db.prepare(`
+          INSERT INTO projects (id, title, description, status, capabilities, category, confluence_link, start_date, due_date, last_synced)
+          VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @last_synced)
+          ON CONFLICT(id) DO UPDATE SET
+            title=excluded.title,
+            description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE projects.description END,
+            status=excluded.status,
+            last_synced=excluded.last_synced
+        `);
+        for (const epic of epics) {
+          epic.last_synced = syncTime;
+          insertProject.run(epic);
+        }
+      })();
+    } catch (err) {
+      console.error('Fetching epics failed during single month sync:', err.message);
+    }
   }
 
   const insertTask = db.prepare(`

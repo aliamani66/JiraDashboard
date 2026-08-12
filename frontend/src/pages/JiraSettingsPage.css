@@ -7,6 +7,17 @@
   box-sizing: border-box;
 }
 
+/* Dark Mode HTML5 Datepicker Indicator */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.8);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  background: rgba(56, 189, 248, 0.25);
+}
+
 /* Header */
 .jsp-header {
   display: flex;

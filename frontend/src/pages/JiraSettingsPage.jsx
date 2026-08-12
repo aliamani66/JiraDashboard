@@ -237,10 +237,23 @@ const JiraSettingsPage = () => {
 
   const [monthlySyncing, setMonthlySyncing] = useState(false);
   const [monthlyResults, setMonthlyResults] = useState(null);
+  const [syncProgress, setSyncProgress] = useState(null);
 
   const [showRangeModal, setShowRangeModal] = useState(false);
   const [rangeStartDate, setRangeStartDate] = useState('2025-01-01');
   const [rangeEndDate, setRangeEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const applyDatePreset = (daysAgo, monthsAgo) => {
+    const end = new Date();
+    const start = new Date();
+    if (daysAgo) {
+      start.setDate(end.getDate() - daysAgo);
+    } else if (monthsAgo) {
+      start.setMonth(end.getMonth() - monthsAgo);
+    }
+    setRangeEndDate(end.toISOString().split('T')[0]);
+    setRangeStartDate(start.toISOString().split('T')[0]);
+  };
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -377,17 +390,25 @@ const JiraSettingsPage = () => {
     let totalTasksSynced = 0;
     const results = [];
 
-    await api.saveJiraConfig(cfg);
+    try {
+      await api.saveJiraConfig(cfg);
+    } catch (_) {}
 
     for (let i = 0; i < monthRanges.length; i++) {
       const mRange = monthRanges[i];
       const stepNum = i + 1;
       const totalSteps = monthRanges.length;
+      const progressPercent = Math.round((stepNum / totalSteps) * 100);
 
-      setActiveModal({
-        status: 'loading',
-        title: `${titlePrefix} (ماه ${stepNum} از ${totalSteps})`,
-        message: `در حال دریافت اطلاعات ماه ${mRange.jalaliName} (${mRange.startStr.split(' ')[0]} تا ${mRange.endStr.split(' ')[0]})... لطفاً صبور باشید.`
+      setSyncProgress({
+        isSyncing: true,
+        titlePrefix,
+        stepNum,
+        totalSteps,
+        monthLabel: mRange.jalaliName,
+        dateRange: `${mRange.startStr.split(' ')[0]} تا ${mRange.endStr.split(' ')[0]}`,
+        totalTasksSoFar: totalTasksSynced,
+        progressPercent
       });
 
       try {
@@ -407,7 +428,7 @@ const JiraSettingsPage = () => {
           status: 'error',
           taskCount: 0,
           jql: res.jql || '',
-          message: res.message || 'خطا در شبکه'
+          message: res.message || 'خطا در همگام‌سازی'
         };
 
         if (!monthRes.jalaliName) monthRes.jalaliName = mRange.jalaliName;
@@ -415,6 +436,11 @@ const JiraSettingsPage = () => {
 
         totalTasksSynced += (monthRes.taskCount || 0);
         results.push(monthRes);
+
+        setSyncProgress(prev => (prev ? {
+          ...prev,
+          totalTasksSoFar: totalTasksSynced
+        } : null));
 
         setMonthlyResults({
           totalTasksSynced,
@@ -441,12 +467,9 @@ const JiraSettingsPage = () => {
       }
     }
 
-    setActiveModal({
-      status: 'success',
-      title: '✅ همگام‌سازی با موفقیت کامل گردید',
-      message: `مجموع ${totalTasksSynced} تسک از ${monthRanges.length} ماه بررسی‌شده دریافت و ثبت گردید.`
-    });
+    setSyncProgress(null);
     setMonthlySyncing(false);
+    showToast(`✅ همگام‌سازی با موفقیت انجام شد. مجموع ${totalTasksSynced} تسک از ${monthRanges.length} ماه ثبت گردید.`, 'success');
   };
 
   const handleMonthlySync = async () => {
@@ -597,6 +620,65 @@ const JiraSettingsPage = () => {
           >
             {toast.type === 'success' ? <CheckCircle2 size={17} /> : <AlertTriangle size={17} />}
             {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 🚀 Floating Top Sync Progress Banner (Non-Blocking, Transparent Background) */}
+      <AnimatePresence>
+        {syncProgress && syncProgress.isSyncing && (
+          <motion.div
+            initial={{ opacity: 0, y: -40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -40, scale: 0.95 }}
+            style={{
+              position: 'fixed',
+              top: '25px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 999999,
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.98))',
+              border: '1px solid rgba(56, 189, 248, 0.6)',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(56, 189, 248, 0.35)',
+              borderRadius: '20px',
+              padding: '1.1rem 1.8rem',
+              minWidth: '460px',
+              maxWidth: '92vw',
+              color: '#FFFFFF',
+              backdropFilter: 'blur(12px)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.25rem', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <RefreshCw size={24} className="spin" style={{ color: '#38BDF8' }} />
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '1.02rem', color: '#38BDF8' }}>
+                    {syncProgress.titlePrefix} (ماه {syncProgress.stepNum} از {syncProgress.totalSteps})
+                  </div>
+                  <div style={{ fontSize: '0.83rem', color: '#CBD5E1', marginTop: '0.15rem' }}>
+                    در حال دریافت {syncProgress.monthLabel} ({syncProgress.dateRange})
+                  </div>
+                </div>
+              </div>
+              <div style={{ textAlign: 'left', minWidth: '100px' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10B981', textAlign: 'center' }}>
+                  {syncProgress.totalTasksSoFar}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#94A3B8', textAlign: 'center' }}>تسک دریافت‌شده</div>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div style={{ width: '100%', background: 'rgba(255, 255, 255, 0.12)', height: '7px', borderRadius: '4px', overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${syncProgress.progressPercent}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #38BDF8, #10B981)',
+                  transition: 'width 0.4s ease'
+                }}
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -774,9 +856,130 @@ const JiraSettingsPage = () => {
                 </button>
               </div>
 
-              <p style={{ margin: '0 0 1.35rem 0', fontSize: '0.88rem', color: '#CBD5E1', lineHeight: '1.6' }}>
-                لطفاً تاریخ شروع و پایان مورد نظر خود را انتخاب نمایید. سیستم کوئری‌های تفکیک‌شده ماهانه را ارسال کرده و گزارش کامل دریافت داده‌ها را آماده می‌سازد.
+              <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.88rem', color: '#CBD5E1', lineHeight: '1.6' }}>
+                لطفاً تاریخ شروع و پایان مورد نظر خود را انتخاب نمایید یا از میان‌برهای سریع زیر استفاده کنید:
               </p>
+
+              {/* ⚡ Quick Presets */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 'bold', color: '#94A3B8', marginBottom: '0.5rem' }}>
+                  ⚡ میان‌برهای سریع انتخاب بازه:
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => applyDatePreset(10, 0)}
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      color: '#38BDF8',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '10px',
+                      fontSize: '0.78rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ⚡ ۱۰ روز گذشته
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyDatePreset(30, 0)}
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      color: '#38BDF8',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '10px',
+                      fontSize: '0.78rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ⚡ ۳۰ روز گذشته
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyDatePreset(0, 1)}
+                    style={{
+                      background: 'rgba(168, 85, 247, 0.15)',
+                      border: '1px solid rgba(168, 85, 247, 0.4)',
+                      color: '#C084FC',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '10px',
+                      fontSize: '0.78rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗓️ ۱ ماه اخیر
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyDatePreset(0, 2)}
+                    style={{
+                      background: 'rgba(168, 85, 247, 0.15)',
+                      border: '1px solid rgba(168, 85, 247, 0.4)',
+                      color: '#C084FC',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '10px',
+                      fontSize: '0.78rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗓️ ۲ ماه اخیر
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyDatePreset(0, 3)}
+                    style={{
+                      background: 'rgba(168, 85, 247, 0.15)',
+                      border: '1px solid rgba(168, 85, 247, 0.4)',
+                      color: '#C084FC',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '10px',
+                      fontSize: '0.78rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗓️ ۳ ماه اخیر
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyDatePreset(0, 6)}
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      border: '1px solid rgba(16, 185, 129, 0.4)',
+                      color: '#34D399',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '10px',
+                      fontSize: '0.78rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗓️ ۶ ماه اخیر
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyDatePreset(0, 12)}
+                    style={{
+                      background: 'rgba(234, 179, 8, 0.15)',
+                      border: '1px solid rgba(234, 179, 8, 0.4)',
+                      color: '#FACC15',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '10px',
+                      fontSize: '0.78rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗓️ ۱ سال اخیر
+                  </button>
+                </div>
+              </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.75rem' }}>
                 <div>
