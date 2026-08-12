@@ -22,12 +22,18 @@ router.get('/projects', (req, res) => {
     const db = getDb();
     const projects = db.prepare(`
       SELECT p.*,
-        IFNULL((SELECT SUM(estimate_hours) FROM tasks WHERE project_id = p.id AND (is_subtask IS NULL OR is_subtask = 0)), 0) as total_estimate_hours,
-        IFNULL((SELECT SUM(spent_hours) FROM tasks WHERE project_id = p.id AND (is_subtask IS NULL OR is_subtask = 0)), 0) as total_spent_hours
+        IFNULL((SELECT COUNT(*) FROM tasks WHERE project_id = p.id OR project_id = (SELECT id FROM projects WHERE id = p.id) OR id LIKE (p.id || '-%')), 0) as calc_total_tasks,
+        IFNULL((SELECT COUNT(*) FROM tasks WHERE (project_id = p.id OR id LIKE (p.id || '-%')) AND (LOWER(status) IN ('done', 'completed', 'resolved'))), 0) as calc_completed_tasks,
+        IFNULL((SELECT COUNT(*) FROM tasks WHERE (project_id = p.id OR id LIKE (p.id || '-%')) AND (is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked'))), 0) as calc_waiting_tasks,
+        IFNULL((SELECT SUM(estimate_hours) FROM tasks WHERE project_id = p.id OR id LIKE (p.id || '-%')), 0) as total_estimate_hours,
+        IFNULL((SELECT SUM(spent_hours) FROM tasks WHERE project_id = p.id OR id LIKE (p.id || '-%')), 0) as total_spent_hours
       FROM projects p
     `).all();
 
     for (const p of projects) {
+      p.total_tasks = p.calc_total_tasks || p.total_tasks || 0;
+      p.completed_tasks = p.calc_completed_tasks || p.completed_tasks || 0;
+      p.waiting_tasks = p.calc_waiting_tasks || p.waiting_tasks || 0;
       p.total_estimate_hours = Math.round((p.total_estimate_hours || 0) * 100) / 100;
       p.total_spent_hours = Math.round((p.total_spent_hours || 0) * 100) / 100;
 
@@ -35,13 +41,18 @@ router.get('/projects', (req, res) => {
       const compRows = db.prepare(`
         SELECT component, COUNT(*) as count 
         FROM tasks 
-        WHERE project_id = ? 
+        WHERE project_id = ? OR id LIKE (? || '-%')
         GROUP BY component
-      `).all(p.id);
+      `).all(p.id, p.id);
       
       const compObj = {};
       for (const row of compRows) {
-        if (row.component) compObj[row.component] = row.count;
+        if (row.component) {
+          const parts = String(row.component).split(/[,|]/).map(c => c.trim()).filter(Boolean);
+          for (const part of parts) {
+            compObj[part] = (compObj[part] || 0) + row.count;
+          }
+        }
       }
       p.components_map = compObj;
 
@@ -49,14 +60,14 @@ router.get('/projects', (req, res) => {
       const statusRows = db.prepare(`
         SELECT status, is_waiting, COUNT(*) as count 
         FROM tasks 
-        WHERE project_id = ? 
+        WHERE project_id = ? OR id LIKE (? || '-%')
         GROUP BY status, is_waiting
-      `).all(p.id);
+      `).all(p.id, p.id);
 
       const statusMap = { done: 0, active: 0, waiting: 0, todo: 0 };
       for (const row of statusRows) {
         const s = (row.status || '').toLowerCase();
-        if (row.is_waiting === 1 || s === 'waiting' || s === 'onholding' || s === 'on hold') {
+        if (row.is_waiting === 1 || s === 'waiting' || s === 'onholding' || s === 'on hold' || s === 'blocked') {
           statusMap.waiting += row.count;
         } else if (s === 'done' || s === 'completed' || s === 'resolved') {
           statusMap.done += row.count;
@@ -69,7 +80,7 @@ router.get('/projects', (req, res) => {
       p.status_map = statusMap;
 
       // Quarter labels — collect unique quarters from all tasks of this project
-      const labelRows = db.prepare(`SELECT labels FROM tasks WHERE project_id = ?`).all(p.id);
+      const labelRows = db.prepare(`SELECT labels FROM tasks WHERE project_id = ? OR id LIKE (? || '-%')`).all(p.id, p.id);
       const quarterSet = new Set();
       for (const row of labelRows) {
         extractQuarterLabels(row.labels).forEach(q => quarterSet.add(q));
@@ -149,9 +160,9 @@ router.get('/projects/:id', (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    const tasks = db.prepare('SELECT * FROM tasks WHERE project_id = ? ORDER BY sort_order ASC, id ASC').all(req.params.id);
+    const tasks = db.prepare('SELECT * FROM tasks WHERE project_id = ? OR id LIKE (? || '-%') ORDER BY sort_order ASC, id ASC').all(req.params.id, req.params.id);
     project.tasks = tasks;
-    project.waitingTasks = tasks.filter(t => t.is_waiting === 1 || t.status === 'OnHolding' || t.status === 'Waiting');
+    project.waitingTasks = tasks.filter(t => t.is_waiting === 1 || t.status === 'OnHolding' || t.status === 'Waiting' || t.status === 'Blocked');
     
     const quarterSet = new Set();
     const statusMap = { done: 0, active: 0, waiting: 0, todo: 0 };
