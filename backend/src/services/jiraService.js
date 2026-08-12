@@ -38,9 +38,28 @@ function getJiraConfig() {
   };
 }
 
+function getAuthHeaderVariants(username, token) {
+  const list = [];
+  if (token) {
+    const trimmedToken = token.trim();
+    const trimmedUser = (username || '').trim();
+    if (trimmedToken.startsWith('Basic ') || trimmedToken.startsWith('Bearer ')) {
+      list.push(trimmedToken);
+    } else {
+      if (trimmedUser) {
+        list.push('Basic ' + Buffer.from(`${trimmedUser}:${trimmedToken}`).toString('base64'));
+      }
+      list.push('Bearer ' + trimmedToken);
+      list.push('Basic ' + trimmedToken);
+    }
+  }
+  return list;
+}
+
 function getAuthHeader() {
   const cfg = getJiraConfig();
-  return 'Basic ' + Buffer.from(`${cfg.username}:${cfg.token}`).toString('base64');
+  const variants = getAuthHeaderVariants(cfg.username, cfg.token);
+  return variants[0] || '';
 }
 
 // Helper to extract date from issue fields according to mapping
