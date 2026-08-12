@@ -231,6 +231,7 @@ const JiraSettingsPage = () => {
   const [toast, setToast] = useState(null);
   const [discoveredProjects, setDiscoveredProjects] = useState([]);
   const [fetchingProjects, setFetchingProjects] = useState(false);
+  const [projectSearchTerm, setProjectSearchTerm] = useState('');
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -321,6 +322,12 @@ const JiraSettingsPage = () => {
     .split(',')
     .map(k => k.trim())
     .filter(Boolean);
+
+  const filteredDiscoveredProjects = discoveredProjects.filter(p => {
+    if (!projectSearchTerm.trim()) return true;
+    const term = projectSearchTerm.trim().toLowerCase();
+    return (p.key || '').toLowerCase().includes(term) || (p.name || '').toLowerCase().includes(term);
+  });
 
   const toggleProjectKey = (keyToToggle) => {
     let current = [...selectedProjectKeys];
@@ -489,34 +496,66 @@ const JiraSettingsPage = () => {
 
             {/* List of Discovered Projects Pills */}
             {discoveredProjects.length > 0 ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '12px', border: '1px solid var(--glass-border)', maxHeight: '180px', overflowY: 'auto' }}>
-                {discoveredProjects.map(p => {
-                  const isSel = selectedProjectKeys.includes(p.key);
-                  return (
-                    <button
-                      key={p.key}
-                      type="button"
-                      onClick={() => toggleProjectKey(p.key)}
-                      style={{
-                        padding: '0.42rem 0.9rem',
-                        borderRadius: '20px',
-                        border: isSel ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.15)',
-                        background: isSel ? 'linear-gradient(135deg, rgba(14,165,233,0.35), rgba(59,130,246,0.35))' : 'rgba(255,255,255,0.05)',
-                        color: isSel ? '#FFFFFF' : 'var(--text-secondary)',
-                        fontWeight: isSel ? '800' : '500',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.45rem',
-                        fontSize: '0.84rem',
-                        boxShadow: isSel ? '0 0 12px rgba(56,189,248,0.3)' : 'none',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      {isSel ? '✅' : '➕'} <strong>{p.key}</strong> <small style={{ opacity: 0.85 }}>({p.name})</small>
-                    </button>
-                  );
-                })}
+              <div>
+                {/* 🔍 Mini Live Search Box & Counter */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <input
+                    type="text"
+                    value={projectSearchTerm}
+                    onChange={e => setProjectSearchTerm(e.target.value)}
+                    placeholder="🔍 جستجوی سریع پروژه‌ها (نام یا کلید)..."
+                    style={{
+                      flex: 1,
+                      maxWidth: '320px',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      color: '#FFFFFF',
+                      borderRadius: '8px',
+                      padding: '0.35rem 0.75rem',
+                      fontSize: '0.82rem',
+                      outline: 'none'
+                    }}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: '#38BDF8', fontWeight: 'bold' }}>
+                    📊 {filteredDiscoveredProjects.length} از {discoveredProjects.length} پروژه
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '12px', border: '1px solid var(--glass-border)', maxHeight: '200px', overflowY: 'auto' }}>
+                  {filteredDiscoveredProjects.length === 0 ? (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.5rem' }}>
+                      نتیجه‌ای برای عبارات «{projectSearchTerm}» یافت نشد.
+                    </div>
+                  ) : (
+                    filteredDiscoveredProjects.map(p => {
+                      const isSel = selectedProjectKeys.includes(p.key);
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => toggleProjectKey(p.key)}
+                          style={{
+                            padding: '0.42rem 0.9rem',
+                            borderRadius: '20px',
+                            border: isSel ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.15)',
+                            background: isSel ? 'linear-gradient(135deg, rgba(14,165,233,0.35), rgba(59,130,246,0.35))' : 'rgba(255,255,255,0.05)',
+                            color: isSel ? '#FFFFFF' : 'var(--text-secondary)',
+                            fontWeight: isSel ? '800' : '500',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            fontSize: '0.84rem',
+                            boxShadow: isSel ? '0 0 12px rgba(56,189,248,0.3)' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          {isSel ? '✅' : '➕'} <strong>{p.key}</strong> <small style={{ opacity: 0.85 }}>({p.name})</small>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             ) : (
               <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.85rem', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.85rem', borderRadius: '8px' }}>

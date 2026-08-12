@@ -559,7 +559,7 @@ async function fetchAllJiraProjects() {
 
   if (projectsList.length === 0) {
     try {
-      const searchRes = await jiraSearch('ORDER BY created DESC', ['project'], { maxResults: 50, timeout: 6000 });
+      const searchRes = await jiraSearch('ORDER BY created DESC', ['project'], { maxResults: 1000, timeout: 10000 });
       if (searchRes && searchRes.issues) {
         const pMap = new Map();
         for (const issue of searchRes.issues) {
