@@ -19,6 +19,10 @@ async function syncFromJira() {
   const syncTime = new Date().toISOString();
 
   try {
+    // Clear previous tasks before full rebuild (ensures DB count = Jira fetch count)
+    db.prepare('DELETE FROM tasks').run();
+    db.prepare('DELETE FROM task_estimate_history').run();
+
     // Step 1: Fetch all epics and save as projects
     console.log('Starting Epic extraction from Jira...');
     const epics = await jiraService.fetchEpics();

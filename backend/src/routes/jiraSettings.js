@@ -238,10 +238,6 @@ router.put('/config', (req, res) => {
     saveDb();
     writeEnv(updates);
     
-    // Automatically trigger Jira sync in background with newly saved config
-    const cacheService = require('../services/cacheService');
-    cacheService.syncFromJira().catch(e => console.error('Background sync after saving config failed:', e.message));
-
     res.json({
       success: true,
       message: 'تنظیمات با موفقیت در دیتابیس و فایل پیکربندی سیستم ذخیره و اعمال گردید.',
