@@ -144,26 +144,17 @@ select option {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* GLOBAL STRICT SINGLE-LINE RULE FOR ALL TASK KEYS / IDS ACROSS THE SYSTEM */
+/* Clean single-line rule for task key tags */
 .task-key-tag,
 .task-key,
-.task-id-badge,
-.td-key,
-.task-badge,
-.task-id,
-.task-key-link,
-[class*="task-key"],
-[class*="task-id"] {
+.task-id-badge {
   white-space: nowrap !important;
-  word-break: keep-all !important;
-  overflow-wrap: normal !important;
-  display: inline-block;
-  direction: ltr !important;
+  display: inline-flex;
+  align-items: center;
 }
 
 .td-key {
   white-space: nowrap !important;
-  width: 1%;
 }
 
 *::-webkit-scrollbar-corner {
