@@ -26,6 +26,15 @@ app.use('/api/sync', syncRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/jira', jiraSettingsRoutes);
 
+// Global Error Handlers to prevent process exit loops on server
+process.on('uncaughtException', (err) => {
+  console.error('CRITICAL: Uncaught Exception in Backend:', err.message, err.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('CRITICAL: Unhandled Promise Rejection in Backend:', reason);
+});
+
 // Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
