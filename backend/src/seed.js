@@ -168,8 +168,8 @@ async function seed() {
   const testCompsList = ['dev', 'infrastructure', 'monitoring', 'security', 'ai', 'database', 'architecture', 'testing', 'documentation', 'support', 'networking', 'devops', 'frontend', 'backend', 'ui-ux', 'cloud'];
 
   const insertTask = db.prepare(`
-    INSERT INTO tasks (id, project_id, title, status, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, sort_order, component)
-    VALUES (:id, :project_id, :title, :status, :estimate_hours, :spent_hours, :start_date, :due_date, :is_waiting, :waiting_for_team, :waiting_reason, :sprint_name, :sprint_start_date, :sprint_end_date, :priority, :sort_order, :component)
+    INSERT INTO tasks (id, project_id, title, status, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, sort_order, component, labels)
+    VALUES (:id, :project_id, :title, :status, :estimate_hours, :spent_hours, :start_date, :due_date, :is_waiting, :waiting_for_team, :waiting_reason, :sprint_name, :sprint_start_date, :sprint_end_date, :priority, :sort_order, :component, :labels)
   `);
 
   // Clear existing data
@@ -201,6 +201,8 @@ async function seed() {
         let sprintEnd = (j % 2 === 0) ? sprint23End : sprint22End;
 
         const assignedComp = testCompsList[taskGlobalIdx % testCompsList.length];
+        const testQuartersList = ['1403Q1', '1403Q2', '1403Q3', '1403Q4', '1404Q1', '1404Q2', '1404Q3', '1404Q4', '1405Q1', '1405Q2', '1405Q3', '1405Q4'];
+        const assignedQuarter = testQuartersList[taskGlobalIdx % testQuartersList.length];
         taskGlobalIdx++;
 
         insertTask.run({
@@ -220,7 +222,8 @@ async function seed() {
           sprint_end_date: sprintEnd,
           priority: t.priority,
           sort_order: j,
-          component: assignedComp
+          component: assignedComp,
+          labels: JSON.stringify([assignedQuarter])
         });
       });
     });
