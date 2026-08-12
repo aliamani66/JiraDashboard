@@ -253,7 +253,7 @@ const JiraSettingsPage = () => {
     try {
       setSaving(true);
       const res = await api.saveJiraConfig(cfg);
-      showToast(res.message || 'تنظیمات با موفقیت ذخیره شد.');
+      showToast(res.message || 'تنظیمات و کلید جدید پروژه با موفقیت ذخیره و به صورت زنده اعمال گردید.');
     } catch (e) {
       showToast('خطا در ذخیره تنظیمات: ' + (e.message || ''), 'error');
     } finally {
@@ -264,12 +264,15 @@ const JiraSettingsPage = () => {
   const handleSync = async () => {
     try {
       setSyncing(true);
-      showToast('در حال همگام‌سازی و دریافت اطلاعات از Jira...');
+      showToast(`در حال ذخیره تنظیمات و دریافت داده‌های پروژه (${cfg.connection?.projectKey || 'اصلی'})...`);
+      // Auto-save current config first so newly entered Project Key is immediately active
+      await api.saveJiraConfig(cfg);
+      // Execute live sync from Jira
       const res = await api.resetDatabase();
       showToast(res.message || 'همگام‌سازی با موفقیت انجام گردید.');
       setTimeout(() => window.location.reload(), 1500);
     } catch (e) {
-      showToast('خطا در سینک جیرا: ' + (e.message || ''), 'error');
+      showToast('خطا در همگام‌سازی با Jira: ' + (e.message || ''), 'error');
     } finally {
       setSyncing(false);
     }

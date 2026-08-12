@@ -194,7 +194,7 @@ router.put('/config', (req, res) => {
     const cacheService = require('../services/cacheService');
     cacheService.syncFromJira().catch(e => console.error('Background sync after saving config failed:', e.message));
 
-    res.json({ message: 'تنظیمات با موفقیت ذخیره گردید و دریافت داده‌ها از Jira آغاز شد.' });
+    res.json({ message: 'تنظیمات با موفقیت ذخیره گردید و کلید جدید پروژه به صورت زنده اعمال شد.' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save settings: ' + err.message });
   }
