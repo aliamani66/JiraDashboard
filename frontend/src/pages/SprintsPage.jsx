@@ -34,6 +34,7 @@ const SprintsPage = () => {
     'Sprint 10': { start: '۱۴۰۵/۰۵/۲۹', due: '۱۴۰۵/۰۷/۰۳' },
   };
 
+  const [allProjects, setAllProjects] = useState([]);
   const [jiraConfiguredKeys, setJiraConfiguredKeys] = useState([]);
 
   useEffect(() => {
