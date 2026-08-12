@@ -9,8 +9,9 @@ cd /d "%~dp0"
 if exist "JiraDashboard" cd JiraDashboard
 if exist "ops-showcase-dashboard" cd ops-showcase-dashboard
 
-echo [1/4] Pulling latest changes from Git repository...
-git pull origin main
+echo [1/4] Syncing latest changes from Git repository...
+git fetch origin main
+git reset --hard origin/main
 
 echo.
 echo [2/4] Creating clean tar.gz deployment package (JiraDashboard.tar.gz)...

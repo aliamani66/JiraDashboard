@@ -14,9 +14,10 @@ Write-Host "Automated Server Deployment Script (Jira Dashboard)" -ForegroundColo
 Write-Host "======================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. Git pull
-Write-Host "[1/4] Pulling latest code changes from Git repository..." -ForegroundColor Yellow
-git pull origin main
+# 1. Git pull (Force sync with origin/main)
+Write-Host "[1/4] Syncing latest code changes from Git repository..." -ForegroundColor Yellow
+git fetch origin main
+git reset --hard origin/main
 
 # 2. Compress clean archive using POSIX tar.gz
 Write-Host ""
