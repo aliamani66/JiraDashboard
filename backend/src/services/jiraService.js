@@ -167,6 +167,7 @@ async function jiraSearch(jql, fields = [], options = {}) {
     if (authSuccess) {
       return { total: totalCount, issues: allIssues };
     }
+  }
   if (lastError) throw lastError;
   throw new Error('Jira search failed due to authentication or network error');
 }
