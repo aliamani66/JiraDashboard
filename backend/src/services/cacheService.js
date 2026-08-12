@@ -682,13 +682,15 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 
     const startDt = new Date(startStr);
     const endDt = new Date(endStr);
-    const selectedProjKeys = new Set(projKeys.map(k => k.toUpperCase()));
+    const configuredProjKeys = new Set(
+      projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
+    );
     const rawIssues = (winningSearchRes && winningSearchRes.issues) ? winningSearchRes.issues : [];
 
     // Filter issues in JS by project and date range
     const finalIssues = rawIssues.filter(issue => {
-      const issueProjKey = (issue.fields?.project?.key || issue.key?.split('-')[0] || '').toUpperCase();
-      if (selectedProjKeys.size > 0 && issueProjKey && !selectedProjKeys.has(issueProjKey)) {
+      const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
+      if (configuredProjKeys.size > 0 && issueProjKey && !configuredProjKeys.has(issueProjKey)) {
         return false;
       }
       if (issue.fields && issue.fields.created) {
@@ -741,11 +743,12 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       monthIndex,
       monthLabel,
       dateRange: `${startStr.split(' ')[0]} تا ${endStr.split(' ')[0]}`,
-      jql,
+      jql: winningJql || queriesToTry[0]?.jql || '',
       taskCount: 0,
       status: 'error',
       errorCode: errCode,
-      message: `🔴 خطا (${errCode}): ${detailMsg}`
+      message: `🔴 خطا (${errCode}): ${detailMsg}`,
+      queryAuditResults
     };
   }
 }
