@@ -367,11 +367,12 @@ router.get('/waiting-tasks', (req, res) => {
     
     for (const t of tasks) {
       totalWaiting++;
-      const teamGroupKey = t.waiting_for_team || 'پروژه صنعتی OPM';
+      const teamGroupKey = t.waiting_for_team || 'تیم توسعه و پشتیبانی';
+      const realProjId = t.project_id || (t.id ? t.id.split('-')[0] : 'ORD');
       
       if (!byTeamMap.has(teamGroupKey)) {
         byTeamMap.set(teamGroupKey, {
-          projectId: 'OPM',
+          projectId: realProjId,
           projectTitle: `وابستگی به ${teamGroupKey}`,
           tasks: []
         });

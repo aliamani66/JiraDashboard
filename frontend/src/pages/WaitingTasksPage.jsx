@@ -33,13 +33,13 @@ const WaitingTasksPage = () => {
 
   const { totalWaiting = 0, byProject = [] } = data || {};
 
-  // Extract unique Jira Project Keys (combining configured projects and DB tasks)
+  // Extract unique Jira Project Keys (STRICTLY showing configured projects from Jira Settings)
   const jiraProjectsList = useMemo(() => {
-    const keys = new Set(configuredProjects);
+    if (configuredProjects.length > 0) {
+      return [...configuredProjects].sort();
+    }
+    const keys = new Set();
     (byProject || []).forEach(p => {
-      const pId = p.projectId || p.project_id || '';
-      const pKey = p.project_key || (pId ? pId.split('-')[0].toUpperCase() : '');
-      if (pKey && pKey !== 'UNKNOWN') keys.add(pKey);
       (p.tasks || []).forEach(t => {
         const tId = t.task_id || t.id || '';
         const tKey = tId ? tId.split('-')[0].toUpperCase() : '';

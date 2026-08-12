@@ -24,9 +24,12 @@ const OverallTimelinePage = () => {
     }).catch(() => {});
   }, []);
 
-  // Extract unique Jira Project Keys (combining configured projects and DB projects)
+  // Extract unique Jira Project Keys (STRICTLY showing configured projects from Jira Settings)
   const jiraProjectsList = useMemo(() => {
-    const keys = new Set(configuredProjects);
+    if (configuredProjects.length > 0) {
+      return [...configuredProjects].sort();
+    }
+    const keys = new Set();
     (projects || []).forEach(p => {
       const pKey = p.project_key || (p.id ? p.id.split('-')[0].toUpperCase() : '');
       if (pKey && pKey !== 'UNKNOWN') keys.add(pKey);
