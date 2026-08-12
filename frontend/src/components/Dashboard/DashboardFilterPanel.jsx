@@ -1,3 +1,4 @@
+import React from 'react';
 import { Filter, RotateCcw, Activity, Calendar, Layers, Search, FolderGit2 } from 'lucide-react';
 import './DashboardFilterPanel.css';
 
