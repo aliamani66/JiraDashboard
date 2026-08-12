@@ -13,21 +13,24 @@ echo [1/4] Pulling latest changes from Git repository...
 git pull origin main
 
 echo.
-echo [2/4] Creating clean deployment package (JiraDashboard.zip)...
-powershell -Command "if (Test-Path 'JiraDashboard.zip') { Remove-Item 'JiraDashboard.zip' -Force }; $files = Get-ChildItem -Path . | Where-Object { @('node_modules','.git','database.sqlite','dist','.vscode','deploy','JiraDashboard.zip') -notcontains $_.Name }; Compress-Archive -Path $files.FullName -DestinationPath 'JiraDashboard.zip' -Force"
+echo [2/4] Creating clean tar.gz deployment package (JiraDashboard.tar.gz)...
+if exist "JiraDashboard.tar.gz" del /f /q JiraDashboard.tar.gz
+if exist "JiraDashboard.zip" del /f /q JiraDashboard.zip
 
-if not exist "JiraDashboard.zip" (
-    echo ❌ ERROR: Failed to create JiraDashboard.zip archive!
+tar -czf JiraDashboard.tar.gz --exclude="node_modules" --exclude="frontend/node_modules" --exclude="backend/node_modules" --exclude=".git" --exclude="backend/database.sqlite" --exclude="frontend/dist" --exclude=".vscode" --exclude="deploy" --exclude="*.tar.gz" --exclude="*.zip" .
+
+if not exist "JiraDashboard.tar.gz" (
+    echo ❌ ERROR: Failed to create JiraDashboard.tar.gz archive!
     pause
     exit /b 1
 )
 
-echo ✅ Created JiraDashboard.zip successfully.
+echo ✅ Created JiraDashboard.tar.gz successfully.
 echo.
 
 set SERVER_SSH=root@10.100.8.130
-echo [3/4] Uploading JiraDashboard.zip via SCP to %SERVER_SSH%...
-scp JiraDashboard.zip %SERVER_SSH%:/tmp/JiraDashboard.zip
+echo [3/4] Uploading JiraDashboard.tar.gz via SCP to %SERVER_SSH%...
+scp JiraDashboard.tar.gz %SERVER_SSH%:/tmp/JiraDashboard.tar.gz
 
 if errorlevel 1 (
     echo ❌ ERROR: SCP file transfer failed!
@@ -37,7 +40,7 @@ if errorlevel 1 (
 
 echo.
 echo [4/4] Extracting archive and executing Docker Compose on server...
-ssh %SERVER_SSH% "mkdir -p /appserver/amani/JiraDashboard && unzip -q -o /tmp/JiraDashboard.zip -d /appserver/amani/JiraDashboard && cd /appserver/amani/JiraDashboard && docker compose down && (docker compose up -d --build || docker-compose up -d --build)"
+ssh %SERVER_SSH% "mkdir -p /appserver/amani/JiraDashboard && tar -xzf /tmp/JiraDashboard.tar.gz -C /appserver/amani/JiraDashboard && cd /appserver/amani/JiraDashboard && docker compose down && (docker compose up -d --build || docker-compose up -d --build)"
 
 if errorlevel 1 (
     echo ❌ ERROR: Remote SSH command execution failed!
