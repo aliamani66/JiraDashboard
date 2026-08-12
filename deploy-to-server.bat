@@ -41,7 +41,7 @@ if errorlevel 1 (
 
 echo.
 echo [4/4] Extracting archive and executing Docker Compose on server...
-ssh %SERVER_SSH% "mkdir -p /appserver/amani/JiraDashboard && tar -xzf /tmp/JiraDashboard.tar.gz -C /appserver/amani/JiraDashboard && cd /appserver/amani/JiraDashboard && docker compose down && (docker compose build --no-cache && docker compose up -d --force-recreate || docker-compose build --no-cache && docker-compose up -d --force-recreate)"
+ssh %SERVER_SSH% "export PATH=$PATH:/usr/local/bin:/usr/bin; DC='docker compose'; if command -v docker-compose >/dev/null 2>&1; then DC='docker-compose'; fi; if docker compose version >/dev/null 2>&1; then DC='docker compose'; fi; mkdir -p /appserver/amani/JiraDashboard && tar -xzf /tmp/JiraDashboard.tar.gz -C /appserver/amani/JiraDashboard && cd /appserver/amani/JiraDashboard && ($DC down || true) && $DC build --no-cache && $DC up -d --force-recreate"
 
 if errorlevel 1 (
     echo [ERROR] Remote SSH command execution failed!
