@@ -243,6 +243,8 @@ const JiraSettingsPage = () => {
   const [showRangeModal, setShowRangeModal] = useState(false);
   const [jqlPreview, setJqlPreview] = useState(null);
   const [jqlPreviewLoading, setJqlPreviewLoading] = useState(false);
+  const [jqlTestResults, setJqlTestResults] = useState(null);
+  const [jqlTestLoading, setJqlTestLoading] = useState(false);
 
   const [rangeStartJalali, setRangeStartJalali] = useState(() => {
     const now = new Date();
@@ -286,6 +288,30 @@ const JiraSettingsPage = () => {
       showToast('خطا در دریافت پیش‌نمایش: ' + e.message, 'error');
     } finally {
       setJqlPreviewLoading(false);
+    }
+  };
+
+  const handleTestAllJql = async () => {
+    if (!rangeStartJalali || !rangeEndJalali) {
+      showToast('لطفاً تاریخ شروع و پایان را انتخاب کنید.', 'error');
+      return;
+    }
+    try {
+      setJqlTestLoading(true);
+      setJqlTestResults(null);
+      setJqlPreview(null);
+      const startG = j2g(rangeStartJalali.jy, rangeStartJalali.jm, rangeStartJalali.jd);
+      const endG = j2g(rangeEndJalali.jy, rangeEndJalali.jm, rangeEndJalali.jd);
+      const startStr = `${startG.gy}-${String(startG.gm).padStart(2,'0')}-${String(startG.gd).padStart(2,'0')} 00:00`;
+      const endStr = `${endG.gy}-${String(endG.gm).padStart(2,'0')}-${String(endG.gd).padStart(2,'0')} 23:59`;
+      const jalaliStartStr = `${rangeStartJalali.jy}/${String(rangeStartJalali.jm).padStart(2,'0')}/${String(rangeStartJalali.jd).padStart(2,'0')} 00:00`;
+      const jalaliEndStr = `${rangeEndJalali.jy}/${String(rangeEndJalali.jm).padStart(2,'0')}/${String(rangeEndJalali.jd).padStart(2,'0')} 23:59`;
+      const res = await api.testAllJqlQueries({ startStr, endStr, jalaliStartStr, jalaliEndStr });
+      setJqlTestResults(res);
+    } catch (e) {
+      showToast('خطا: ' + e.message, 'error');
+    } finally {
+      setJqlTestLoading(false);
     }
   };
 
@@ -960,10 +986,18 @@ const JiraSettingsPage = () => {
                 <button
                   type="button"
                   onClick={handlePreviewJql}
-                  disabled={jqlPreviewLoading}
+                  disabled={jqlPreviewLoading || jqlTestLoading}
                   style={{ background: 'linear-gradient(135deg, #6366F1, #4F46E5)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.65rem 1.25rem', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 >
-                  {jqlPreviewLoading ? '⏳ در حال جنریت...' : '🔎 نمایش کوئری‌های JQL'}
+                  {jqlPreviewLoading ? '⏳ در حال جنریت...' : '🔎 نمایش کوئری‌ها'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTestAllJql}
+                  disabled={jqlTestLoading || jqlPreviewLoading}
+                  style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.65rem 1.25rem', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  {jqlTestLoading ? '⏳ در حال اجرا...' : '⚡ تست همه کوئری‌ها روی جیرا'}
                 </button>
                 <button
                   type="button"

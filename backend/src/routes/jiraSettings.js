@@ -380,7 +380,121 @@ router.post('/preview-jql', (req, res) => {
 });
 
 
-// GET All Jira Projects from live Jira Server for multi-select combo
+// POST Test ALL JQL queries against real Jira and return status of each
+router.post('/test-all-jql', async (req, res) => {
+  try {
+    const { startStr, endStr, jalaliStartStr, jalaliEndStr } = req.body;
+    if (!startStr || !endStr) {
+      return res.status(400).json({ success: false, message: 'startStr و endStr الزامی هستند' });
+    }
+
+    const cfg = jiraService.getJiraConfig();
+    const projKeyStr = cfg.projectKey || 'ORD';
+
+    // Build project clause
+    let projectClause = '';
+    if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
+      const projects = projKeyStr.split(',').map(p => {
+        const clean = p.trim().toUpperCase();
+        return /^[A-Z0-9_]+$/.test(clean) ? clean : `"${clean}"`;
+      }).filter(Boolean);
+      if (projects.length > 1) projectClause = `project IN (${projects.join(',')})`;
+      else if (projects.length === 1) projectClause = `project = ${projects[0]}`;
+    }
+    const projPrefix = projectClause ? `${projectClause} AND ` : '';
+
+    // Jalali conversion helper
+    function g2j(gy, gm, gd) {
+      let d_no = 365 * gy + Math.floor((gy+3)/4) - Math.floor((gy+99)/100) + Math.floor((gy+399)/400)
+        + [0,0,31,59+(gy%4===0&&(gy%100!==0||gy%400===0)?1:0),90,120,151,181,212,243,273,304,334][gm] + gd
+        - (365*1348 + Math.floor((1348+3)/4) - Math.floor((1348+99)/100) + Math.floor((1348+399)/400)) - 79;
+      let jy = 33 * Math.floor(d_no / 12053); d_no %= 12053;
+      jy += 4 * Math.floor(d_no / 1461); d_no %= 1461;
+      if (d_no >= 366) { jy += Math.floor((d_no-1)/365); d_no = (d_no-1)%365; }
+      let jm = 0;
+      for (const days of [31,31,31,31,31,31,30,30,30,30,30]) { if (d_no < days) break; d_no -= days; jm++; }
+      return { jy, jm: jm+1, jd: d_no+1 };
+    }
+
+    let jStart = jalaliStartStr;
+    let jEnd = jalaliEndStr;
+    if (!jStart && startStr) {
+      const p = startStr.split(' ')[0].split('-').map(Number);
+      if (p.length === 3) { const j = g2j(p[0],p[1],p[2]); jStart = `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')} 00:00`; }
+    }
+    if (!jEnd && endStr) {
+      const p = endStr.split(' ')[0].split('-').map(Number);
+      if (p.length === 3) { const j = g2j(p[0],p[1],p[2]); jEnd = `${j.jy}/${String(j.jm).padStart(2,'0')}/${String(j.jd).padStart(2,'0')} 23:59`; }
+    }
+
+    const jalaliSlash = jStart ? jStart.split(' ')[0] : '';
+    const jalaliSlashEnd = jEnd ? jEnd.split(' ')[0] : '';
+    const jalaliDash = jalaliSlash.replace(/\//g, '-');
+    const jalaliDashEnd = jalaliSlashEnd.replace(/\//g, '-');
+    const gregStart = startStr.split(' ')[0];
+    const gregEnd = endStr.split(' ')[0];
+
+    const queries = [
+      { id: 1, name: 'شمسی دش (۱۴۰۵-۰۳-۲۲)', jql: jalaliDash ? `${projPrefix}created >= "${jalaliDash}" AND created <= "${jalaliDashEnd}" ORDER BY created ASC` : null },
+      { id: 2, name: 'شمسی اسلش (۱۴۰۵/۰۳/۲۲)', jql: jalaliSlash ? `${projPrefix}created >= "${jalaliSlash}" AND created <= "${jalaliSlashEnd}" ORDER BY created ASC` : null },
+      { id: 3, name: 'میلادی تنها (YYYY-MM-DD)', jql: `${projPrefix}created >= "${gregStart}" AND created <= "${gregEnd}" ORDER BY created ASC` },
+      { id: 4, name: 'میلادی با ساعت (YYYY-MM-DD HH:mm)', jql: `${projPrefix}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC` },
+      { id: 5, name: 'شمسی بدون پروژه', jql: jalaliDash ? `created >= "${jalaliDash}" AND created <= "${jalaliDashEnd}" ORDER BY created ASC` : null },
+      { id: 6, name: 'میلادی بدون پروژه', jql: `created >= "${gregStart}" AND created <= "${gregEnd}" ORDER BY created ASC` },
+      { id: 7, name: 'پروژه بدون فیلتر تاریخ', jql: projectClause ? `${projectClause} ORDER BY created DESC` : null },
+      { id: 8, name: 'نسبی ۳۰ روز اخیر', jql: `${projPrefix}created >= -30d ORDER BY created DESC` },
+      { id: 9, name: 'نسبی ۱ سال اخیر', jql: `${projPrefix}created >= -365d ORDER BY created DESC` },
+      { id: 10, name: 'کلیه تسک‌های سرور (بدون فیلتر)', jql: `ORDER BY created DESC` }
+    ].filter(q => q && q.jql);
+
+    // Run all queries against real Jira
+    const results = [];
+    for (const q of queries) {
+      const start = Date.now();
+      try {
+        const res = await jiraService.jiraSearch(q.jql, 1); // maxResults=1 to be fast
+        const totalCount = res.total !== undefined ? res.total : (res.issues ? res.issues.length : 0);
+        results.push({
+          id: q.id,
+          name: q.name,
+          jql: q.jql,
+          status: totalCount > 0 ? 'success' : 'zero',
+          total: totalCount,
+          ms: Date.now() - start
+        });
+      } catch (err) {
+        const errCode = err.code || (err.response ? `HTTP_${err.response.status}` : 'ERROR');
+        const errMsg = err.response?.data?.errorMessages?.join(', ') || err.message;
+        results.push({
+          id: q.id,
+          name: q.name,
+          jql: q.jql,
+          status: 'error',
+          total: 0,
+          ms: Date.now() - start,
+          errorCode: errCode,
+          errorMsg: errMsg
+        });
+      }
+    }
+
+    const winner = results.find(r => r.status === 'success');
+    res.json({
+      success: true,
+      jiraBaseUrl: cfg.baseUrl,
+      projectKey: projKeyStr,
+      jalaliRange: `${jalaliDash} تا ${jalaliDashEnd}`,
+      gregorianRange: `${gregStart} تا ${gregEnd}`,
+      winnerJql: winner ? winner.jql : null,
+      winnerId: winner ? winner.id : null,
+      results
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
 router.get('/fetch-jira-projects', async (req, res) => {
   try {
     const projects = await jiraService.fetchAllJiraProjects();
