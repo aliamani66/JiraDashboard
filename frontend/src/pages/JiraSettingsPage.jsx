@@ -975,43 +975,69 @@ const JiraSettingsPage = () => {
               </div>
 
               {/* Modal Action Buttons */}
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.25rem', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => { setShowRangeModal(false); setJqlPreview(null); }}
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#94A3B8', borderRadius: '12px', padding: '0.65rem 1.25rem', fontSize: '0.9rem', cursor: 'pointer' }}
-                >
-                  ✕ بستن
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.2rem', flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => { setShowRangeModal(false); setJqlPreview(null); setJqlTestResults(null); }}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#94A3B8', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', cursor: 'pointer' }}>
+                  بستن
                 </button>
-                <button
-                  type="button"
-                  onClick={handlePreviewJql}
-                  disabled={jqlPreviewLoading || jqlTestLoading}
-                  style={{ background: 'linear-gradient(135deg, #6366F1, #4F46E5)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.65rem 1.25rem', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                >
-                  {jqlPreviewLoading ? '⏳ در حال جنریت...' : '🔎 نمایش کوئری‌ها'}
+                <button type="button" onClick={handlePreviewJql} disabled={jqlPreviewLoading || jqlTestLoading}
+                  style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}>
+                  {jqlPreviewLoading ? 'جنریت...' : 'نمایش کوئری‌ها'}
                 </button>
-                <button
-                  type="button"
-                  onClick={handleTestAllJql}
-                  disabled={jqlTestLoading || jqlPreviewLoading}
-                  style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.65rem 1.25rem', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                >
-                  {jqlTestLoading ? '⏳ در حال اجرا...' : '⚡ تست همه کوئری‌ها روی جیرا'}
+                <button type="button" onClick={handleTestAllJql} disabled={jqlTestLoading || jqlPreviewLoading}
+                  style={{ background: 'linear-gradient(135deg,#F59E0B,#D97706)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}>
+                  {jqlTestLoading ? 'در حال اجرا...' : 'تست همه کوئری‌ها روی جیرا'}
                 </button>
-                <button
-                  type="button"
-                  onClick={handleRangeSync}
-                  disabled={monthlySyncing}
-                  style={{ background: 'linear-gradient(135deg, #10B981, #059669)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.65rem 1.5rem', fontSize: '0.92rem', fontWeight: 'bold', cursor: monthlySyncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 4px 15px rgba(16,185,129,0.4)' }}
-                >
-                  <RefreshCw size={18} className={monthlySyncing ? 'spin' : ''} />
-                  {monthlySyncing ? 'در حال استخراج...' : '🚀 شروع همگام‌سازی'}
+                <button type="button" onClick={handleRangeSync} disabled={monthlySyncing}
+                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.3rem', fontSize: '0.9rem', fontWeight: 700, cursor: monthlySyncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <RefreshCw size={16} className={monthlySyncing ? 'spin' : ''} />
+                  {monthlySyncing ? 'در حال استخراج...' : 'شروع همگام‌سازی'}
                 </button>
               </div>
 
-              {/* JQL Preview Panel - shown below buttons inside modal */}
-              {jqlPreview && (
+              {jqlTestResults && (
+                <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(245,158,11,0.35)', paddingTop: '1rem' }}>
+                  <div style={{ fontSize: '0.77rem', color: '#94A3B8', marginBottom: '0.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <span>سرور: <strong style={{ color: '#38BDF8' }}>{jqlTestResults.jiraBaseUrl}</strong></span>
+                    <span>پروژه: <strong style={{ color: '#38BDF8' }}>{jqlTestResults.projectKey}</strong></span>
+                    <span>شمسی: <strong style={{ color: '#10B981' }}>{jqlTestResults.jalaliRange}</strong></span>
+                    <span>میلادی: <strong style={{ color: '#F59E0B' }}>{jqlTestResults.gregorianRange}</strong></span>
+                  </div>
+                  {jqlTestResults.winnerId
+                    ? <div style={{ background:'rgba(16,185,129,0.12)', border:'1px solid rgba(16,185,129,0.4)', borderRadius:'8px', padding:'0.4rem 0.85rem', marginBottom:'0.55rem', fontSize:'0.78rem', color:'#6EE7B7' }}>برنده: <strong>#{jqlTestResults.winnerId}</strong> - این کوئری جواب داد</div>
+                    : <div style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'8px', padding:'0.4rem 0.85rem', marginBottom:'0.55rem', fontSize:'0.78rem', color:'#FCA5A5' }}>هیچ کوئری تسک برنگرداند</div>
+                  }
+                  <div style={{ display:'flex', flexDirection:'column', gap:'0.35rem', maxHeight:'360px', overflowY:'auto' }}>
+                    {jqlTestResults.results.map(r => {
+                      const win = r.id === jqlTestResults.winnerId;
+                      const bg = win ? 'rgba(16,185,129,0.1)' : r.status==='error' ? 'rgba(239,68,68,0.07)' : r.status==='zero' ? 'rgba(245,158,11,0.05)' : 'rgba(255,255,255,0.03)';
+                      const bdr = win ? '1.5px solid rgba(16,185,129,0.5)' : r.status==='error' ? '1px solid rgba(239,68,68,0.22)' : '1px solid rgba(255,255,255,0.07)';
+                      const badgeColor = win ? '#10B981' : r.status==='error' ? '#EF4444' : r.status==='zero' ? '#F59E0B' : '#6366F1';
+                      const badgeText = win ? 'برنده' : r.status==='error' ? 'خطا' : r.status==='zero' ? 'صفر تسک' : '...';
+                      return (
+                        <div key={r.id} style={{ background:bg, border:bdr, borderRadius:'9px', padding:'0.5rem 0.8rem' }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'0.3rem', marginBottom:'0.25rem' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+                              <span style={{ background:badgeColor, color:'#fff', fontSize:'0.64rem', fontWeight:700, padding:'0.1rem 0.4rem', borderRadius:'20px' }}>{badgeText}</span>
+                              <span style={{ fontSize:'0.75rem', color: win ? '#A7F3D0' : '#94A3B8', fontWeight: win ? 700 : 400 }}>#{r.id} - {r.name}</span>
+                            </div>
+                            <div style={{ fontSize:'0.69rem', color:'#64748B', display:'flex', gap:'0.5rem' }}>
+                              {r.status!=='error' && <span>{r.total} تسک</span>}
+                              {r.status==='error' && <span style={{ color:'#FCA5A5' }}>{r.errorCode}</span>}
+                              <span>{r.ms}ms</span>
+                            </div>
+                          </div>
+                          <code style={{ fontSize:'0.71rem', color: win ? '#6EE7B7' : '#475569', wordBreak:'break-all', fontFamily:'monospace', lineHeight:1.5, display:'block' }}>{r.jql}</code>
+                          {r.status==='error' && r.errorMsg && <div style={{ fontSize:'0.66rem', color:'#FCA5A5', marginTop:'0.2rem' }}>{r.errorMsg}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* JQL Preview Panel */}
+              {jqlPreview && !jqlTestResults && (
                 <div style={{ marginTop: '1.25rem', borderTop: '1px solid rgba(99,102,241,0.3)', paddingTop: '1rem' }}>
                   <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.75rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                     <span>🔗 <strong style={{ color: '#38BDF8' }}>سرور جیرا:</strong> {jqlPreview.jiraBaseUrl}</span>
@@ -1544,3 +1570,4 @@ const JiraSettingsPage = () => {
 };
 
 export default JiraSettingsPage;
+
