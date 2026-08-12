@@ -630,8 +630,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   const gregStartDateOnly = startStr.split(' ')[0];
   const gregEndDateOnly = endStr.split(' ')[0];
 
-  // ✅ کوئری پایدار: -365d با project filter — تنها فرمتی که روی این سرور کار می‌کند
-  const confirmedJql = `${projPrefix}created >= -365d ORDER BY created ASC`;
+  // ✅ کوئری تایید شده #3: project filter + تاریخ میلادی دقیق
+  const confirmedJql = `${projPrefix}created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
 
   const configuredProjKeys = new Set(
     projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
