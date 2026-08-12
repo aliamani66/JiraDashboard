@@ -982,6 +982,7 @@ const JiraSettingsPage = () => {
                   <button type="button" onClick={() => applyDatePreset(0, 3)} className="jsp-preset-pill purple">🗓️ ۳ ماه اخیر</button>
                   <button type="button" onClick={() => applyDatePreset(0, 6)} className="jsp-preset-pill green">🗓️ ۶ ماه اخیر</button>
                   <button type="button" onClick={() => applyDatePreset(0, 12)} className="jsp-preset-pill gold">🗓️ ۱ سال اخیر</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 24)} className="jsp-preset-pill gold" style={{ borderColor: '#F59E0B', color: '#FCD34D' }}>🗓️ ۲ سال اخیر</button>
                 </div>
               </div>
 
@@ -1003,20 +1004,16 @@ const JiraSettingsPage = () => {
               <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.2rem', flexWrap: 'wrap' }}>
                 <button type="button" onClick={() => { setShowRangeModal(false); setJqlPreview(null); setJqlTestResults(null); }}
                   style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#94A3B8', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', cursor: 'pointer' }}>
-                  بستن
-                </button>
-                <button type="button" onClick={handlePreviewJql} disabled={jqlPreviewLoading || jqlTestLoading}
-                  style={{ background: 'linear-gradient(135deg,#6366F1,#4F46E5)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}>
-                  {jqlPreviewLoading ? 'جنریت...' : 'نمایش کوئری‌ها'}
+                  ✕ بستن
                 </button>
                 <button type="button" onClick={handleTestAllJql} disabled={jqlTestLoading || jqlPreviewLoading}
-                  style={{ background: 'linear-gradient(135deg,#F59E0B,#D97706)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}>
-                  {jqlTestLoading ? 'در حال اجرا...' : 'تست همه کوئری‌ها روی جیرا'}
+                  style={{ background: 'linear-gradient(135deg,#F59E0B,#D97706)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  {jqlTestLoading ? '⏳ در حال تست...' : '⚡ تست کوئری جیرا (کوئری ۳)'}
                 </button>
                 <button type="button" onClick={handleRangeSync} disabled={monthlySyncing}
-                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.3rem', fontSize: '0.9rem', fontWeight: 700, cursor: monthlySyncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.3rem', fontSize: '0.9rem', fontWeight: 700, cursor: monthlySyncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(16,185,129,0.35)' }}>
                   <RefreshCw size={16} className={monthlySyncing ? 'spin' : ''} />
-                  {monthlySyncing ? 'در حال استخراج...' : 'شروع همگام‌سازی'}
+                  {monthlySyncing ? 'در حال استخراج...' : '🚀 شروع همگام‌سازی'}
                 </button>
               </div>
 

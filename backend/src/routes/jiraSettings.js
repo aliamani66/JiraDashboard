@@ -435,16 +435,7 @@ router.post('/test-all-jql', async (req, res) => {
     const gregEnd = endStr.split(' ')[0];
 
     const queries = [
-      { id: 1, name: 'شمسی دش (۱۴۰۵-۰۳-۲۲)', jql: jalaliDash ? `${projPrefix}created >= "${jalaliDash}" AND created <= "${jalaliDashEnd}" ORDER BY created ASC` : null },
-      { id: 2, name: 'شمسی اسلش (۱۴۰۵/۰۳/۲۲)', jql: jalaliSlash ? `${projPrefix}created >= "${jalaliSlash}" AND created <= "${jalaliSlashEnd}" ORDER BY created ASC` : null },
-      { id: 3, name: 'میلادی تنها (YYYY-MM-DD)', jql: `${projPrefix}created >= "${gregStart}" AND created <= "${gregEnd}" ORDER BY created ASC` },
-      { id: 4, name: 'میلادی با ساعت (YYYY-MM-DD HH:mm)', jql: `${projPrefix}created >= "${startStr}" AND created <= "${endStr}" ORDER BY created ASC` },
-      { id: 5, name: 'شمسی بدون پروژه', jql: jalaliDash ? `created >= "${jalaliDash}" AND created <= "${jalaliDashEnd}" ORDER BY created ASC` : null },
-      { id: 6, name: 'میلادی بدون پروژه', jql: `created >= "${gregStart}" AND created <= "${gregEnd}" ORDER BY created ASC` },
-      { id: 7, name: 'پروژه بدون فیلتر تاریخ', jql: projectClause ? `${projectClause} ORDER BY created DESC` : null },
-      { id: 8, name: 'نسبی ۳۰ روز اخیر', jql: `${projPrefix}created >= -30d ORDER BY created DESC` },
-      { id: 9, name: 'نسبی ۱ سال اخیر', jql: `${projPrefix}created >= -365d ORDER BY created DESC` },
-      { id: 10, name: 'کلیه تسک‌های سرور (بدون فیلتر)', jql: `ORDER BY created DESC` }
+      { id: 3, name: 'کوئری اصلی جیرا (کوئری ۳ - پروژه + تاریخ میلادی دقیق)', jql: `${projPrefix}created >= "${gregStart}" AND created <= "${gregEnd}" ORDER BY created ASC` }
     ].filter(q => q && q.jql);
 
     // Run ALL queries IN PARALLEL with short timeout (8s each) — avoids 504
