@@ -231,7 +231,37 @@ const SprintsPage = () => {
   }
 
   const projectGroups = Array.from(tasksByProjectMap.values());
-  const selectedDates = sprintDates[selectedSprint] || { start: '---', due: '---' };
+
+  // Dynamically extract sprint start and end dates from Jira task dates
+  let dynamicStart = null;
+  let dynamicDue = null;
+
+  for (const t of filteredTasks) {
+    if (!t) continue;
+    const sDate = t.sprint_start_date || t.start_date;
+    const eDate = t.sprint_end_date || t.due_date;
+    if (sDate && (!dynamicStart || sDate < dynamicStart)) dynamicStart = sDate;
+    if (eDate && (!dynamicDue || eDate > dynamicDue)) dynamicDue = eDate;
+  }
+
+  const formatJalali = (isoStr) => {
+    if (!isoStr) return null;
+    try {
+      const d = new Date(isoStr);
+      if (isNaN(d.getTime())) return isoStr;
+      return new Intl.DateTimeFormat('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+    } catch {
+      return isoStr;
+    }
+  };
+
+  const formattedStart = formatJalali(dynamicStart);
+  const formattedDue = formatJalali(dynamicDue);
+
+  const selectedDates = {
+    start: formattedStart || sprintDates[selectedSprint]?.start || dynamicStart || '۱۴۰۵/۰۵/۰۱',
+    due: formattedDue || sprintDates[selectedSprint]?.due || dynamicDue || '۱۴۰۵/۰۵/۲۵'
+  };
 
   const token = localStorage.getItem('token') || '';
 

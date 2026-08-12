@@ -510,11 +510,15 @@ router.get('/reports/sprints-html', (req, res) => {
         `;
       }
 
+      const sMinDate = sTasks.map(t => t.sprint_start_date || t.start_date).filter(Boolean).sort()[0];
+      const sMaxDate = sTasks.map(t => t.sprint_end_date || t.due_date).filter(Boolean).sort().reverse()[0];
+      const sDateText = sMinDate && sMaxDate ? ` | 📅 زمان‌بندی: از ${sMinDate} تا ${sMaxDate}` : '';
+
       sprintCardsHTML += `
         <div class="sprint-card">
           <div class="sprint-header">
             <h2>🔥 خروجی و دستاوردهای عملیاتی ${sKey}</h2>
-            <span class="sprint-badge">${done} تسک انجام‌شده از ${total} تسک | کارکرد: ${spent}h (پیشرفت %${prog})</span>
+            <span class="sprint-badge">${done} تسک انجام‌شده از ${total} تسک | کارکرد: ${spent}h (پیشرفت %${prog})${sDateText}</span>
           </div>
 
           <table class="data-table">
