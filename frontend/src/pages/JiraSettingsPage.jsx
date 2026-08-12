@@ -920,19 +920,19 @@ const JiraSettingsPage = () => {
             disabled={monthlySyncing}
           >
             <Calendar size={16} />
-            {monthlySyncing ? 'در حال استخراج...' : '🗓️ استخراج دیتای جیرا در بازه دلخواه'}
+            {monthlySyncing ? 'در حال استخراج...' : 'استخراج دیتای جیرا در بازه دلخواه'}
           </button>
           <button className="jsp-run-diag-btn secondary" onClick={handleDiagnose} disabled={diagLoading}>
             <Zap size={16} className={diagLoading ? 'spin' : ''} />
-            {diagLoading ? 'در حال پایش...' : '🔍 پایش زنده API'}
+            {diagLoading ? 'در حال پایش...' : 'پایش زنده API'}
           </button>
           <button className="jsp-run-diag-btn" style={{ background: '#0EA5E9' }} onClick={handleSync} disabled={syncing}>
             <RefreshCw size={16} className={syncing ? 'spin' : ''} />
-            {syncing ? 'در حال همگام‌سازی...' : '🔄 همگام‌سازی سریع (تسک‌های جاری)'}
+            {syncing ? 'در حال همگام‌سازی...' : 'همگام‌سازی سریع (تسک‌های جاری)'}
           </button>
           <button className="jsp-run-diag-btn" onClick={handleSave} disabled={saving}>
             <Save size={16} className={saving ? 'spin' : ''} />
-            {saving ? 'در حال ذخیره...' : '💾 ذخیره تنظیمات'}
+            {saving ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}
           </button>
         </div>
       </div>
