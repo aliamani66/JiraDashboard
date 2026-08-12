@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TrendingUp, Layers, ArrowLeft, ExternalLink, Activity, Clock, CheckCircle2, AlertTriangle, Search, FolderGit2 } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
+import { api } from '../services/api';
 import StatusBadge from '../components/common/StatusBadge';
 import './OverallTimelinePage.css';
 
@@ -11,21 +12,35 @@ const OverallTimelinePage = () => {
   const { projects, loading, error } = useProjects();
   const [jiraProjectFilter, setJiraProjectFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [configuredProjects, setConfiguredProjects] = useState([]);
+
+  useEffect(() => {
+    api.getJiraConfig().then(cfg => {
+      const keys = (cfg?.connection?.projectKey || '')
+        .split(',')
+        .map(k => k.trim().toUpperCase())
+        .filter(Boolean);
+      setConfiguredProjects(keys);
+    }).catch(() => {});
+  }, []);
+
+  // Extract unique Jira Project Keys (combining configured projects and DB projects)
+  const jiraProjectsList = useMemo(() => {
+    const keys = new Set(configuredProjects);
+    (projects || []).forEach(p => {
+      const pKey = p.project_key || (p.id ? p.id.split('-')[0].toUpperCase() : '');
+      if (pKey && pKey !== 'UNKNOWN') keys.add(pKey);
+    });
+    return Array.from(keys).sort();
+  }, [configuredProjects, projects]);
 
   if (loading) return <div className="loading-screen">در حال دریافت تایم‌لاین پیشرفت کل پروژه‌ها...</div>;
   if (error) return <div className="error-screen">خطا در دریافت اطلاعات پروژه‌ها</div>;
 
-  // Extract unique Jira Project Keys (e.g. ORD, OPS, DEV)
-  const jiraProjectsList = Array.from(
-    new Set(
-      projects.map(p => p.project_key || (p.id ? p.id.split('-')[0] : '')).filter(Boolean)
-    )
-  ).sort();
-
   // Filter projects by Jira Project Key and search query
   const filteredProjects = projects.filter(p => {
-    const jKey = p.project_key || (p.id ? p.id.split('-')[0] : '');
-    if (jiraProjectFilter !== 'all' && jKey !== jiraProjectFilter) return false;
+    const jKey = (p.project_key || (p.id ? p.id.split('-')[0] : '')).toUpperCase();
+    if (jiraProjectFilter !== 'all' && jKey !== jiraProjectFilter.toUpperCase()) return false;
 
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase().trim();

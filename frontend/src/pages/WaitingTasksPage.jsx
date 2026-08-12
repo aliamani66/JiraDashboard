@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, Clock, ClipboardList, AlertCircle, Calendar, Flag, ExternalLink, Printer, Search, FolderGit2 } from 'lucide-react';
 import { useWaitingTasks } from '../hooks/useProjects';
+import { api } from '../services/api';
 import './WaitingTasksPage.css';
 
 const JIRA_BASE_URL = 'https://10.100.71.140:8443';
@@ -18,30 +19,53 @@ const WaitingTasksPage = () => {
   const { data, loading } = useWaitingTasks();
   const [jiraProjectFilter, setJiraProjectFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [configuredProjects, setConfiguredProjects] = useState([]);
+
+  useEffect(() => {
+    api.getJiraConfig().then(cfg => {
+      const keys = (cfg?.connection?.projectKey || '')
+        .split(',')
+        .map(k => k.trim().toUpperCase())
+        .filter(Boolean);
+      setConfiguredProjects(keys);
+    }).catch(() => {});
+  }, []);
+
+  const { totalWaiting = 0, byProject = [] } = data || {};
+
+  // Extract unique Jira Project Keys (combining configured projects and DB tasks)
+  const jiraProjectsList = useMemo(() => {
+    const keys = new Set(configuredProjects);
+    (byProject || []).forEach(p => {
+      const pId = p.projectId || p.project_id || '';
+      const pKey = p.project_key || (pId ? pId.split('-')[0].toUpperCase() : '');
+      if (pKey && pKey !== 'UNKNOWN') keys.add(pKey);
+      (p.tasks || []).forEach(t => {
+        const tId = t.task_id || t.id || '';
+        const tKey = tId ? tId.split('-')[0].toUpperCase() : '';
+        if (tKey && tKey !== 'UNKNOWN') keys.add(tKey);
+      });
+    });
+    return Array.from(keys).sort();
+  }, [configuredProjects, byProject]);
 
   if (loading) {
     return <div className="page-loading">در حال دریافت اطلاعات تسک‌های منتظر...</div>;
   }
 
-  const { totalWaiting = 0, byProject = [] } = data || {};
-
-  // Extract unique Jira Project Keys (e.g. ORD, OPS, DEV)
-  const jiraProjectsList = Array.from(
-    new Set(
-      byProject.map(p => {
-        const pId = p.projectId || p.project_id || '';
-        return pId ? pId.split('-')[0] : '';
-      }).filter(Boolean)
-    )
-  ).sort();
-
   // Filter projects by Jira Project Key and search query
   const filteredByProject = byProject.filter(project => {
     const pId = project.projectId || project.project_id || '';
     const pTitle = project.projectTitle || project.project_name || '';
-    const jKey = pId ? pId.split('-')[0] : '';
+    const jKey = (project.project_key || (pId ? pId.split('-')[0] : '')).toUpperCase();
 
-    if (jiraProjectFilter !== 'all' && jKey !== jiraProjectFilter) return false;
+    const hasMatchingTask = (project.tasks || []).some(t => {
+      const tId = t.task_id || t.id || '';
+      const tKey = tId ? tId.split('-')[0].toUpperCase() : '';
+      return tKey === jiraProjectFilter.toUpperCase();
+    });
+
+    if (jiraProjectFilter !== 'all' && jKey !== jiraProjectFilter.toUpperCase() && !hasMatchingTask) return false;
 
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase().trim();
