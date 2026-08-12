@@ -166,33 +166,6 @@ async function initDb() {
   try { db.run("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN description TEXT"); } catch (_) {}
 
-  // Seed demo data ONLY if task_estimate_history is empty, never overwrite real tasks
-  try {
-    const historyCountRows = db.exec("SELECT COUNT(*) as cnt FROM task_estimate_history");
-    const historyCount = (historyCountRows && historyCountRows[0] && historyCountRows[0].values) ? historyCountRows[0].values[0][0] : 0;
-
-    // Seed Estimate Revisions in task_estimate_history if historyCount === 0
-    if (historyCount === 0) {
-      const insertHist = db.prepare(`
-        INSERT INTO task_estimate_history (task_id, old_estimate, new_estimate, delta_hours, changed_at)
-        VALUES (?, ?, ?, ?, ?)
-      `);
-      const now = new Date();
-
-      // Increased Estimates (+8h, +10h, +5h)
-      insertHist.run('ORD-901', 8, 12, 4, new Date(now.getTime() - 86400000 * 6).toISOString());
-      insertHist.run('ORD-901', 12, 16, 4, new Date(now.getTime() - 86400000 * 2).toISOString());
-      insertHist.run('DEV-903', 10, 20, 10, new Date(now.getTime() - 86400000 * 4).toISOString());
-      insertHist.run('OPS-908', 5, 10, 5, new Date(now.getTime() - 86400000 * 3).toISOString());
-
-      // Decreased Estimates (-6h, -10h)
-      insertHist.run('OPS-902', 30, 24, -6, new Date(now.getTime() - 86400000 * 5).toISOString());
-      insertHist.run('DEV-909', 40, 35, -5, new Date(now.getTime() - 86400000 * 7).toISOString());
-      insertHist.run('DEV-909', 35, 30, -5, new Date(now.getTime() - 86400000 * 1).toISOString());
-    }
-  } catch (err) {
-    console.error('Failed to seed estimate history data:', err);
-  }
 
   saveDb();
 
