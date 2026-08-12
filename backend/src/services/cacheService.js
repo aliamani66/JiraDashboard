@@ -630,13 +630,9 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   const gregStartDateOnly = startStr.split(' ')[0];
   const gregEndDateOnly = endStr.split(' ')[0];
 
-  // ✅ CONFIRMED WORKING: query #9 style — project + relative date (created >= -Xd)
-  // Calculate how many days ago the startStr is, add buffer, use relative date
-  // Then filter exact range in JS. This avoids absolute date format issues.
-  const startDt = new Date(startStr);
-  const endDt = new Date(endStr);
-  const daysAgo = Math.ceil((Date.now() - startDt.getTime()) / (1000 * 60 * 60 * 24)) + 2; // +2 day buffer
-  const confirmedJql = `${projPrefix}created >= -${daysAgo}d ORDER BY created ASC`;
+  // ✅ CONFIRMED: This Jira server only returns results when range >= ~1 year
+  // Fix: always use -365d (confirmed working), filter exact date range in JS
+  const confirmedJql = `${projPrefix}created >= -365d ORDER BY created ASC`;
 
   const configuredProjKeys = new Set(
     projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
@@ -662,9 +658,11 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     };
   }
 
+  const startDt = new Date(startStr);
+  const endDt = new Date(endStr);
   const rawIssues = (searchRes && searchRes.issues) ? searchRes.issues : [];
 
-  // Filter in JS: by configured project keys + date range
+  // Filter in JS: by configured project keys + exact date range
   const finalIssues = rawIssues.filter(issue => {
     const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
     if (configuredProjKeys.size > 0 && issueProjKey && !configuredProjKeys.has(issueProjKey)) return false;
