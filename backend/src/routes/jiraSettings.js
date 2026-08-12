@@ -66,7 +66,7 @@ function writeEnv(updates) {
   fs.writeFileSync(envPath, newLines.join('\n'), 'utf8');
 }
 
-const { getDb } = require('../db/database');
+const { getDb, saveDb } = require('../db/database');
 
 // Helper: read all settings stored in SQLite system_settings table
 function getDbSettings() {
@@ -235,6 +235,7 @@ router.put('/config', (req, res) => {
     for (const [k, v] of Object.entries(updates)) {
       saveDbSetting(k, v);
     }
+    saveDb();
     writeEnv(updates);
     
     // Automatically trigger Jira sync in background with newly saved config

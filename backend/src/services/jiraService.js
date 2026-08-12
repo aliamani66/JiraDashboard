@@ -22,10 +22,22 @@ try {
 }
 
 function getJiraConfig() {
-  const baseUrl = (process.env.JIRA_BASE_URL || (config && config.jira && config.jira.baseUrl) || '').trim();
-  const username = (process.env.JIRA_USERNAME || (config && config.jira && config.jira.username) || '').trim();
-  const token = (process.env.JIRA_TOKEN || (config && config.jira && config.jira.token) || '').trim();
-  const projectKey = (process.env.JIRA_PROJECT_KEY || (config && config.jira && config.jira.projectKey) || 'ORD').trim();
+  let dbSettingMap = {};
+  try {
+    const { getDb } = require('../db/database');
+    const db = getDb();
+    const rows = db.prepare("SELECT key, value FROM system_settings").all();
+    for (const r of rows) {
+      if (r.key && r.value !== null && r.value !== undefined) {
+        dbSettingMap[r.key] = r.value;
+      }
+    }
+  } catch (_) {}
+
+  const baseUrl = (dbSettingMap['JIRA_BASE_URL'] || process.env.JIRA_BASE_URL || (config && config.jira && config.jira.baseUrl) || '').trim();
+  const username = (dbSettingMap['JIRA_USERNAME'] || process.env.JIRA_USERNAME || (config && config.jira && config.jira.username) || '').trim();
+  const token = (dbSettingMap['JIRA_TOKEN'] || process.env.JIRA_TOKEN || (config && config.jira && config.jira.token) || '').trim();
+  const projectKey = (dbSettingMap['JIRA_PROJECT_KEY'] || process.env.JIRA_PROJECT_KEY || (config && config.jira && config.jira.projectKey) || 'ORD').trim();
   const isConfigured = !!(baseUrl && token);
   const currentMapping = (config && config.jira && config.jira.mapping) || jiraMapping;
   return {
