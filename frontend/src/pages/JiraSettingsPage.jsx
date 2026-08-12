@@ -399,12 +399,19 @@ const JiraSettingsPage = () => {
   };
 
   const handleSync = async () => {
+    const projKeyStr = cfg?.connection?.projectKey || 'ORD';
+    const projectClause = projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*'
+      ? (projKeyStr.includes(',') ? `project IN (${projKeyStr})` : `project = ${projKeyStr}`)
+      : '';
+    const executedJql = projectClause ? `${projectClause} ORDER BY created DESC` : 'ORDER BY created DESC';
+
     try {
       setSyncing(true);
       setActiveModal({
         status: 'loading',
-        title: '🔄 در حال همگام‌سازی زنده با سرور Jira',
-        message: `دیتابیس در حال دریافت اپیک‌ها و تسک‌های جدید پروژه‌های انتخاب‌شده (${cfg?.connection?.projectKey || 'اصلی'}) مستقیم از سرور جیرا می‌باشد...`
+        title: '🔄 در حال همگام‌سازی سریع با سرور Jira',
+        message: `دیتابیس در حال استخراج و به‌روزرسانی تسک‌های پروژه‌های انتخاب‌شده (${projKeyStr}) می‌باشد...`,
+        jql: executedJql
       });
       // Auto-save current config first so newly entered Project Key is immediately active
       await api.saveJiraConfig(cfg);
@@ -412,15 +419,17 @@ const JiraSettingsPage = () => {
       const res = await api.resetDatabase();
       setActiveModal({
         status: 'success',
-        title: '✅ همگام‌سازی با موفقیت انجام شد',
-        message: res.message || 'دیتابیس با داده‌های زنده Jira همگام شد. با زدن دکمه تأیید، صفحه بازنشانی می‌شود.',
+        title: '✅ همگام‌سازی سریع با موفقیت انجام شد',
+        message: res.message || 'دیتابیس با داده‌های زنده Jira همگام شد.',
+        jql: executedJql,
         onConfirm: () => window.location.reload()
       });
     } catch (e) {
       setActiveModal({
         status: 'error',
         title: '❌ خطا در همگام‌سازی با Jira',
-        message: e.message || 'همگام‌سازی با خطا مواجه شد.'
+        message: e.message || 'همگام‌سازی با خطا مواجه شد.',
+        jql: executedJql
       });
     } finally {
       setSyncing(false);
@@ -848,6 +857,18 @@ const JiraSettingsPage = () => {
               <p style={{ margin: 0, fontSize: '0.94rem', color: '#CBD5E1', lineHeight: '1.65' }}>
                 {activeModal.message}
               </p>
+
+              {/* JQL Executed Code Box */}
+              {activeModal.jql && (
+                <div style={{ marginTop: '1rem', textAlign: 'right', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '12px', padding: '0.75rem 1rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#38BDF8', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span>⚡ کوئری JQL اجراشده روی سرور جیرا:</span>
+                  </div>
+                  <code style={{ fontSize: '0.8rem', color: '#6EE7B7', wordBreak: 'break-all', fontFamily: 'monospace', lineHeight: 1.5, display: 'block' }}>
+                    {activeModal.jql}
+                  </code>
+                </div>
+              )}
 
               {/* Loading Indicator OR Confirm Button */}
               {activeModal.status === 'loading' ? (
