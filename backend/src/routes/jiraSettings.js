@@ -447,36 +447,23 @@ router.post('/test-all-jql', async (req, res) => {
       { id: 10, name: 'کلیه تسک‌های سرور (بدون فیلتر)', jql: `ORDER BY created DESC` }
     ].filter(q => q && q.jql);
 
-    // Run all queries against real Jira
-    const results = [];
-    for (const q of queries) {
-      const start = Date.now();
+    // Run ALL queries IN PARALLEL with short timeout (8s each) — avoids 504
+    const QUERY_TIMEOUT = 8000;
+
+    const runOneQuery = async (q) => {
+      const t0 = Date.now();
       try {
-        const res = await jiraService.jiraSearch(q.jql, 1); // maxResults=1 to be fast
+        const res = await jiraService.jiraSearch(q.jql, null, { maxResults: 1, timeout: QUERY_TIMEOUT, retries: 1, singlePage: true });
         const totalCount = res.total !== undefined ? res.total : (res.issues ? res.issues.length : 0);
-        results.push({
-          id: q.id,
-          name: q.name,
-          jql: q.jql,
-          status: totalCount > 0 ? 'success' : 'zero',
-          total: totalCount,
-          ms: Date.now() - start
-        });
+        return { id: q.id, name: q.name, jql: q.jql, status: totalCount > 0 ? 'success' : 'zero', total: totalCount, ms: Date.now() - t0 };
       } catch (err) {
         const errCode = err.code || (err.response ? `HTTP_${err.response.status}` : 'ERROR');
         const errMsg = err.response?.data?.errorMessages?.join(', ') || err.message;
-        results.push({
-          id: q.id,
-          name: q.name,
-          jql: q.jql,
-          status: 'error',
-          total: 0,
-          ms: Date.now() - start,
-          errorCode: errCode,
-          errorMsg: errMsg
-        });
+        return { id: q.id, name: q.name, jql: q.jql, status: 'error', total: 0, ms: Date.now() - t0, errorCode: errCode, errorMsg: errMsg };
       }
-    }
+    };
+
+    const results = (await Promise.all(queries.map(runOneQuery))).sort((a, b) => a.id - b.id);
 
     const winner = results.find(r => r.status === 'success');
     res.json({
