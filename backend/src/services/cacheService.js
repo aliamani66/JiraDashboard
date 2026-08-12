@@ -609,6 +609,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, monthLabel, monthInde
       message: parsedTasks.length > 0 ? `${parsedTasks.length} تسک دریافت شد` : '۰ تسک (بدون نتیجه)'
     };
   } catch (err) {
+    const errCode = err.code || (err.response ? `HTTP_${err.response.status}` : 'TIMEOUT_OR_NETWORK');
+    const detailMsg = err.response && err.response.data && err.response.data.errorMessages ? err.response.data.errorMessages.join(', ') : err.message;
     return {
       success: false,
       monthIndex,
@@ -617,7 +619,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, monthLabel, monthInde
       jql,
       taskCount: 0,
       status: 'error',
-      message: `خطا در همگام‌سازی: ${err.message}`
+      errorCode: errCode,
+      message: `🔴 خطا (${errCode}): ${detailMsg}`
     };
   }
 }

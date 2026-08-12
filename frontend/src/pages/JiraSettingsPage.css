@@ -18,6 +18,47 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   background: rgba(56, 189, 248, 0.25);
 }
 
+/* Preset Pills */
+.jsp-preset-pill {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38BDF8;
+  padding: 0.32rem 0.7rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.jsp-preset-pill:hover {
+  background: rgba(56, 189, 248, 0.25);
+  transform: translateY(-1px);
+}
+.jsp-preset-pill.purple {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.35);
+  color: #C084FC;
+}
+.jsp-preset-pill.purple:hover {
+  background: rgba(168, 85, 247, 0.25);
+}
+.jsp-preset-pill.green {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34D399;
+}
+.jsp-preset-pill.green:hover {
+  background: rgba(16, 185, 129, 0.25);
+}
+.jsp-preset-pill.gold {
+  background: rgba(234, 179, 8, 0.12);
+  border-color: rgba(234, 179, 8, 0.35);
+  color: #FACC15;
+}
+.jsp-preset-pill.gold:hover {
+  background: rgba(234, 179, 8, 0.25);
+}
+
 /* Header */
 .jsp-header {
   display: flex;

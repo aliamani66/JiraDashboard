@@ -781,24 +781,16 @@ const JiraSettingsPage = () => {
       <div className="jsp-header">
         <div>
           <h1 className="jsp-title"><Settings size={26} className="text-accent-cyan" />تنظیمات کامل اتصال و مپینگ Jira API</h1>
-          <p className="jsp-subtitle">مدیریت کامل تمام مپینگ‌ها، فیلدهای کاستوم، وضعیت‌ها، برچسب‌ها و تشخیص‌دهنده زنده API جیرا</p>
+          <p className="jsp-subtitle">مدیریت کامل تمام مپینگ‌ها، فیلدهای کاستوم، وضعیت‌ها، برچسب‌ها و استخراج پیشرفته اطلاعات جیرا</p>
         </div>
         <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
           <button className="jsp-run-diag-btn secondary" onClick={handleDiagnose} disabled={diagLoading}>
             <Zap size={16} className={diagLoading ? 'spin' : ''} />
             {diagLoading ? 'در حال پایش...' : '🔍 پایش زنده API'}
           </button>
-          <button className="jsp-run-diag-btn" style={{ background: '#10B981' }} onClick={() => setShowRangeModal(true)} disabled={monthlySyncing}>
-            <Calendar size={16} />
-            📅 همگام‌سازی بازه دلخواه
-          </button>
-          <button className="jsp-run-diag-btn" style={{ background: '#8B5CF6' }} onClick={handleMonthlySync} disabled={monthlySyncing}>
-            <Calendar size={16} className={monthlySyncing ? 'spin' : ''} />
-            {monthlySyncing ? 'در حال دریافت ۱۲ ماه...' : '🗓️ همگام‌سازی ۱۲ ماه گذشته'}
-          </button>
           <button className="jsp-run-diag-btn" style={{ background: '#0EA5E9' }} onClick={handleSync} disabled={syncing}>
             <RefreshCw size={16} className={syncing ? 'spin' : ''} />
-            {syncing ? 'در حال دریافت...' : '🔄 همگام‌سازی سریع'}
+            {syncing ? 'در حال همگام‌سازی...' : '🔄 همگام‌سازی سریع (تسک‌های جاری)'}
           </button>
           <button className="jsp-run-diag-btn" onClick={handleSave} disabled={saving}>
             <Save size={16} className={saving ? 'spin' : ''} />
@@ -807,264 +799,119 @@ const JiraSettingsPage = () => {
         </div>
       </div>
 
-      {/* 📅 Datepicker Custom Range Sync Modal Overlay */}
-      <AnimatePresence>
-        {showRangeModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(15, 23, 42, 0.85)',
-              backdropFilter: 'blur(12px)',
-              zIndex: 99999,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '1.5rem'
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: -20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: -20 }}
+      {/* 📅 Permanent Inline Custom Range Search & Jira Data Extraction Card */}
+      <motion.div
+        className="glass-card"
+        style={{
+          padding: '1.5rem 1.8rem',
+          borderRadius: '20px',
+          border: '1px solid rgba(16, 185, 129, 0.4)',
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.95))',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(16, 185, 129, 0.15)'
+        }}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.1rem' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#6EE7B7', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <Calendar size={22} /> همگام‌سازی و استخراج داده‌های جیرا در بازه زمانی دلخواه
+            </h2>
+            <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.86rem', color: '#94A3B8' }}>
+              تعیین بازه تاریخی مشخص و استخراج تفکیک‌شده ماه به ماه اطلاعات تسک‌ها از سرور جیرا
+            </p>
+          </div>
+
+          {/* Quick Presets Pills */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#CBD5E1', marginLeft: '0.3rem' }}>⚡ میان‌برها:</span>
+            <button type="button" onClick={() => applyDatePreset(10, 0)} className="jsp-preset-pill">⚡ ۱۰ روز گذشته</button>
+            <button type="button" onClick={() => applyDatePreset(30, 0)} className="jsp-preset-pill">⚡ ۳۰ روز گذشته</button>
+            <button type="button" onClick={() => applyDatePreset(0, 1)} className="jsp-preset-pill purple">🗓️ ۱ ماه اخیر</button>
+            <button type="button" onClick={() => applyDatePreset(0, 2)} className="jsp-preset-pill purple">🗓️ ۲ ماه اخیر</button>
+            <button type="button" onClick={() => applyDatePreset(0, 3)} className="jsp-preset-pill purple">🗓️ ۳ ماه اخیر</button>
+            <button type="button" onClick={() => applyDatePreset(0, 6)} className="jsp-preset-pill green">🗓️ ۶ ماه اخیر</button>
+            <button type="button" onClick={() => applyDatePreset(0, 12)} className="jsp-preset-pill gold">🗓️ ۱ سال اخیر</button>
+          </div>
+        </div>
+
+        {/* Inputs & Extract Button Row */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1.25rem', background: 'rgba(0, 0, 0, 0.3)', padding: '1rem 1.25rem', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+          <div style={{ flex: '1 1 200px' }}>
+            <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 'bold', color: '#38BDF8', marginBottom: '0.45rem' }}>
+              🗓️ از تاریخ (روز / ماه / سال):
+            </label>
+            <input
+              type="date"
+              value={rangeStartDate}
+              onChange={e => setRangeStartDate(e.target.value)}
               style={{
-                background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99))',
-                border: '1px solid rgba(16, 185, 129, 0.5)',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.8), 0 0 35px rgba(16,185,129,0.3)',
-                borderRadius: '24px',
-                padding: '2.2rem 2.5rem',
-                maxWidth: '480px',
                 width: '100%',
-                color: '#FFFFFF'
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                color: '#FFFFFF',
+                borderRadius: '12px',
+                padding: '0.65rem 0.95rem',
+                fontSize: '0.95rem',
+                outline: 'none',
+                fontFamily: 'inherit',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <div style={{ flex: '1 1 200px' }}>
+            <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 'bold', color: '#38BDF8', marginBottom: '0.45rem' }}>
+              🗓️ تا تاریخ (روز / ماه / سال):
+            </label>
+            <input
+              type="date"
+              value={rangeEndDate}
+              onChange={e => setRangeEndDate(e.target.value)}
+              style={{
+                width: '100%',
+                background: 'rgba(15, 23, 42, 0.8)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                color: '#FFFFFF',
+                borderRadius: '12px',
+                padding: '0.65rem 0.95rem',
+                fontSize: '0.95rem',
+                outline: 'none',
+                fontFamily: 'inherit',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <div style={{ flex: '1 1 220px' }}>
+            <button
+              type="button"
+              onClick={handleRangeSync}
+              disabled={monthlySyncing}
+              style={{
+                width: '100%',
+                height: '42px',
+                background: 'linear-gradient(135deg, #10B981, #059669)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '0.92rem',
+                fontWeight: 'bold',
+                cursor: monthlySyncing ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.65rem',
+                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)',
+                opacity: monthlySyncing ? 0.7 : 1
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#6EE7B7', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <Calendar size={24} /> همگام‌سازی بازه زمانی دلخواه
-                </h3>
-                <button
-                  onClick={() => setShowRangeModal(false)}
-                  style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.88rem', color: '#CBD5E1', lineHeight: '1.6' }}>
-                لطفاً تاریخ شروع و پایان مورد نظر خود را انتخاب نمایید یا از میان‌برهای سریع زیر استفاده کنید:
-              </p>
-
-              {/* ⚡ Quick Presets */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 'bold', color: '#94A3B8', marginBottom: '0.5rem' }}>
-                  ⚡ میان‌برهای سریع انتخاب بازه:
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => applyDatePreset(10, 0)}
-                    style={{
-                      background: 'rgba(56, 189, 248, 0.15)',
-                      border: '1px solid rgba(56, 189, 248, 0.4)',
-                      color: '#38BDF8',
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ⚡ ۱۰ روز گذشته
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyDatePreset(30, 0)}
-                    style={{
-                      background: 'rgba(56, 189, 248, 0.15)',
-                      border: '1px solid rgba(56, 189, 248, 0.4)',
-                      color: '#38BDF8',
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ⚡ ۳۰ روز گذشته
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyDatePreset(0, 1)}
-                    style={{
-                      background: 'rgba(168, 85, 247, 0.15)',
-                      border: '1px solid rgba(168, 85, 247, 0.4)',
-                      color: '#C084FC',
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🗓️ ۱ ماه اخیر
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyDatePreset(0, 2)}
-                    style={{
-                      background: 'rgba(168, 85, 247, 0.15)',
-                      border: '1px solid rgba(168, 85, 247, 0.4)',
-                      color: '#C084FC',
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🗓️ ۲ ماه اخیر
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyDatePreset(0, 3)}
-                    style={{
-                      background: 'rgba(168, 85, 247, 0.15)',
-                      border: '1px solid rgba(168, 85, 247, 0.4)',
-                      color: '#C084FC',
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🗓️ ۳ ماه اخیر
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyDatePreset(0, 6)}
-                    style={{
-                      background: 'rgba(16, 185, 129, 0.15)',
-                      border: '1px solid rgba(16, 185, 129, 0.4)',
-                      color: '#34D399',
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🗓️ ۶ ماه اخیر
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyDatePreset(0, 12)}
-                    style={{
-                      background: 'rgba(234, 179, 8, 0.15)',
-                      border: '1px solid rgba(234, 179, 8, 0.4)',
-                      color: '#FACC15',
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🗓️ ۱ سال اخیر
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.75rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 'bold', color: '#38BDF8', marginBottom: '0.45rem' }}>
-                    🗓️ تاریخ شروع (روز / ماه / سال):
-                  </label>
-                  <input
-                    type="date"
-                    value={rangeStartDate}
-                    onChange={e => setRangeStartDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(56, 189, 248, 0.4)',
-                      color: '#FFFFFF',
-                      borderRadius: '12px',
-                      padding: '0.65rem 0.95rem',
-                      fontSize: '0.95rem',
-                      outline: 'none',
-                      fontFamily: 'inherit'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 'bold', color: '#38BDF8', marginBottom: '0.45rem' }}>
-                    🗓️ تاریخ پایان (روز / ماه / سال):
-                  </label>
-                  <input
-                    type="date"
-                    value={rangeEndDate}
-                    onChange={e => setRangeEndDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(56, 189, 248, 0.4)',
-                      color: '#FFFFFF',
-                      borderRadius: '12px',
-                      padding: '0.65rem 0.95rem',
-                      fontSize: '0.95rem',
-                      outline: 'none',
-                      fontFamily: 'inherit'
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowRangeModal(false)}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    color: '#CBD5E1',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    padding: '0.6rem 1.35rem',
-                    borderRadius: '12px',
-                    fontSize: '0.88rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  انصراف
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRangeSync}
-                  style={{
-                    background: 'linear-gradient(135deg, #10B981, #059669)',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    padding: '0.6rem 1.6rem',
-                    borderRadius: '12px',
-                    fontSize: '0.88rem',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)'
-                  }}
-                >
-                  🚀 شروع همگام‌سازی بازه
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <RefreshCw size={18} className={monthlySyncing ? 'spin' : ''} />
+              {monthlySyncing ? 'در حال استخراج...' : '🚀 شروع همگام‌سازی و استخراج از جیرا'}
+            </button>
+          </div>
+        </div>
+      </motion.div>
 
       {/* ── 12-MONTH BATCH SYNC RESULTS ── */}
       {monthlyResults && (

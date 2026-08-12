@@ -96,8 +96,8 @@ async function jiraSearch(jql, fields = [], options = {}) {
   const isCloud = cfg.baseUrl && cfg.baseUrl.includes('.atlassian.net');
 
   const pageSize = options.maxResults || 500;
-  const timeout = options.timeout || 15000;
-  const retries = options.retries || 2;
+  const timeout = options.timeout || 8000;
+  const retries = options.retries || 1;
 
   let lastError = null;
 
