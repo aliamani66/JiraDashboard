@@ -2,27 +2,7 @@ version: '3.8'
 
 services:
 
-  # ─── Reverse Proxy (entry point: Port 8081 & 8443) ──────────────────
-  nginx-proxy:
-    build:
-      context: ./nginx-proxy
-      dockerfile: Dockerfile
-      args:
-        REGISTRY: ${REGISTRY:-docker.arvancloud.ir}
-    image: jira-nginx-proxy:latest
-    container_name: jira-nginx-proxy
-    restart: always
-    ports:
-      - "8081:80"
-      - "8443:443"
-    volumes:
-      - ssl_certs:/etc/nginx/ssl
-    depends_on:
-      - frontend
-    networks:
-      - jira-net
-
-  # ─── Frontend ────────────────────────────────────────────────────────
+  # ─── Frontend (Port 5173) ────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -32,8 +12,6 @@ services:
     image: jira-dashboard-frontend:latest
     container_name: jira-dashboard-frontend
     restart: always
-    expose:
-      - "80"
     ports:
       - "5173:80"
     depends_on:
@@ -41,7 +19,7 @@ services:
     networks:
       - jira-net
 
-  # ─── Backend ─────────────────────────────────────────────────────────
+  # ─── Backend (Port 3001) ─────────────────────────────────────────────
   backend:
     build:
       context: ./backend
@@ -72,7 +50,6 @@ services:
 
 volumes:
   sqlite_data:
-  ssl_certs:
 
 networks:
   jira-net:
