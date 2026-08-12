@@ -131,6 +131,8 @@ function parseJiraDescription(desc) {
 async function fetchEpics() {
   const cfg = getJiraConfig();
   if (!cfg.isConfigured) return [];
+  const mapping = cfg.mapping || jiraMapping;
+  const customFields = mapping.customFields || {};
   try {
     const projKeyStr = cfg.projectKey;
     let projectFilter = '';
@@ -238,6 +240,8 @@ async function fetchEpics() {
 async function fetchTasksForEpic(epicKey) {
   const cfg = getJiraConfig();
   if (!cfg.isConfigured) return [];
+  const mapping = cfg.mapping || jiraMapping;
+  const customFields = mapping.customFields || {};
   try {
     const jql = `("Epic Link" = ${epicKey} OR parent = ${epicKey}) ORDER BY rank ASC`;
     const fields = [
