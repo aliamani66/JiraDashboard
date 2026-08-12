@@ -15,8 +15,11 @@ async function fetchWithAuth(url, options = {}) {
     window.location.href = '/login';
   }
   if (!response.ok) {
-    let errMsg = 'API Error';
-    try { const d = await response.json(); errMsg = d.error || d.message || errMsg; } catch {}
+    let errMsg = `خطای API (کد ${response.status})`;
+    try { 
+      const d = await response.json(); 
+      errMsg = d.message || d.error || d.details || errMsg; 
+    } catch {}
     throw new Error(errMsg);
   }
   return response.json();
