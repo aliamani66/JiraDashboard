@@ -51,15 +51,26 @@ async function syncFromJira() {
     // Link any previously-saved tasks to these newly-fetched epics
     autoLinkTasksToEpics();
 
-    const logInsert = db.prepare('INSERT INTO sync_log (synced_at, status, message, projects_synced, tasks_synced) VALUES (?, ?, ?, ?, ?)');
-    logInsert.run(syncTime, 'Success', 'Epic extraction completed successfully', projectsSynced, tasksSynced);
-
     console.log(`Epic extraction complete. Epics/Projects: ${projectsSynced}`);
+    console.log('Now fetching tasks for the last 12 months...');
+
+    // Fetch tasks for the last 12 months
+    try {
+      const monthlyResult = await syncMonthlyLastYearFromJira();
+      tasksSynced = monthlyResult.totalTasksSynced || 0;
+      console.log(`Task extraction complete. Tasks synced: ${tasksSynced}`);
+    } catch (taskErr) {
+      console.error('Task extraction failed (epics still saved):', taskErr.message);
+    }
+
+    const logInsert = db.prepare('INSERT INTO sync_log (synced_at, status, message, projects_synced, tasks_synced) VALUES (?, ?, ?, ?, ?)');
+    logInsert.run(syncTime, 'Success', 'Full sync completed successfully', projectsSynced, tasksSynced);
+
     return {
       success: true,
       projectsSynced,
       tasksSynced,
-      message: `استخراج اپیک‌ها با موفقیت انجام شد (${projectsSynced} اپیک/پروژه ثبت گردید)`
+      message: `بازسازی کامل انجام شد (${projectsSynced} اپیک و ${tasksSynced} تسک از جیرا دریافت شد)`
     };
 
   } catch (err) {
@@ -572,8 +583,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     const gregEndDateOnly = (endStr || '').split(' ')[0];
 
     const confirmedJql = projectClause
-      ? `${projectClause} AND issuetype != Epic AND created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`
-      : `issuetype != Epic AND created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
+      ? `${projectClause} AND created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`
+      : `created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
 
     const configuredProjKeys = new Set(
       projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
