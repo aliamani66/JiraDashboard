@@ -27,6 +27,8 @@ frontend/node_modules/
 frontend/build/
 
 # Database & logs
+backend/database.sqlite
+*.sqlite
 *.log
 npm-debug.log*
 yarn-debug.log*
