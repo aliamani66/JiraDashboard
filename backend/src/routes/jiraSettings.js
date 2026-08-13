@@ -315,7 +315,16 @@ router.get('/jira-count', async (req, res) => {
       }
     }
 
-    const withEpicCount = Math.max(0, total - withoutEpicCount);
+    const withEpicJql = `${fullClause} AND issuetype != Epic AND "Epic Link" NOT EMPTY`;
+    let withEpicCount = 0;
+    try {
+      const withRes = await jiraService.jiraSearch(withEpicJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
+      if (withRes && withRes.total !== undefined) {
+        withEpicCount = withRes.total;
+      }
+    } catch (_) {
+      withEpicCount = Math.max(0, total - withoutEpicCount);
+    }
 
     // 3. Epics Count JQL (All Epics in Project, without date bounds since Epics are standing containers)
     let jiraEpicsCount = 0;
@@ -339,6 +348,7 @@ router.get('/jira-count', async (req, res) => {
       rebuildMonths,
       jql: countJql,
       withoutEpicJql,
+      withEpicJql,
       projectKey: projKeyStr
     });
   } catch (err) {
@@ -988,6 +998,16 @@ router.get('/db-stats', (req, res) => {
       }
     } catch (_) {}
 
+    let withEpicTasksCount = 0;
+    try {
+      withEpicTasksCount = db.prepare(`
+        SELECT COUNT(*) as c
+        FROM tasks
+        WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND parent_task_id IN (SELECT id FROM projects WHERE ${epicWhere})
+          AND (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere}${dbDateClause}
+      `).get()?.c || 0;
+    } catch (_) {}
+
     res.json({
       success: true,
       totalTasks,
@@ -1005,6 +1025,7 @@ router.get('/db-stats', (req, res) => {
       projectTaskCounts,
       unlinkedTasksCount,
       unlinkedTasksList,
+      withEpicTasksCount,
       epicsWithoutTasksCount,
       epicsWithoutTasksList
     });
