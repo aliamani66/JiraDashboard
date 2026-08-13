@@ -1969,10 +1969,46 @@ const JiraSettingsPage = () => {
                     </td>
                   </tr>
 
-                  {/* Row 3: Total Non-Epic Tasks */}
+                  {/* Row 3: Sub-tasks */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
+                      🔹 زیرتسک‌ها (Sub-tasks)
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
+                      {jiraCountLoading || monthlySyncing || syncing ? (
+                        <span style={{ color: '#FBBF24', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> ⏳ در حال دریافت...</span>
+                      ) : jiraCountData?.subtaskCount !== undefined ? `${jiraCountData.subtaskCount.toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#60A5FA' }}>
+                      {dbStatsLoading || monthlySyncing || syncing ? '⏳...' : dbStats?.subtasksCount !== undefined ? `${(dbStats.subtasksCount || 0).toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
+                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                        </span>
+                      ) : (
+                        (jiraCountData?.subtaskCount === dbStats?.subtasksCount) ? (
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => { openMismatchDiagnosticModal('withEpicTasks'); setMismatchTab('liveMapping'); }}
+                            style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35))', border: '1px solid rgba(245, 158, 11, 0.6)', color: '#FBBF24', padding: '0.2rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                            title="برای مشاهده نگاشت نظیر به نظیر کلیک فرمایید"
+                          >
+                            <Search size={13} color="#FBBF24" />
+                            <span>⚠️ اختلاف {Math.abs((jiraCountData?.subtaskCount || 0) - (dbStats?.subtasksCount || 0))}</span>
+                          </button>
+                        )
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* Row 4: Total Non-Epic Tasks */}
                   <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: 'rgba(255, 255, 255, 0.02)' }}>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#FFFFFF' }}>
-                      📝 مجموع کل تسک‌های غیر‌اپیک
+                      📝 مجموع کل تسک‌ها
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8', fontSize: '0.88rem' }}>
                       {jiraCountLoading || monthlySyncing || syncing ? (

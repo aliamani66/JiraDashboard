@@ -377,8 +377,16 @@ router.get('/jira-count', async (req, res) => {
     } catch (_) {}
 
     // Fetch all non-epic keys from DB directly for category=totalTasks
-    const dbAllRows = db.prepare(`SELECT id FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere2}${dbDateClause2}`).all();
+    const dbAllRows = db.prepare(`SELECT id FROM tasks WHERE 1=1${taskProjWhere2}${dbDateClause2}`).all();
     const dbAllKeys = new Set(dbAllRows.map(r => r.id.toUpperCase()));
+
+    // Count Sub-tasks in Jira live
+    let subtaskCount = 0;
+    try {
+      const subJql = projectClause ? `${projectClause} AND issuetype IN (subTaskIssueTypes(), Sub-task, Subtask)` : `issuetype IN (Sub-task, Subtask)`;
+      const subRes = await jiraService.jiraSearch(subJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
+      if (subRes && subRes.total !== undefined) subtaskCount = subRes.total;
+    } catch (_) {}
 
     // Compute SET-BASED mismatch counts
     const withEpicMismatchCount = [...new Set([...dbWithEpicKeys, ...jiraWithEpicKeys])].filter(k => !(dbWithEpicKeys.has(k) && jiraWithEpicKeys.has(k))).length;
@@ -400,6 +408,7 @@ router.get('/jira-count', async (req, res) => {
       total,
       withEpicCount,
       withoutEpicCount,
+      subtaskCount,
       jiraEpicsCount,
       jiraEpicsWithoutTasksCount,
       // Set-based mismatch counts (for badge display — matches modal exactly)
@@ -932,7 +941,9 @@ router.get('/db-stats', (req, res) => {
     let lastSynced = null;
     let componentsList = [];
 
-    try { totalTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
+    let subtasksCount = 0;
+    try { totalTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE 1=1${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
+    try { subtasksCount = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE is_subtask = 1${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
     try { totalProjects = db.prepare(`SELECT COUNT(*) as count FROM projects WHERE ${epicWhere}`).get()?.count || 0; } catch (_) {}
     try { doneTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('done', 'completed')${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
     try { waitingTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE (is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked'))${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
@@ -1111,6 +1122,7 @@ router.get('/db-stats', (req, res) => {
       unlinkedTasksCount,
       unlinkedTasksList,
       withEpicTasksCount,
+      subtasksCount,
       epicsWithoutTasksCount,
       epicsWithoutTasksList
     });
