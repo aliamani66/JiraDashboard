@@ -364,7 +364,16 @@ router.get('/jira-count', async (req, res) => {
     const unlinkedMismatchCount = Math.abs(dbUnlinkedCount - withoutEpicCount);
     const totalMismatchCount = Math.abs(dbTotalCount - total);
 
-    const jiraEpicsWithoutTasksCount = db.prepare(`SELECT COUNT(*) as c FROM projects WHERE ${epicWhere2} AND id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''${dbDateClause2})`).get()?.c || 0;
+    const jiraEpicsWithoutTasksCount = db.prepare(`
+      SELECT COUNT(*) as c FROM projects
+      WHERE ${epicWhere2} AND id NOT IN (
+        SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''${dbDateClause2}
+        UNION
+        SELECT DISTINCT parent_task_id FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != ''${dbDateClause2}
+        UNION
+        SELECT DISTINCT epic_id FROM tasks WHERE epic_id IS NOT NULL AND epic_id != ''${dbDateClause2}
+      )
+    `).get()?.c || 0;
 
     res.json({
       success: true,
@@ -1047,14 +1056,26 @@ router.get('/db-stats', (req, res) => {
       epicsWithoutTasksCount = db.prepare(`
         SELECT COUNT(*) as c
         FROM projects
-        WHERE ${epicWhere} AND id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != '')
+        WHERE ${epicWhere} AND id NOT IN (
+          SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''
+          UNION
+          SELECT DISTINCT parent_task_id FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != ''
+          UNION
+          SELECT DISTINCT epic_id FROM tasks WHERE epic_id IS NOT NULL AND epic_id != ''
+        )
       `).get()?.c || 0;
 
       if (epicsWithoutTasksCount > 0) {
         epicsWithoutTasksList = db.prepare(`
           SELECT id, title, status
           FROM projects
-          WHERE ${epicWhere} AND id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != '')
+          WHERE ${epicWhere} AND id NOT IN (
+            SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''
+            UNION
+            SELECT DISTINCT parent_task_id FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != ''
+            UNION
+            SELECT DISTINCT epic_id FROM tasks WHERE epic_id IS NOT NULL AND epic_id != ''
+          )
           LIMIT 50
         `).all() || [];
       }
