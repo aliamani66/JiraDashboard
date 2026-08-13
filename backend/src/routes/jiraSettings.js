@@ -807,17 +807,19 @@ router.get('/db-stats', (req, res) => {
         });
     } catch (_) {}
 
-    // Task count per project
+    // Task count per Jira project key (prefix before dash, e.g. ORD from ORD-123)
     let projectTaskCounts = [];
     try {
       const projTaskRows = db.prepare(`
-        SELECT p.id, p.title, COUNT(t.id) as taskCount
-        FROM projects p
-        LEFT JOIN tasks t ON t.project_id = p.id
-        GROUP BY p.id, p.title
+        SELECT
+          UPPER(SUBSTR(id, 1, INSTR(id, '-') - 1)) as projectKey,
+          COUNT(*) as taskCount
+        FROM tasks
+        WHERE INSTR(id, '-') > 0
+        GROUP BY projectKey
         ORDER BY taskCount DESC
       `).all();
-      projectTaskCounts = projTaskRows.map(r => ({ id: r.id, title: r.title || r.id, taskCount: r.taskCount || 0 }));
+      projectTaskCounts = projTaskRows.map(r => ({ id: r.projectKey, title: r.projectKey, taskCount: r.taskCount || 0 }));
     } catch (_) {}
 
     res.json({

@@ -1736,37 +1736,35 @@ const JiraSettingsPage = () => {
             </div>
           </div>
 
-          {/* 📁 TASKS PER PROJECT BREAKDOWN */}
+          {/* 📁 TASKS PER JIRA PROJECT KEY */}
           {dbStats?.projectTaskCounts && dbStats.projectTaskCounts.length > 0 && (
             <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px dashed rgba(255, 255, 255, 0.1)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+              <div style={{ marginBottom: '0.65rem' }}>
                 <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  📁 تعداد تسک‌ها به تفکیک پروژه ({dbStats.projectTaskCounts.length} پروژه):
+                  📁 تعداد تسک‌های دیتابیس به تفکیک پروژه جیرا ({dbStats.projectTaskCounts.length} پروژه):
                 </span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {dbStats.projectTaskCounts.map(proj => (
                   <div key={proj.id} style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    background: 'rgba(99, 102, 241, 0.07)',
-                    border: '1px solid rgba(99, 102, 241, 0.2)',
-                    borderRadius: '10px',
-                    padding: '0.45rem 0.85rem',
-                    gap: '0.5rem'
+                    background: 'rgba(99, 102, 241, 0.08)',
+                    border: '1px solid rgba(99, 102, 241, 0.25)',
+                    borderRadius: '12px',
+                    padding: '0.6rem 1rem',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-                      <span style={{ fontSize: '0.72rem', color: '#A78BFA', fontWeight: 700, background: 'rgba(167,139,250,0.15)', padding: '0.1rem 0.45rem', borderRadius: '6px', flexShrink: 0 }}>{proj.id}</span>
-                      <span style={{ fontSize: '0.8rem', color: '#CBD5E1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={proj.title}>{proj.title}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', flexShrink: 0 }}>
-                      <strong style={{
-                        fontSize: '1.05rem',
-                        color: proj.taskCount > 0 ? '#818CF8' : '#475569',
-                        fontWeight: 800
-                      }}>{proj.taskCount.toLocaleString()}</strong>
-                      <span style={{ fontSize: '0.72rem', color: '#64748B' }}>تسک</span>
+                    <span style={{
+                      fontSize: '0.95rem', color: '#A78BFA', fontWeight: 800,
+                      background: 'rgba(167,139,250,0.18)', padding: '0.2rem 0.7rem',
+                      borderRadius: '8px', letterSpacing: '0.05em'
+                    }}>{proj.id}</span>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
+                      <strong style={{ fontSize: '1.25rem', color: proj.taskCount > 0 ? '#818CF8' : '#475569', fontWeight: 800 }}>
+                        {proj.taskCount.toLocaleString()}
+                      </strong>
+                      <span style={{ fontSize: '0.75rem', color: '#64748B' }}>تسک</span>
                     </div>
                   </div>
                 ))}
