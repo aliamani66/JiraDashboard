@@ -224,9 +224,9 @@ const StatusMappingEditor = ({ mapping, onChange }) => {
 
 // ─────────────────────────── MAIN PAGE ────────────────────────────
 const JiraSettingsPage = () => {
-  const [activeTab, setActiveTab] = useState('database');
   const [cfg, setCfg] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('database');
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [diagLoading, setDiagLoading] = useState(false);
@@ -994,8 +994,6 @@ const JiraSettingsPage = () => {
       </AnimatePresence>
 
       {/* Header */}
-
-            {/* Header */}
       <div className="jsp-header">
         <div>
           <h1 className="jsp-title"><Settings size={26} className="text-accent-cyan" />تنظیمات کامل اتصال و مپینگ Jira API</h1>
@@ -1024,7 +1022,10 @@ const JiraSettingsPage = () => {
             <Zap size={16} className={diagLoading ? 'spin' : ''} />
             {diagLoading ? 'در حال پایش...' : 'پایش زنده API'}
           </button>
-
+          <button className="jsp-run-diag-btn" style={{ background: '#0EA5E9' }} onClick={handleSync} disabled={syncing}>
+            <RefreshCw size={16} className={syncing ? 'spin' : ''} />
+            {syncing ? 'در حال استخراج...' : '📦 استخراج اپیک‌ها (Epics)'}
+          </button>
           <button className="jsp-run-diag-btn" onClick={handleSave} disabled={saving}>
             <Save size={16} className={saving ? 'spin' : ''} />
             {saving ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}
@@ -1032,6 +1033,413 @@ const JiraSettingsPage = () => {
         </div>
       </div>
 
+      {/* 📅 POPUP MODAL FOR CUSTOM RANGE JIRA EXTRACTION */}
+      <AnimatePresence>
+        {showRangeModal && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 99999,
+              background: 'rgba(15, 23, 42, 0.82)',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1.5rem'
+            }}
+            onClick={() => setShowRangeModal(false)}
+          >
+            <motion.div
+              style={{
+                background: 'linear-gradient(135deg, #0F172A, #1E293B)',
+                border: '1px solid rgba(16, 185, 129, 0.5)',
+                borderRadius: '24px',
+                padding: '2rem',
+                maxWidth: '650px',
+                width: '100%',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(16, 185, 129, 0.25)',
+                color: '#FFFFFF'
+              }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '1rem' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#6EE7B7', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <Calendar size={24} /> همگام‌سازی و استخراج داده‌های جیرا در بازه زمانی دلخواه
+                  </h2>
+                  <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: '#94A3B8' }}>
+                    تاریخ شروع و پایان شمسی را انتخاب نمایید؛ پس از زدن دکمه استخراج، این پاپ‌آپ بسته شده و اطلاعات ماه به ماه دریافت می‌شود.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowRangeModal(false)}
+                  style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', color: '#94A3B8', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Quick Presets Pills */}
+              <div style={{ marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 'bold', color: '#CBD5E1', marginBottom: '0.5rem' }}>⚡ میان‌برهای بازه زمانی:</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                  <button type="button" onClick={() => applyDatePreset(10, 0)} className="jsp-preset-pill">⚡ ۱۰ روز گذشته</button>
+                  <button type="button" onClick={() => applyDatePreset(30, 0)} className="jsp-preset-pill">⚡ ۳۰ روز گذشته</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 1)} className="jsp-preset-pill purple">🗓️ ۱ ماه اخیر</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 2)} className="jsp-preset-pill purple">🗓️ ۲ ماه اخیر</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 3)} className="jsp-preset-pill purple">🗓️ ۳ ماه اخیر</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 6)} className="jsp-preset-pill green">🗓️ ۶ ماه اخیر</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 12)} className="jsp-preset-pill gold">🗓️ ۱ سال اخیر</button>
+                  <button type="button" onClick={() => applyDatePreset(0, 24)} className="jsp-preset-pill gold" style={{ borderColor: '#F59E0B', color: '#FCD34D' }}>🗓️ ۲ سال اخیر</button>
+                </div>
+              </div>
+
+              {/* Jalali Date Pickers */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.75rem' }}>
+                <JalaliDatePicker
+                  label="🗓️ از تاریخ (شمسی):"
+                  value={rangeStartJalali}
+                  onChange={setRangeStartJalali}
+                />
+                <JalaliDatePicker
+                  label="🗓️ تا تاریخ (شمسی):"
+                  value={rangeEndJalali}
+                  onChange={setRangeEndJalali}
+                />
+              </div>
+
+              {/* Modal Action Buttons */}
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.2rem', flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => { setShowRangeModal(false); setJqlPreview(null); setJqlTestResults(null); }}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#94A3B8', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', cursor: 'pointer' }}>
+                  ✕ بستن
+                </button>
+                <button type="button" onClick={handleTestAllJql} disabled={jqlTestLoading || jqlPreviewLoading}
+                  style={{ background: 'linear-gradient(135deg,#F59E0B,#D97706)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  {jqlTestLoading ? '⏳ در حال تست...' : '⚡ تست کوئری جیرا (کوئری ۳)'}
+                </button>
+                <button type="button" onClick={handleRangeSync} disabled={monthlySyncing}
+                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.3rem', fontSize: '0.9rem', fontWeight: 700, cursor: monthlySyncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(16,185,129,0.35)' }}>
+                  <RefreshCw size={16} className={monthlySyncing ? 'spin' : ''} />
+                  {monthlySyncing ? 'در حال استخراج...' : '🚀 شروع همگام‌سازی'}
+                </button>
+              </div>
+
+              {jqlTestResults && (
+                <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(245,158,11,0.35)', paddingTop: '1rem' }}>
+                  <div style={{ fontSize: '0.77rem', color: '#94A3B8', marginBottom: '0.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <span>سرور: <strong style={{ color: '#38BDF8' }}>{jqlTestResults.jiraBaseUrl}</strong></span>
+                    <span>پروژه: <strong style={{ color: '#38BDF8' }}>{jqlTestResults.projectKey}</strong></span>
+                    <span>شمسی: <strong style={{ color: '#10B981' }}>{jqlTestResults.jalaliRange}</strong></span>
+                    <span>میلادی: <strong style={{ color: '#F59E0B' }}>{jqlTestResults.gregorianRange}</strong></span>
+                  </div>
+                  {jqlTestResults.winnerId
+                    ? <div style={{ background:'rgba(16,185,129,0.12)', border:'1px solid rgba(16,185,129,0.4)', borderRadius:'8px', padding:'0.4rem 0.85rem', marginBottom:'0.55rem', fontSize:'0.78rem', color:'#6EE7B7' }}>برنده: <strong>#{jqlTestResults.winnerId}</strong> - این کوئری جواب داد</div>
+                    : <div style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'8px', padding:'0.4rem 0.85rem', marginBottom:'0.55rem', fontSize:'0.78rem', color:'#FCA5A5' }}>هیچ کوئری تسک برنگرداند</div>
+                  }
+                  <div style={{ display:'flex', flexDirection:'column', gap:'0.35rem', maxHeight:'360px', overflowY:'auto' }}>
+                    {jqlTestResults.results.map(r => {
+                      const win = r.id === jqlTestResults.winnerId;
+                      const bg = win ? 'rgba(16,185,129,0.1)' : r.status==='error' ? 'rgba(239,68,68,0.07)' : r.status==='zero' ? 'rgba(245,158,11,0.05)' : 'rgba(255,255,255,0.03)';
+                      const bdr = win ? '1.5px solid rgba(16,185,129,0.5)' : r.status==='error' ? '1px solid rgba(239,68,68,0.22)' : '1px solid rgba(255,255,255,0.07)';
+                      const badgeColor = win ? '#10B981' : r.status==='error' ? '#EF4444' : r.status==='zero' ? '#F59E0B' : '#6366F1';
+                      const badgeText = win ? 'برنده' : r.status==='error' ? 'خطا' : r.status==='zero' ? 'صفر تسک' : '...';
+                      return (
+                        <div key={r.id} style={{ background:bg, border:bdr, borderRadius:'9px', padding:'0.5rem 0.8rem' }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'0.3rem', marginBottom:'0.25rem' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+                              <span style={{ background:badgeColor, color:'#fff', fontSize:'0.64rem', fontWeight:700, padding:'0.1rem 0.4rem', borderRadius:'20px' }}>{badgeText}</span>
+                              <span style={{ fontSize:'0.75rem', color: win ? '#A7F3D0' : '#94A3B8', fontWeight: win ? 700 : 400 }}>#{r.id} - {r.name}</span>
+                            </div>
+                            <div style={{ fontSize:'0.69rem', color:'#64748B', display:'flex', gap:'0.5rem' }}>
+                              {r.status!=='error' && <span>{r.total} تسک</span>}
+                              {r.status==='error' && <span style={{ color:'#FCA5A5' }}>{r.errorCode}</span>}
+                              <span>{r.ms}ms</span>
+                            </div>
+                          </div>
+                          <code style={{ fontSize:'0.71rem', color: win ? '#6EE7B7' : '#475569', wordBreak:'break-all', fontFamily:'monospace', lineHeight:1.5, display:'block' }}>{r.jql}</code>
+                          {r.status==='error' && r.errorMsg && <div style={{ fontSize:'0.66rem', color:'#FCA5A5', marginTop:'0.2rem' }}>{r.errorMsg}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* ── GRAND TOTAL COUNT FROM JIRA ── */}
+                  {jqlTestResults.totalCountInJira !== null && jqlTestResults.totalCountInJira !== undefined && (
+                    <div style={{
+                      marginTop: '0.85rem',
+                      borderTop: '1px solid rgba(56,189,248,0.25)',
+                      paddingTop: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ background: 'rgba(56,189,248,0.18)', border: '1px solid rgba(56,189,248,0.45)', color: '#38BDF8', fontSize: '0.68rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '20px' }}>🔢 کوئری COUNT کل</span>
+                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>تعداد کل تسک‌های پروژه در جیرا (بدون فیلتر تاریخ):</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
+                        <strong style={{ fontSize: '1.35rem', color: '#38BDF8', fontWeight: 800 }}>{jqlTestResults.totalCountInJira.toLocaleString()}</strong>
+                        <span style={{ fontSize: '0.78rem', color: '#64748B' }}>تسک</span>
+                      </div>
+                      {jqlTestResults.countJql && (
+                        <div style={{ width: '100%', marginTop: '0.3rem' }}>
+                          <code style={{ fontSize: '0.68rem', color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace', background: 'rgba(56,189,248,0.06)', padding: '0.25rem 0.5rem', borderRadius: '6px', display: 'block', border: '1px solid rgba(56,189,248,0.15)' }}>{jqlTestResults.countJql}</code>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* JQL Preview Panel */}
+              {jqlPreview && !jqlTestResults && (
+                <div style={{ marginTop: '1.25rem', borderTop: '1px solid rgba(99,102,241,0.3)', paddingTop: '1rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.75rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    <span>🔗 <strong style={{ color: '#38BDF8' }}>سرور جیرا:</strong> {jqlPreview.jiraBaseUrl}</span>
+                    <span>📁 <strong style={{ color: '#38BDF8' }}>پروژه:</strong> {jqlPreview.projectKey}</span>
+                    <span>📅 <strong style={{ color: '#10B981' }}>بازه شمسی:</strong> {jqlPreview.jalaliRange}</span>
+                    <span>📅 <strong style={{ color: '#F59E0B' }}>بازه میلادی:</strong> {jqlPreview.gregorianRange}</span>
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '0 0 0.6rem' }}>کوئری‌های زیر دقیقاً همان‌هایی هستند که به جیرا ارسال می‌شوند. تأیید کنید که فرمت درست است:</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '260px', overflowY: 'auto' }}>
+                    {jqlPreview.queries.map(q => (
+                      <div key={q.id} style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '0.6rem 0.9rem' }}>
+                        <div style={{ fontSize: '0.74rem', color: '#A78BFA', fontWeight: 700, marginBottom: '0.3rem' }}>
+                          #{q.id} — {q.name}
+                        </div>
+                        <code style={{ fontSize: '0.8rem', color: '#6EE7B7', wordBreak: 'break-all', fontFamily: 'monospace', lineHeight: 1.6 }}>
+                          {q.jql}
+                        </code>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+
+      {/* ── BATCH SYNC RESULTS REPORT ── */}
+      {monthlyResults && (
+        <motion.div className="glass-card jsp-diag-card" style={{ borderColor: 'rgba(139, 92, 246, 0.4)', background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.4), rgba(15, 23, 42, 0.85))' }} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="jsp-diag-header">
+            <div>
+              <h2 style={{ color: '#C084FC', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                <Calendar size={22} /> گزارش تفکیکی همگام‌سازی داده‌های Jira
+              </h2>
+              <p className="jsp-diag-sub" style={{ marginTop: '0.45rem' }}>
+                تعداد کل تسک‌های دریافت‌شده: <strong style={{ color: '#38BDF8', fontSize: '1.05rem' }}>{monthlyResults.totalTasksSynced || 0} تسک</strong> | تعداد بازه/ماه بررسی‌شده: <strong>{monthlyResults.monthlyResults?.length || 0} بازه</strong>
+              </p>
+            </div>
+            <button className="jsp-delete-row" style={{ color: '#A78BFA', cursor: 'pointer' }} onClick={() => { setMonthlyResults(null); setJiraTotalCount(null); }} title="بستن این گزارش">
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* ── JIRA vs DB COMPARISON BAR ── */}
+          <div style={{
+            margin: '1rem 0 0.5rem',
+            background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,27,75,0.8))',
+            border: '1px solid rgba(139,92,246,0.35)',
+            borderRadius: '14px',
+            padding: '0.9rem 1.2rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem'
+          }}>
+            {/* Synced from this run */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>📥 تسک‌های سینک‌شده (این عملیات)</span>
+              <strong style={{ fontSize: '1.45rem', color: '#38BDF8', fontWeight: 800, lineHeight: 1 }}>{(monthlyResults.totalTasksSynced || 0).toLocaleString()}</strong>
+              <span style={{ fontSize: '0.68rem', color: '#64748B' }}>تسک</span>
+            </div>
+
+            <div style={{ fontSize: '1.4rem', color: '#475569', fontWeight: 300 }}>vs</div>
+
+            {/* Jira total COUNT */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>🔢 COUNT کل جیرا (بدون فیلتر تاریخ)</span>
+              {jiraTotalCountLoading ? (
+                <span style={{ fontSize: '0.85rem', color: '#A78BFA' }}>⏳ در حال دریافت...</span>
+              ) : jiraTotalCount ? (
+                <strong style={{ fontSize: '1.45rem', color: '#C084FC', fontWeight: 800, lineHeight: 1 }}>{jiraTotalCount.total.toLocaleString()}</strong>
+              ) : (
+                <button onClick={async () => {
+                  try { setJiraTotalCountLoading(true); const r = await api.getJiraTotalCount(); if (r.success) setJiraTotalCount({ total: r.total, jql: r.jql }); } catch (_) {}
+                  finally { setJiraTotalCountLoading(false); }
+                }} style={{ background: 'rgba(192,132,252,0.15)', border: '1px solid rgba(192,132,252,0.4)', color: '#C084FC', borderRadius: '8px', padding: '0.3rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>
+                  کلیک کن تعداد جیرا بیاد
+                </button>
+              )}
+              <span style={{ fontSize: '0.68rem', color: '#64748B' }}>تسک</span>
+            </div>
+
+            <div style={{ fontSize: '1.4rem', color: '#475569', fontWeight: 300 }}>=</div>
+
+            {/* Difference */}
+            {jiraTotalCount && (() => {
+              const diff = jiraTotalCount.total - (monthlyResults.totalTasksSynced || 0);
+              const isOk = diff === 0;
+              const isNeg = diff < 0;
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>⚠️ اختلاف</span>
+                  <strong style={{ fontSize: '1.45rem', color: isOk ? '#10B981' : isNeg ? '#F59E0B' : '#EF4444', fontWeight: 800, lineHeight: 1 }}>
+                    {diff >= 0 ? '+' : ''}{diff.toLocaleString()}
+                  </strong>
+                  <span style={{ fontSize: '0.68rem', color: isOk ? '#6EE7B7' : '#94A3B8' }}>{isOk ? '✅ برابر' : isNeg ? 'بیشتر از جیرا سینک شده' : 'تسک سینک‌نشده'}</span>
+                </div>
+              );
+            })()}
+
+            {/* COUNT JQL label */}
+            {jiraTotalCount?.jql && (
+              <div style={{ width: '100%', marginTop: '0.15rem', paddingTop: '0.6rem', borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
+                <code style={{ fontSize: '0.67rem', color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace', display: 'block' }}>
+                  🔍 COUNT JQL: {jiraTotalCount.jql}
+                </code>
+              </div>
+            )}
+          </div>
+
+          <div className="jsp-diag-table-wrapper" style={{ marginTop: '1rem', maxHeight: '420px', overflowY: 'auto' }}>
+            <table className="jsp-diag-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '70px' }}>ردیف</th>
+                  <th>دوره زمانی (ماه)</th>
+                  <th>بازه تاریخ میلادی</th>
+                  <th>وضعیت همگام‌سازی</th>
+                  <th>تعداد تسک دریافت‌شده</th>
+                  <th>کوئری JQL اجراشده</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyResults.monthlyResults?.map((m) => (
+                  <tr key={m.monthIndex}>
+                    <td><strong>ماه {m.monthIndex}</strong></td>
+                    <td>
+                      <strong style={{ color: '#F8FAFC' }}>{m.jalaliName}</strong>
+                      <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>{m.gregorianName}</div>
+                    </td>
+                    <td><code className="mono-code" style={{ fontSize: '0.8rem' }}>{m.dateRange}</code></td>
+                    <td>
+                      <span className={`diag-status-pill ${m.status === 'success' ? 'matched' : m.status === 'empty' ? 'warning' : 'missing'}`}>
+                        {m.status === 'success' ? '✅ موفق' : m.status === 'empty' ? '⚠️ ۰ تسک (بدون نتیجه)' : '❌ خطا'}
+                      </span>
+                    </td>
+                    <td>
+                      <strong style={{ color: m.taskCount > 0 ? '#38BDF8' : '#64748B', fontSize: '0.95rem' }}>
+                        {m.taskCount} تسک
+                      </strong>
+                    </td>
+                    <td>
+                      <code className="diag-val-code accent" style={{ fontSize: '0.78rem', color: m.status === 'error' ? '#FCA5A5' : '#38BDF8', wordBreak: 'break-all', display: 'inline-block', padding: '0.2rem 0.5rem', background: m.status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(56, 189, 248, 0.1)', border: m.status === 'error' ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '6px' }} title={m.jql || m.message}>
+                        {m.jql || 'مشخص نشده'}
+                      </code>
+                      {m.status === 'error' && m.message && (
+                        <div style={{ fontSize: '0.72rem', color: '#FCA5A5', marginTop: '0.25rem' }}>{m.message}</div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── DIAGNOSTIC RESULTS (TOP OF PAGE) ── */}
+      {diagResult && (
+        <motion.div className="glass-card jsp-diag-card" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="jsp-diag-header">
+            <div>
+              <h2>گزارش پایش زنده ساختار Jira API</h2>
+              {diagResult.projectName && (
+                <p className="jsp-diag-sub">
+                  پروژه: <strong>{diagResult.projectName}</strong> — تسک نمونه: <strong>{diagResult.sampleIssueKey}</strong> — مجموع تسک‌ها: {diagResult.totalIssuesFound}
+                </p>
+              )}
+            </div>
+            {diagResult.complianceScore !== undefined && (
+              <div className={`jsp-score-badge ${diagResult.complianceScore >= 80 ? 'good' : diagResult.complianceScore >= 50 ? 'warn' : 'bad'}`}>
+                <span className="score-num">%{diagResult.complianceScore}</span>
+                <span className="score-lbl">تطابق ساختاری</span>
+              </div>
+            )}
+          </div>
+
+          {!diagResult.success && (
+            <div className="jsp-error-msg"><AlertTriangle size={16} /> {diagResult.message}</div>
+          )}
+
+          {diagResult.requestDetails && (
+            <div className="jsp-req-details-box">
+              <h4>📋 اطلاعات کامل درخواست ارسالی به سرور Jira:</h4>
+              <div className="jsp-req-grid">
+                <div><span>آدرس سرور (Base URL):</span> <code>{diagResult.requestDetails.baseUrl}</code></div>
+                <div><span>نام کاربری:</span> <code>{diagResult.requestDetails.username || '—'}</code></div>
+                <div><span>کلید پروژه:</span> <code>{diagResult.requestDetails.projectKey}</code></div>
+                <div><span>کوئری JQL اجراشده:</span> <code className="accent">{diagResult.requestDetails.executedJql}</code></div>
+                <div><span>مسیر REST API:</span> <code>{diagResult.requestDetails.endpoint}</code></div>
+              </div>
+            </div>
+          )}
+
+          {diagResult.diagnostics?.length > 0 && (
+            <div className="jsp-diag-table-wrapper">
+              <table className="jsp-diag-table">
+                <thead>
+                  <tr>
+                    <th>فیلد مورد انتظار</th>
+                    <th>وضعیت</th>
+                    <th>مقدار دریافتی از Jira</th>
+                    <th>توضیح و راهکار</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {diagResult.diagnostics.map((d, i) => (
+                    <tr key={i}>
+                      <td><strong className="mono-code">{d.field}</strong></td>
+                      <td>
+                        <span className={`diag-status-pill ${d.status}`}>
+                          {d.status === 'matched' ? '✅ تطابق' : d.status === 'warning' ? '⚠️ بررسی شود' : d.status === 'missing' ? '❌ یافت نشد' : 'ℹ️ اختیاری'}
+                        </span>
+                      </td>
+                      <td><code className="diag-val-code">{d.value || '—'}</code></td>
+                      <td className="diag-note-text">{d.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {diagResult.rawSampleKeys?.length > 0 && (
+            <div className="jsp-customfields-footer">
+              <h4>فیلدهای شناسایی‌شده در پاسخ Jira (می‌توانید از اینها در بخش Custom Fields استفاده کنید):</h4>
+              <div className="jsp-cf-tags">
+                {diagResult.rawSampleKeys.map(k => <span key={k} className="jsp-cf-tag">{k}</span>)}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
       {/* 🏷️ INTEGRATED CONNECTED PANEL WITH TABS */}
       <div style={{
         background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.7))',
@@ -1185,34 +1593,7 @@ const JiraSettingsPage = () => {
           <AnimatePresence mode="wait">
             {activeTab === 'database' && (
               <motion.div key="database" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                <Section defaultOpen={true} icon={Cpu} title="نسخه و مسیرهای API جیرا (API Version & Custom Endpoints)" color="#6366F1">
-        <p className="jsp-section-desc">اگر جیرای سازمان شما نسخه Server / Data Center یا دارای آدرس‌های اختصاصی API است، می‌توانید نسخه و مسیرها را تعیین فرمایید.</p>
-        <div className="jsp-grid-2">
-          <Field label="نوع و نسخه Jira API" hint="تعیین نوع ساختار متدهای API">
-            <select
-              value={cfg.apiEndpoints?.apiVersion || 'auto'}
-              onChange={e => set('apiEndpoints', 'apiVersion', e.target.value)}
-              className="jsp-input"
-            >
-              <option value="auto">🔄 تشخیص خودکار (Auto-Detect Cloud v3 / Server v2)</option>
-              <option value="v3">🌐 Jira Cloud (REST API v3)</option>
-              <option value="v2">🖥️ Jira Server / Data Center (REST API v2)</option>
-            </select>
-          </Field>
-          <Field label="آدرس Endpoint جستجو (Search Endpoint)" hint="مسیر API جستجوی JQL">
-            <Input value={cfg.apiEndpoints?.searchEndpoint} onChange={v => set('apiEndpoints', 'searchEndpoint', v)} placeholder="/rest/api/3/search/jql" mono />
-          </Field>
-          <Field label="آدرس Endpoint پروژه (Project Endpoint)" hint="مسیر API دریافت اطلاعات پروژه">
-            <Input value={cfg.apiEndpoints?.projectEndpoint} onChange={v => set('apiEndpoints', 'projectEndpoint', v)} placeholder="/rest/api/3/project" mono />
-          </Field>
-        </div>
-      </Section>
-              </motion.div>
-            )}
-
-            {activeTab === 'connection' && (
-              <motion.div key="connection" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <Section icon={Server} title="تنظیمات سرور و دیتابیس (Server & Database Management)" color="#10B981" defaultOpen={true}>
+<Section icon={Server} title="تنظیمات سرور و دیتابیس (Server & Database Management)" color="#10B981" defaultOpen={true}>
         <p className="jsp-section-desc">پایش زنده وضعیت دیتابیس SQLite، تعداد کل تسک‌های ثبت‌شده، حجم فایل و به‌روزرسانی سیستم.</p>
         
         {/* 📊 DATABASE STATS TILE CARD */}
@@ -1528,7 +1909,12 @@ const JiraSettingsPage = () => {
           </Field>
         </div>
       </Section>
-                <Section defaultOpen={true} icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
+              </motion.div>
+            )}
+
+            {activeTab === 'connection' && (
+              <motion.div key="connection" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+<Section defaultOpen={true} icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
         <div className="jsp-grid-2">
           <Field label="آدرس پایه Jira (Base URL)" hint="مثال: https://10.100.71.140:8443 یا https://jira.company.com">
             <Input value={cfg.connection?.baseUrl} onChange={v => set('connection', 'baseUrl', v)} placeholder="https://10.100.71.140:8443" />
@@ -1686,7 +2072,31 @@ const JiraSettingsPage = () => {
           </div>
         </div>
       </Section>
-                <Section icon={GitBranch} title="اتصال به Confluence (مستندات)" color="#A78BFA" defaultOpen={true}>
+
+<Section defaultOpen={true} icon={Cpu} title="نسخه و مسیرهای API جیرا (API Version & Custom Endpoints)" color="#6366F1">
+        <p className="jsp-section-desc">اگر جیرای سازمان شما نسخه Server / Data Center یا دارای آدرس‌های اختصاصی API است، می‌توانید نسخه و مسیرها را تعیین فرمایید.</p>
+        <div className="jsp-grid-2">
+          <Field label="نوع و نسخه Jira API" hint="تعیین نوع ساختار متدهای API">
+            <select
+              value={cfg.apiEndpoints?.apiVersion || 'auto'}
+              onChange={e => set('apiEndpoints', 'apiVersion', e.target.value)}
+              className="jsp-input"
+            >
+              <option value="auto">🔄 تشخیص خودکار (Auto-Detect Cloud v3 / Server v2)</option>
+              <option value="v3">🌐 Jira Cloud (REST API v3)</option>
+              <option value="v2">🖥️ Jira Server / Data Center (REST API v2)</option>
+            </select>
+          </Field>
+          <Field label="آدرس Endpoint جستجو (Search Endpoint)" hint="مسیر API جستجوی JQL">
+            <Input value={cfg.apiEndpoints?.searchEndpoint} onChange={v => set('apiEndpoints', 'searchEndpoint', v)} placeholder="/rest/api/3/search/jql" mono />
+          </Field>
+          <Field label="آدرس Endpoint پروژه (Project Endpoint)" hint="مسیر API دریافت اطلاعات پروژه">
+            <Input value={cfg.apiEndpoints?.projectEndpoint} onChange={v => set('apiEndpoints', 'projectEndpoint', v)} placeholder="/rest/api/3/project" mono />
+          </Field>
+        </div>
+      </Section>
+
+<Section icon={GitBranch} title="اتصال به Confluence (مستندات)" color="#A78BFA" defaultOpen={true}>
         <div className="jsp-grid-2">
           <Field label="آدرس Confluence Base URL">
             <Input value={cfg.confluence?.baseUrl} onChange={v => set('confluence', 'baseUrl', v)} placeholder="https://10.100.71.140:8443/wiki" />
@@ -1703,8 +2113,8 @@ const JiraSettingsPage = () => {
             )}
 
             {activeTab === 'mapping' && (
-              <motion.div key="mapping" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <Section defaultOpen={true} icon={Cpu} title="فیلدهای کاستوم Jira (Custom Fields Mapping)" color="#EC4899">
+              <motion.div key="motion_mapping" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+<Section defaultOpen={true} icon={Cpu} title="فیلدهای کاستوم Jira (Custom Fields Mapping)" color="#EC4899">
         <p className="jsp-section-desc">شماره کاستوم‌فیلدهای اختصاصی جیرای سازمان را وارد کنید. پس از اجرای پایش زنده، شناسه‌های دقیق نمایش داده می‌شوند.</p>
         <div className="jsp-grid-2">
           <Field label="فیلد لینک به اپیک (Epic Link)" hint="شناسه فیلد ارتباط تسک با اپیک در جیرای شما (customfield_10006)">
@@ -1730,14 +2140,16 @@ const JiraSettingsPage = () => {
           </Field>
         </div>
       </Section>
-                <Section defaultOpen={true} icon={Tag} title="نگاشت وضعیت‌های Jira به داشبورد (Status Mapping)" color="#10B981">
+
+<Section defaultOpen={true} icon={Tag} title="نگاشت وضعیت‌های Jira به داشبورد (Status Mapping)" color="#10B981">
         <p className="jsp-section-desc">هر وضعیت اصلی جیرا را به وضعیت داشبورد نگاشت کنید. وضعیت‌های داشبورد: Done، In Progress، Waiting، To Do</p>
         <StatusMappingEditor
           mapping={cfg.statusMapping || {}}
           onChange={v => setCfg(prev => ({ ...prev, statusMapping: v }))}
         />
       </Section>
-                <Section defaultOpen={true} icon={AlertTriangle} title="وضعیت‌های «منتظر» (Waiting Status List)" color="#FBBF24">
+
+<Section defaultOpen={true} icon={AlertTriangle} title="وضعیت‌های «منتظر» (Waiting Status List)" color="#FBBF24">
         <p className="jsp-section-desc">وضعیت‌های جیرا که باید به‌عنوان «منتظر تیم‌های دیگر» شناسایی شوند. هر وضعیت را وارد کرده و Enter بزنید.</p>
         <TagList
           items={cfg.waitingStatuses || []}
@@ -1745,7 +2157,8 @@ const JiraSettingsPage = () => {
           placeholder="OnHolding، Waiting، Blocked..."
         />
       </Section>
-                <Section icon={Calendar} title="نگاشت فیلدهای تاریخ (Date Field Mapping)" color="#06B6D4" defaultOpen={true}>
+
+<Section icon={Calendar} title="نگاشت فیلدهای تاریخ (Date Field Mapping)" color="#06B6D4" defaultOpen={true}>
         <div className="jsp-grid-2">
           <Field label="فیلد تاریخ شروع اپیک" hint="معمولاً created یا customfield_XXXXX">
             <Input value={cfg.dateMapping?.epicStartDateField} onChange={v => set('dateMapping', 'epicStartDateField', v)} placeholder="created" mono />
@@ -1761,7 +2174,8 @@ const JiraSettingsPage = () => {
           </Field>
         </div>
       </Section>
-                <Section icon={Tag} title="پیشوندهای لیبل‌های جیرا (Label Prefixes)" color="#F97316" defaultOpen={true}>
+
+<Section icon={Tag} title="پیشوندهای لیبل‌های جیرا (Label Prefixes)" color="#F97316" defaultOpen={true}>
         <p className="jsp-section-desc">برچسب‌هایی که برای تشخیص تیم منتظر، دلیل انتظار و قابلیت‌ها از لیبل‌های Jira استفاده می‌شوند.</p>
         <div className="jsp-grid-2">
           <Field label="پیشوند تیم منتظر" hint="مثال: wait: → لیبل: wait:infra-team">
@@ -1775,7 +2189,8 @@ const JiraSettingsPage = () => {
           </Field>
         </div>
       </Section>
-                <Section icon={Cpu} title="کامپوننت‌های برجسته داشبورد (Featured Components)" color="#8B5CF6" defaultOpen={true}>
+
+<Section icon={Cpu} title="کامپوننت‌های برجسته داشبورد (Featured Components)" color="#8B5CF6" defaultOpen={true}>
         <p className="jsp-section-desc">کامپوننت‌هایی که به‌عنوان دکمه فیلتر سریع در صفحه داشبورد نمایش داده می‌شوند.</p>
         <TagList
           items={cfg.featuredComponents || []}
