@@ -575,10 +575,10 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
         for (const match of matches) {
           const candidateKey = match[1] ? match[1].toUpperCase() : null;
           if (candidateKey && candidateKey !== (issue.key || '').toUpperCase()) {
-            if (knownEpicKeysSet && knownEpicKeysSet.has(candidateKey)) {
+            if (knownEpicKeysSet && knownEpicKeysSet.size > 0 && knownEpicKeysSet.has(candidateKey)) {
               epicKey = candidateKey;
               break;
-            } else if (!knownEpicKeysSet) {
+            } else if (!knownEpicKeysSet || knownEpicKeysSet.size === 0) {
               epicKey = candidateKey;
               break;
             }

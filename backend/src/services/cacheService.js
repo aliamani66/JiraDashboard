@@ -590,8 +590,9 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   const db = getDb();
   const syncTime = new Date().toISOString();
 
-  // Only fetch Epics on step 1 to eliminate network overhead for subsequent steps
-  if (Number(monthIndex) === 1) {
+  // Ensure projects table has Epics (fetch if empty or monthIndex === 1)
+  const projCountInDb = db.prepare('SELECT COUNT(*) as c FROM projects').get()?.c || 0;
+  if (Number(monthIndex) === 1 || projCountInDb === 0) {
     try {
       const epics = await jiraService.fetchEpics();
       db.transaction(() => {
@@ -609,7 +610,6 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
           insertProject.run(epic);
         }
       })();
-      // Link any previously-saved tasks to these newly-fetched epics
       autoLinkTasksToEpics();
     } catch (err) {
       console.error('Fetching epics failed during single month sync:', err.message);
