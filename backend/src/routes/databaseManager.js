@@ -84,20 +84,49 @@ router.get('/data/:tableName', (req, res) => {
     // Metadata counts for tasks table
     let stats = null;
     if (tableName === 'tasks') {
-      const fullDbTasks = db.prepare(`SELECT parent_task_id, is_subtask FROM tasks`).all() || [];
+      const fullDbTasks = db.prepare(`SELECT project_id, parent_task_id, epic_id, is_subtask FROM tasks`).all() || [];
+      const fullProjects = db.prepare(`SELECT id, key, title FROM projects`).all() || [];
+      
       let withEpicCount = 0;
       let withoutEpicCount = 0;
       let subtasksCount = 0;
+      const projectTaskMap = {};
+
       for (const t of fullDbTasks) {
         if (t.is_subtask === 1) subtasksCount++;
-        if (isValidEpicKey(t.parent_task_id)) withEpicCount++;
+        const hasEpic = isValidEpicKey(t.epic_id) || isValidEpicKey(t.parent_task_id);
+        if (hasEpic) withEpicCount++;
         else withoutEpicCount++;
+
+        const pKey = (t.project_id || '').toUpperCase();
+        if (pKey) {
+          projectTaskMap[pKey] = (projectTaskMap[pKey] || 0) + 1;
+        }
       }
+
+      const projectBreakdown = {};
+      for (const p of fullProjects) {
+        const pKey = (p.key || p.id.split('-')[0] || p.id).toUpperCase();
+        if (!projectBreakdown[pKey]) {
+          projectBreakdown[pKey] = { projectKey: pKey, epicCount: 0, taskCount: 0 };
+        }
+        projectBreakdown[pKey].epicCount++;
+      }
+      for (const [pKey, tCount] of Object.entries(projectTaskMap)) {
+        if (!projectBreakdown[pKey]) {
+          projectBreakdown[pKey] = { projectKey: pKey, epicCount: 0, taskCount: tCount };
+        } else {
+          projectBreakdown[pKey].taskCount = tCount;
+        }
+      }
+
       stats = {
         totalDbTasks: fullDbTasks.length,
+        totalEpicsCount: fullProjects.length,
         withEpicCount,
         withoutEpicCount,
-        subtasksCount
+        subtasksCount,
+        projectBreakdown: Object.values(projectBreakdown)
       };
     }
 

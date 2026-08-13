@@ -163,31 +163,60 @@ const DatabaseManagerPage = () => {
 
       {/* Quick Database Metrics Summary */}
       {tableData?.stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '0.85rem 1rem' }}>
-            <div style={{ color: '#94A3B8', fontSize: '0.75rem', fontWeight: 600 }}>مجموع کل تسک‌های دیتابیس</div>
-            <div style={{ color: '#F8FAFC', fontSize: '1.25rem', fontWeight: 800, marginTop: '0.2rem' }}>
-              {(tableData.stats.totalDbTasks || 0).toLocaleString()} تسک
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.25rem' }}>
+          
+          {/* Main Global Stats Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1rem' }}>
+            <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '0.85rem 1rem' }}>
+              <div style={{ color: '#94A3B8', fontSize: '0.75rem', fontWeight: 600 }}>مجموع کل تسک‌های دیتابیس</div>
+              <div style={{ color: '#F8FAFC', fontSize: '1.25rem', fontWeight: 800, marginTop: '0.2rem' }}>
+                {(tableData.stats.totalDbTasks || 0).toLocaleString()} تسک
+              </div>
+            </div>
+            <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(192, 132, 252, 0.25)', borderRadius: '12px', padding: '0.85rem 1rem' }}>
+              <div style={{ color: '#C084FC', fontSize: '0.75rem', fontWeight: 600 }}>📌 اپیک‌های کل پروژه‌ها</div>
+              <div style={{ color: '#C084FC', fontSize: '1.25rem', fontWeight: 800, marginTop: '0.2rem' }}>
+                {(tableData.stats.totalEpicsCount || 0).toLocaleString()} اپیک
+              </div>
+            </div>
+            <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '12px', padding: '0.85rem 1rem' }}>
+              <div style={{ color: '#6EE7B7', fontSize: '0.75rem', fontWeight: 600 }}>⚡ تسک‌های دارای اپیک</div>
+              <div style={{ color: '#6EE7B7', fontSize: '1.25rem', fontWeight: 800, marginTop: '0.2rem' }}>
+                {(tableData.stats.withEpicCount || 0).toLocaleString()} تسک
+              </div>
+            </div>
+            <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(251, 191, 36, 0.25)', borderRadius: '12px', padding: '0.85rem 1rem' }}>
+              <div style={{ color: '#FBBF24', fontSize: '0.75rem', fontWeight: 600 }}>⚠️ تسک‌های بدون اپیک</div>
+              <div style={{ color: '#FBBF24', fontSize: '1.25rem', fontWeight: 800, marginTop: '0.2rem' }}>
+                {(tableData.stats.withoutEpicCount || 0).toLocaleString()} تسک
+              </div>
+            </div>
+            <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(96, 165, 250, 0.25)', borderRadius: '12px', padding: '0.85rem 1rem' }}>
+              <div style={{ color: '#60A5FA', fontSize: '0.75rem', fontWeight: 600 }}>🔹 زیرتسک‌ها (Sub-tasks)</div>
+              <div style={{ color: '#60A5FA', fontSize: '1.25rem', fontWeight: 800, marginTop: '0.2rem' }}>
+                {(tableData.stats.subtasksCount || 0).toLocaleString()} تسک
+              </div>
             </div>
           </div>
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '12px', padding: '0.85rem 1rem' }}>
-            <div style={{ color: '#6EE7B7', fontSize: '0.75rem', fontWeight: 600 }}>⚡ تسک‌های دارای اپیک</div>
-            <div style={{ color: '#6EE7B7', fontSize: '1.25rem', fontWeight: 800, marginTop: '0.2rem' }}>
-              {(tableData.stats.withEpicCount || 0).toLocaleString()} تسک
+
+          {/* Per Project Live Breakdown Cards */}
+          {Array.isArray(tableData.stats.projectBreakdown) && tableData.stats.projectBreakdown.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', background: 'rgba(30, 41, 59, 0.4)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '0.75rem 1rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                📊 تفکیک زنده پروژه‌های جیرا:
+              </span>
+              {tableData.stats.projectBreakdown.map((p, idx) => (
+                <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '8px', padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem' }}>
+                  <strong style={{ color: '#38BDF8', fontWeight: 800 }}>پروژه {p.projectKey}</strong>
+                  <span style={{ color: '#CBD5E1' }}>|</span>
+                  <span style={{ color: '#C084FC', fontWeight: 700 }}>{p.epicCount} اپیک کل</span>
+                  <span style={{ color: '#CBD5E1' }}>|</span>
+                  <span style={{ color: '#6EE7B7', fontWeight: 700 }}>{p.taskCount} تسک در دیتابیس</span>
+                </div>
+              ))}
             </div>
-          </div>
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(251, 191, 36, 0.25)', borderRadius: '12px', padding: '0.85rem 1rem' }}>
-            <div style={{ color: '#FBBF24', fontSize: '0.75rem', fontWeight: 600 }}>⚠️ تسک‌های بدون اپیک</div>
-            <div style={{ color: '#FBBF24', fontSize: '1.25rem', fontWeight: 800, marginTop: '0.2rem' }}>
-              {(tableData.stats.withoutEpicCount || 0).toLocaleString()} تسک
-            </div>
-          </div>
-          <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(96, 165, 250, 0.25)', borderRadius: '12px', padding: '0.85rem 1rem' }}>
-            <div style={{ color: '#60A5FA', fontSize: '0.75rem', fontWeight: 600 }}>🔹 زیرتسک‌ها (Sub-tasks)</div>
-            <div style={{ color: '#60A5FA', fontSize: '1.25rem', fontWeight: 800, marginTop: '0.2rem' }}>
-              {(tableData.stats.subtasksCount || 0).toLocaleString()} تسک
-            </div>
-          </div>
+          )}
+
         </div>
       )}
 
