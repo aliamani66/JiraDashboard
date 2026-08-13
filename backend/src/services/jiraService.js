@@ -632,63 +632,42 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     const outwardDesc = (linkType.outward || link.outward || 'relates to').toLowerCase();
     const blockingKeywords = ['is blocked by', 'depends on', 'is waited on by', 'blocked', 'waiting'];
 
-    const linkedIssue = link.inwardIssue || link.inward || null;
-    if (linkedIssue && typeof linkedIssue === 'object' && linkedIssue.key) {
-      if (!linkedTasks.some(lt => lt.key === linkedIssue.key)) {
-        linkedTasks.push({
-          key: linkedIssue.key,
-          title: linkedIssue.fields?.summary || linkedIssue.key,
-          linkType: typeName,
-          relationship: linkType.inward || 'is related to',
-          direction: 'inward',
-          status: linkedIssue.fields?.status?.name || null,
-          assignee: linkedIssue.fields?.assignee ? (linkedIssue.fields.assignee.displayName || linkedIssue.fields.assignee.name) : null,
-          start_date: linkedIssue.fields?.created ? linkedIssue.fields.created.split('T')[0] : null,
-          due_date: linkedIssue.fields?.duedate || null
-        });
-      }
+    const candidates = [
+      { item: link.inwardIssue || link.inward, rel: linkType.inward || 'is related to', dir: 'inward', isBlocking: blockingKeywords.some(kw => inwardDesc.includes(kw)) },
+      { item: link.outwardIssue || link.outward, rel: linkType.outward || 'relates to', dir: 'outward', isBlocking: blockingKeywords.some(kw => outwardDesc.includes(kw)) },
+      { item: link.otherIssue || link.issue || link.target, rel: linkType.name || 'is related to', dir: 'other', isBlocking: false }
+    ];
 
-      if (blockingKeywords.some(kw => inwardDesc.includes(kw))) {
-        isWaiting = 1;
-        if (linkedIssue.fields) {
-          if (linkedIssue.fields.assignee) {
-            linkedWaitingTeam = linkedWaitingTeam || linkedIssue.fields.assignee.displayName;
-          }
-          if (linkedIssue.fields.project) {
-            linkedWaitingTeam = linkedWaitingTeam || linkedIssue.fields.project.name;
-          }
+    for (const cand of candidates) {
+      const targetObj = cand.item;
+      if (targetObj && typeof targetObj === 'object' && targetObj.key) {
+        if (!linkedTasks.some(lt => lt.key === targetObj.key)) {
+          linkedTasks.push({
+            key: targetObj.key,
+            title: targetObj.fields?.summary || targetObj.summary || targetObj.key,
+            linkType: typeName,
+            relationship: cand.rel,
+            direction: cand.dir,
+            status: targetObj.fields?.status?.name || (typeof targetObj.status === 'object' ? targetObj.status.name : targetObj.status) || null,
+            assignee: targetObj.fields?.assignee ? (targetObj.fields.assignee.displayName || targetObj.fields.assignee.name) : (typeof targetObj.assignee === 'object' ? targetObj.assignee.displayName : targetObj.assignee) || null,
+            start_date: targetObj.fields?.created ? targetObj.fields.created.split('T')[0] : null,
+            due_date: targetObj.fields?.duedate || targetObj.duedate || null
+          });
         }
-        linkedWaitingReason = `بلاک شده توسط ${linkedIssue.key}: ${linkedIssue.fields?.summary || ''}`;
-      }
-    }
 
-    const outLinkedIssue = link.outwardIssue || link.outward || null;
-    if (outLinkedIssue && typeof outLinkedIssue === 'object' && outLinkedIssue.key) {
-      if (!linkedTasks.some(lt => lt.key === outLinkedIssue.key)) {
-        linkedTasks.push({
-          key: outLinkedIssue.key,
-          title: outLinkedIssue.fields?.summary || outLinkedIssue.key,
-          linkType: typeName,
-          relationship: linkType.outward || 'relates to',
-          direction: 'outward',
-          status: outLinkedIssue.fields?.status?.name || null,
-          assignee: outLinkedIssue.fields?.assignee ? (outLinkedIssue.fields.assignee.displayName || outLinkedIssue.fields.assignee.name) : null,
-          start_date: outLinkedIssue.fields?.created ? outLinkedIssue.fields.created.split('T')[0] : null,
-          due_date: outLinkedIssue.fields?.duedate || null
-        });
-      }
-
-      if (blockingKeywords.some(kw => outwardDesc.includes(kw))) {
-        isWaiting = 1;
-        if (outLinkedIssue.fields) {
-          if (outLinkedIssue.fields.assignee) {
-            linkedWaitingTeam = linkedWaitingTeam || outLinkedIssue.fields.assignee.displayName;
+        if (cand.isBlocking) {
+          isWaiting = 1;
+          const fields = targetObj.fields || targetObj;
+          if (fields) {
+            if (fields.assignee) {
+              linkedWaitingTeam = linkedWaitingTeam || (fields.assignee.displayName || fields.assignee.name);
+            }
+            if (fields.project) {
+              linkedWaitingTeam = linkedWaitingTeam || (fields.project.name || fields.project.key);
+            }
           }
-          if (outLinkedIssue.fields.project) {
-            linkedWaitingTeam = linkedWaitingTeam || outLinkedIssue.fields.project.name;
-          }
+          linkedWaitingReason = `وابسته/بلاک شده توسط ${targetObj.key}: ${fields?.summary || ''}`;
         }
-        linkedWaitingReason = `وابسته به ${outLinkedIssue.key}: ${outLinkedIssue.fields?.summary || ''}`;
       }
     }
   }
