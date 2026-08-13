@@ -1074,16 +1074,19 @@ router.get('/db-stats', (req, res) => {
 });
 
 // GET /api/jira/mismatch-details
-// Returns side-by-side comparison between DB items and Jira Live items for diagnostic grid modal
+// Returns exact differences between DB items and Jira Live items based on comparison table queries
 router.get('/mismatch-details', async (req, res) => {
   try {
     const db = getDb();
     const cfg = jiraService.getJiraConfig();
-    const category = req.query.category || 'epics';
+    const category = req.query.category || 'totalTasks';
     const rebuildMonths = parseInt(req.query.months, 10) || parseInt(cfg.rebuildMonths, 10) || 3;
 
     const projKeyStr = (cfg.projectKey || '').trim().toUpperCase();
     let projectFilter = '';
+    let taskProjWhere = '';
+    let epicWhere = "id LIKE '%-%'";
+
     if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
       const projects = projKeyStr.split(',').map(p => {
         const clean = p.trim().toUpperCase();
@@ -1094,46 +1097,41 @@ router.get('/mismatch-details', async (req, res) => {
       } else if (projects.length === 1) {
         projectFilter = `AND project = ${projects[0]}`;
       }
+
+      const pKeys = projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean);
+      if (pKeys.length > 0) {
+        epicWhere = `(${pKeys.map(k => `id LIKE '${k}-%'`).join(' OR ')})`;
+        taskProjWhere = ` AND (${pKeys.map(k => `id LIKE '${k}-%'`).join(' OR ')})`;
+      }
     }
 
     const now = new Date();
     const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
     const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
-    const dateClause = `created >= "${startDateStr}"`;
-    const fullClause = projectFilter ? `${projectFilter.replace(/^AND\s+/i, '')} AND ${dateClause}` : dateClause;
+    const dateClause = (rebuildMonths < 60) ? `created >= "${startDateStr}"` : '';
+    const fullClause = projectFilter
+      ? (dateClause ? `${projectFilter.replace(/^AND\s+/i, '')} AND ${dateClause}` : projectFilter.replace(/^AND\s+/i, ''))
+      : (dateClause || '');
 
-    // Filter DB tasks by the exact same timeframe filter (created_at or start_date)
     const dbDateClause = (rebuildMonths < 60)
-      ? ` AND (created_at >= '${startDateStr}' OR start_date >= '${startDateStr}')`
+      ? ` AND (created_at >= '${startDateStr}' OR start_date >= '${startDateStr}' OR due_date >= '${startDateStr}')`
       : '';
 
     let items = [];
+    const missingKeys = [];
 
     if (category === 'epics') {
-      let dbEpicWhere = "id LIKE '%-%'";
-      if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
-        const pKeys = projKeyStr.split(',').map(k => k.trim()).filter(Boolean);
-        if (pKeys.length > 0) {
-          dbEpicWhere = pKeys.map(k => `id LIKE '${k}-%'`).join(' OR ');
-        }
-      }
-
-      const dbEpics = db.prepare(`SELECT id, title, status, last_synced FROM projects WHERE ${dbEpicWhere} ORDER BY id ASC`).all();
+      const dbEpics = db.prepare(`SELECT id, title, status FROM projects WHERE ${epicWhere}`).all();
       const dbEpicMap = new Map();
       for (const e of dbEpics) dbEpicMap.set(e.id.toUpperCase(), e);
-
-      const dbContainerProjects = db.prepare(`SELECT id, title, status FROM projects WHERE id NOT LIKE '%-%'`).all();
-      for (const cp of dbContainerProjects) dbEpicMap.set(cp.id.toUpperCase(), { ...cp, isContainer: true });
 
       const jql = `issuetype = Epic ${projectFilter} ORDER BY created ASC`;
       let jiraEpics = [];
       try {
-        const jiraRes = await jiraService.jiraSearch(jql, ['summary', 'status', 'project'], { maxResults: 2000, timeout: 15000 });
-        if (jiraRes && jiraRes.issues) {
-          jiraEpics = jiraRes.issues;
-        }
+        const jiraRes = await jiraService.jiraSearch(jql, ['summary', 'status', 'project'], { maxResults: 1000, timeout: 8000 });
+        if (jiraRes && jiraRes.issues) jiraEpics = jiraRes.issues;
       } catch (err) {
-        console.error('Failed to fetch live epics for mismatch analysis:', err.message);
+        console.error('Failed to fetch live epics:', err.message);
       }
 
       const jiraEpicMap = new Map();
@@ -1142,97 +1140,65 @@ router.get('/mismatch-details', async (req, res) => {
         jiraEpicMap.set(keyUpper, {
           id: je.key,
           title: je.fields?.summary || je.key,
-          status: je.fields?.status?.name || 'In Progress',
-          projectKey: je.fields?.project?.key
+          status: je.fields?.status?.name || 'In Progress'
         });
       }
 
       const allKeys = new Set([...dbEpicMap.keys(), ...jiraEpicMap.keys()]);
-
       for (const key of allKeys) {
         const inDb = dbEpicMap.get(key);
         const inJira = jiraEpicMap.get(key);
 
-        let mismatchType = 'MATCHED';
-        let reason = '✅ تطابق کامل بین دیتابیس و سرور جیرا';
-
-        if (inDb && inDb.isContainer && !inJira) {
-          mismatchType = 'CONTAINER_PROJECT';
-          reason = `📌 شناسه «${key}» کانتینر اصلی پروژه است که برای گروه‌بندی تسک‌ها در دیتابیس لوکال ثبت شده است و یک اپیک مستقل نیست.`;
+        if (!inDb && inJira) {
+          missingKeys.push(key);
+          items.push({
+            id: key,
+            title: inJira.title,
+            jiraStatus: inJira.status,
+            dbStatus: '🔴 ثبت‌نشده در دیتابیس',
+            mismatchType: 'JIRA_ONLY',
+            reason: `🌐 اپیک «${key}» در جیرا موجود است اما در دیتابیس ثبت نشده.`
+          });
         } else if (inDb && !inJira) {
-          mismatchType = 'DB_ONLY';
-          reason = `⚠️ شناسه «${key}» در دیتابیس موجود است اما در لیست اپیک‌های زنده جیرا یافت نشد (احتمالاً پاک‌شده یا دسترسی محدود است).`;
-        } else if (!inDb && inJira) {
-          mismatchType = 'JIRA_ONLY';
-          reason = `🌐 اپیک «${key}» در سرور جیرا موجود است ولی هنوز در دیتابیس لوکال همگام‌سازی نشده است.`;
-        } else if (inDb && inJira && inDb.status !== inJira.status) {
-          mismatchType = 'STATUS_MISMATCH';
-          reason = `🔄 تفاوت وضعیت: در دیتابیس «${inDb.status}» و در جیرا «${inJira.status}» می‌باشد.`;
+          items.push({
+            id: key,
+            title: inDb.title,
+            jiraStatus: '🔴 یافت‌نشد در جیرا',
+            dbStatus: inDb.status || 'موجود',
+            mismatchType: 'DB_ONLY',
+            reason: `💾 اپیک «${key}» در دیتابیس موجود است اما در نتایج جیرا نیامد.`
+          });
         }
-
-        items.push({
-          id: key,
-          title: inJira?.title || inDb?.title || `اپیک ${key}`,
-          dbStatus: inDb ? (inDb.status || 'موجود') : '🔴 ناموجود در دیتابیس',
-          jiraStatus: inJira ? (inJira.status || 'موجود') : '🔴 ناموجود در جیرا',
-          mismatchType,
-          reason,
-          inDb: !!inDb,
-          inJira: !!inJira
-        });
       }
-    } else if (category === 'unlinkedTasks' || category === 'withEpicTasks' || category === 'totalTasks') {
-      const knownEpicsSet = new Set(db.prepare('SELECT UPPER(id) as id FROM projects').all().map(p => p.id));
-      const isLinkedToEpic = (parentTaskId) => parentTaskId && knownEpicsSet.has(String(parentTaskId).toUpperCase());
-
-      const jql = `${fullClause} AND issuetype != Epic ORDER BY created ASC`;
-      const INSPECTION_FIELDS = [
-        'summary',
-        'status',
-        'issuetype',
-        'parent',
-        'project',
-        'created',
-        'duedate',
-        'assignee',
-        'issuelinks',
-        'customfield_10006',
-        'customfield_10014',
-        'customfield_10008',
-        'customfield_10004',
-        'customfield_10020'
-      ];
+    } else {
+      const countJql = fullClause ? `${fullClause} AND issuetype != Epic ORDER BY created ASC` : `issuetype != Epic ORDER BY created ASC`;
+      const FIELDS = ['summary', 'status', 'issuetype', 'parent', 'project', 'created'];
 
       let rawJiraIssues = [];
       try {
-        const jiraRes = await jiraService.jiraSearch(jql, INSPECTION_FIELDS, { maxResults: 1000, timeout: 12000 });
+        const jiraRes = await jiraService.jiraSearch(countJql, FIELDS, { maxResults: 1000, timeout: 10000 });
         if (jiraRes && jiraRes.issues) rawJiraIssues = jiraRes.issues;
       } catch (err) {
-        console.error('Failed to fetch live tasks for mismatch details:', err.message);
+        console.error('Failed to fetch live tasks for mismatch:', err.message);
       }
-
-      const parsedJiraTasks = rawJiraIssues
-        .map((issue, idx) => jiraService.parseTaskIssue(issue, null, idx, knownEpicsSet))
-        .filter(t => t && t.id);
 
       const jiraTaskMap = new Map();
-      for (const t of parsedJiraTasks) {
-        const upperId = t.id.toUpperCase();
-        const linked = isLinkedToEpic(t.parent_task_id);
-        if (category === 'unlinkedTasks' && linked) continue;
-        if (category === 'withEpicTasks' && !linked) continue;
-        jiraTaskMap.set(upperId, t);
+      for (const ji of rawJiraIssues) {
+        const kUpper = (ji.key || '').trim().toUpperCase();
+        if (/^[A-Z][A-Z0-9_]*-\d+$/i.test(kUpper)) {
+          jiraTaskMap.set(kUpper, {
+            id: ji.key,
+            title: ji.fields?.summary || ji.key,
+            status: ji.fields?.status?.name || 'To Do',
+            issueType: ji.fields?.issuetype?.name || 'Task'
+          });
+        }
       }
 
-      let dbQuery = `SELECT id, project_id, parent_task_id, title, status FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0)${dbDateClause} ORDER BY id ASC`;
-      const dbTasks = db.prepare(dbQuery).all();
+      const dbTasks = db.prepare(`SELECT id, project_id, parent_task_id, is_subtask, title, status FROM tasks WHERE 1=1${taskProjWhere}${dbDateClause}`).all();
       const dbTaskMap = new Map();
-      for (const t of dbTasks) {
-        const upperId = t.id.toUpperCase();
-        const linked = isLinkedToEpic(t.parent_task_id);
-        if (category === 'unlinkedTasks' && linked) continue;
-        if (category === 'withEpicTasks' && !linked) continue;
-        dbTaskMap.set(upperId, t);
+      for (const dt of dbTasks) {
+        dbTaskMap.set(dt.id.toUpperCase(), dt);
       }
 
       const allKeys = new Set([...dbTaskMap.keys(), ...jiraTaskMap.keys()]);
@@ -1240,47 +1206,43 @@ router.get('/mismatch-details', async (req, res) => {
         const inDb = dbTaskMap.get(key);
         const inJira = jiraTaskMap.get(key);
 
-        let mismatchType = 'MATCHED';
-        let reason = '✅ تطابق کامل';
-
-        if (inDb && !inJira) {
-          mismatchType = 'DB_ONLY';
-          reason = `⚠️ تسک «${key}» در دیتابیس لوکال موجود است اما در بازه ${rebuildMonths} ماهه جیرا نیامد.`;
-        } else if (!inDb && inJira) {
-          mismatchType = 'JIRA_ONLY';
-          reason = `🌐 تسک «${key}» در سرور جیرا موجود است اما هنوز در دیتابیس لوکال سینک نشده است.`;
-        } else if (inDb && inJira && inDb.status !== inJira.status) {
-          mismatchType = 'STATUS_MISMATCH';
-          reason = `🔄 تفاوت وضعیت: دیتابیس «${inDb.status}»، جیرا «${inJira.status}»`;
+        if (!inDb && inJira) {
+          missingKeys.push(key);
+          items.push({
+            id: key,
+            title: inJira.title,
+            issueType: inJira.issueType,
+            jiraStatus: inJira.status,
+            dbStatus: '🔴 ثبت‌نشده در دیتابیس',
+            mismatchType: 'JIRA_ONLY',
+            reason: `🌐 تسک «${key}» در جیرا موجود است اما در دیتابیس ثبت نشده.`
+          });
+        } else if (inDb && !inJira) {
+          items.push({
+            id: key,
+            title: inDb.title,
+            issueType: inDb.is_subtask === 1 ? 'Sub-task' : 'Task',
+            jiraStatus: '🔴 یافت‌نشد در بازه جیرا',
+            dbStatus: inDb.status || 'موجود',
+            mismatchType: 'DB_ONLY',
+            reason: `💾 تسک «${key}» در دیتابیس ثبت است اما در بازه جاری جیرا دریافت نشد.`
+          });
         }
-
-        items.push({
-          id: key,
-          title: inJira?.title || inDb?.title || `تسک ${key}`,
-          dbStatus: inDb ? (inDb.status || 'موجود') : '🔴 ناموجود در دیتابیس',
-          jiraStatus: inJira ? (inJira.status || 'موجود') : '🔴 ناموجود در جیرا',
-          mismatchType,
-          reason,
-          inDb: !!inDb,
-          inJira: !!inJira
-        });
       }
     }
-
-    const mismatchedItems = items.filter(i => i.mismatchType !== 'MATCHED' && i.mismatchType !== 'CONTAINER_PROJECT');
 
     res.json({
       success: true,
       category,
       rebuildMonths,
-      totalCount: items.length,
-      mismatchCount: mismatchedItems.length,
-      matchedCount: items.length - mismatchedItems.length,
-      mismatchedItems,
-      allItems: items
+      totalJiraCount: category === 'epics' ? (items.filter(i => i.mismatchType !== 'DB_ONLY').length) : (items.filter(i => i.mismatchType !== 'DB_ONLY').length),
+      mismatches: items,
+      mismatchCount: items.length,
+      missingCount: missingKeys.length,
+      missingKeys
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'خطا در تحلیل اختلافات: ' + err.message });
+    res.status(500).json({ success: false, message: 'خطا در استخراج موارد اختلاف: ' + err.message });
   }
 });
 

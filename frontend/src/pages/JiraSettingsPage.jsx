@@ -278,35 +278,30 @@ const JiraSettingsPage = () => {
     try {
       setSyncingMissing(true);
       const months = parseInt(cfg?.rebuildMonths, 10) || 3;
-      const allLiveMappings = liveMappingData?.mappings || [];
-      const isErrorItem = (m) => !m.inDb || m.classification === 'INVALID_KEY' || (m.recordStatus && m.recordStatus.includes('🔴'));
-      const missingKeys = allLiveMappings.filter(isErrorItem).map(m => m.jiraKey).filter(Boolean);
+      const missingKeys = mismatchModalData?.missingKeys || [];
 
-      showToast(`⚡ در حال استخراج و ذخیره مستقیم ${missingKeys.length > 0 ? missingKeys.length + ' تسک' : 'تسک‌های'} خطادار از Jira...`);
+      showToast(`⚡ در حال استخراج و ذخیره مستقیم ${missingKeys.length > 0 ? missingKeys.length + ' تسک' : 'تسک‌های'} اختلاف از Jira...`);
       const res = await api.syncMissingTasks({ months, keys: missingKeys });
-      showToast(res.message || 'تسک‌های مورد نظر با موفقیت در دیتابیس ثبت شدند.', 'success');
-      await fetchLiveMappingInspector();
+      showToast(res.message || 'تسک‌های اختلاف با موفقیت در دیتابیس ذخیره شدند.', 'success');
       await fetchDbStats(months);
-      if (mismatchModalData?.category) {
-        const freshMismatch = await api.getMismatchDetails(mismatchModalData.category, months);
-        setMismatchModalData(freshMismatch);
-      }
+      await fetchJiraCount();
+      const freshMismatch = await api.getMismatchDetails(mismatchModalData?.category || 'totalTasks', months);
+      setMismatchModalData(freshMismatch);
     } catch (e) {
-      showToast('خطا در سینک تسک‌های جامانده: ' + e.message, 'error');
+      showToast('خطا در ذخیره تسک‌های اختلاف: ' + e.message, 'error');
     } finally {
       setSyncingMissing(false);
     }
   };
 
-  const openMismatchDiagnosticModal = async (category = 'epics') => {
+  const openMismatchDiagnosticModal = async (category = 'totalTasks') => {
     try {
       setMismatchLoading(true);
-      showToast(`🔍 در حال استخراج و تحلیل زنده اختلافات ${category === 'epics' ? 'اپیک‌ها' : 'تسک‌ها'}...`);
+      showToast(`🔍 در حال استخراج و تحلیل زنده موارد اختلاف بر اساس کوئری‌های جدول...`);
       const months = parseInt(cfg?.rebuildMonths, 10) || 3;
-      fetchLiveMappingInspector();
       const res = await api.getMismatchDetails(category, months);
       setMismatchModalData(res);
-      setMismatchTab(res.mismatchCount > 0 ? 'mismatched' : 'all');
+      setMismatchSearch('');
     } catch (e) {
       showToast('خطا در دریافت تحلیل اختلافات: ' + e.message, 'error');
     } finally {
@@ -1816,26 +1811,27 @@ const JiraSettingsPage = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  onClick={() => { openMismatchDiagnosticModal('withEpicTasks'); setMismatchTab('liveMapping'); }}
+                  onClick={() => openMismatchDiagnosticModal('totalTasks')}
+                  disabled={mismatchLoading}
                   style={{
-                    background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)',
+                    background: 'linear-gradient(135deg, #F59E0B, #D97706)',
                     border: 'none',
                     color: '#FFFFFF',
-                    padding: '0.38rem 0.95rem',
-                    borderRadius: '9px',
-                    fontSize: '0.79rem',
+                    padding: '0.4rem 1rem',
+                    borderRadius: '10px',
+                    fontSize: '0.8rem',
                     fontWeight: 800,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.45rem',
-                    boxShadow: '0 3px 10px rgba(139, 92, 246, 0.3)',
+                    boxShadow: '0 3px 10px rgba(245, 158, 11, 0.35)',
                     transition: 'all 0.2s ease'
                   }}
-                  title="مشاهده مستقیم جدول نظیر به نظیر تمام تسک‌های جیرا و نحوه مپ شدن آن‌ها در دیتابیس"
+                  title="استخراج و بررسی دقیق لیست موارد اختلاف بین کوئری‌های جیرا و دیتابیس لوکال"
                 >
                   <Search size={14} />
-                  <span>🔍 نگاشت نظیر به نظیر Jira به DB</span>
+                  <span>🔍 بررسی و ذخیره موارد اختلاف (Jira vs DB)</span>
                 </button>
                 <button
                   type="button"
@@ -1929,7 +1925,7 @@ const JiraSettingsPage = () => {
                 </thead>
                 <tbody>
                   {/* Row 1: Tasks with epic (includes subtasks with epic) */}
-                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', cursor: 'pointer', transition: 'background 0.2s ease' }} onClick={() => openMismatchDiagnosticModal('withEpicTasks')} title="کلیک کنید برای مشاهده گرید تحلیل دقیق زنده اختلافات تسک‌های دارای اپیک">
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <CheckCircle2 size={16} color="#6EE7B7" />
                       <span>⚡ تسک‌های دارای اپیک (شامل زیرتسک‌های دارای اپیک)</span>
@@ -1945,21 +1941,13 @@ const JiraSettingsPage = () => {
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
                       {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
                         <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                          ⚪ نیازمند محاسبه تطابق
                         </span>
                       ) : (
                         (jiraCountData?.withEpicCount === dbStats?.withEpicTasksCount) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => openMismatchDiagnosticModal('withEpicTasks')}
-                            style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35))', border: '1px solid rgba(245, 158, 11, 0.6)', color: '#FBBF24', padding: '0.2rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                            title="برای مشاهده گرید تحلیل اختلافات تسک‌های دارای اپیک کلیک فرمایید"
-                          >
-                            <Search size={13} color="#FBBF24" />
-                            <span>⚠️ اختلاف {Math.abs((jiraCountData?.withEpicCount || 0) - (dbStats?.withEpicTasksCount || 0))}</span>
-                          </button>
+                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.withEpicCount || 0) - (dbStats?.withEpicTasksCount || 0))} مورد)</span>
                         )
                       )}
                     </td>
@@ -1981,21 +1969,13 @@ const JiraSettingsPage = () => {
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
                       {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
                         <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                          ⚪ نیازمند محاسبه تطابق
                         </span>
                       ) : (
                         (jiraCountData?.withoutEpicCount === dbStats?.unlinkedTasksCount) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => openMismatchDiagnosticModal('unlinkedTasks')}
-                            style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35))', border: '1px solid rgba(245, 158, 11, 0.6)', color: '#FBBF24', padding: '0.2rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                            title="برای مشاهده گرید تحلیل اختلافات تسک‌های بدون اپیک کلیک فرمایید"
-                          >
-                            <Search size={13} color="#FBBF24" />
-                            <span>⚠️ اختلاف {Math.abs((jiraCountData?.withoutEpicCount || 0) - (dbStats?.unlinkedTasksCount || 0))}</span>
-                          </button>
+                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.withoutEpicCount || 0) - (dbStats?.unlinkedTasksCount || 0))} مورد)</span>
                         )
                       )}
                     </td>
@@ -2017,21 +1997,13 @@ const JiraSettingsPage = () => {
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
                       {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
                         <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                          ⚪ نیازمند محاسبه تطابق
                         </span>
                       ) : (
                         (jiraCountData?.subtaskCount === dbStats?.subtasksCount) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => { openMismatchDiagnosticModal('withEpicTasks'); setMismatchTab('liveMapping'); }}
-                            style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35))', border: '1px solid rgba(245, 158, 11, 0.6)', color: '#FBBF24', padding: '0.2rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                            title="برای مشاهده نگاشت نظیر به نظیر کلیک فرمایید"
-                          >
-                            <Search size={13} color="#FBBF24" />
-                            <span>⚠️ اختلاف {Math.abs((jiraCountData?.subtaskCount || 0) - (dbStats?.subtasksCount || 0))}</span>
-                          </button>
+                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.subtaskCount || 0) - (dbStats?.subtasksCount || 0))} مورد)</span>
                         )
                       )}
                     </td>
@@ -2053,32 +2025,23 @@ const JiraSettingsPage = () => {
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
                       {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
                         <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                          ⚪ نیازمند محاسبه تطابق
                         </span>
                       ) : (
                         (jiraCountData?.total === dbStats?.totalTasks) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#6EE7B7', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800 }}>✅ همگام کامل</span>
+                          <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (همگام کامل)</span>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => openMismatchDiagnosticModal('totalTasks')}
-                            style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(220, 38, 38, 0.35))', border: '1px solid rgba(239, 68, 68, 0.6)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                            title="برای مشاهده گرید تحلیل اختلافات کلیک فرمایید"
-                          >
-                            <Search size={13} color="#FCA5A5" />
-                            <span>⚠️ اختلاف {Math.abs((jiraCountData?.total || 0) - (dbStats?.totalTasks || 0))} تسک</span>
-                          </button>
+                          <span style={{ background: 'rgba(239, 68, 68, 0.25)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.total || 0) - (dbStats?.totalTasks || 0))} تسک)</span>
                         )
                       )}
                     </td>
                   </tr>
 
-                  {/* Row 4: Total Epics with Per-Project Breakdown */}
-                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', cursor: 'pointer', transition: 'background 0.2s ease' }} onClick={() => openMismatchDiagnosticModal('epics')} title="کلیک کنید برای مشاهده گرید تحلیل دقیق زنده اختلافات اپیک‌ها">
+                  {/* Row 5: Total Epics with Per-Project Breakdown */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
                         <span>📂 کل اپیک‌ها (پروژه‌ها)</span>
-                        <span style={{ fontSize: '0.7rem', color: '#8B5CF6', background: 'rgba(139, 92, 246, 0.15)', padding: '0.1rem 0.4rem', borderRadius: '6px' }}>🔍 مشاهده تحلیل</span>
                       </div>
                       {/* Live Per-Project Epics & Tasks Breakdown Badge Pills */}
                       {Array.isArray(dbStats?.projectTaskCounts) && dbStats.projectTaskCounts.length > 0 && (
@@ -2102,21 +2065,19 @@ const JiraSettingsPage = () => {
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center', verticalAlign: 'top' }}>
                       {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
                         <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                          ⚪ نیازمند محاسبه تطابق
                         </span>
                       ) : (
                         (jiraCountData?.jiraEpicsCount === dbStats?.totalProjects) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
                         ) : (
-                          <span style={{ background: 'rgba(245, 158, 11, 0.25)', color: '#FBBF24', padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800, boxShadow: '0 0 10px rgba(245, 158, 11, 0.3)' }}>
-                            ⚠️ اختلاف {Math.abs((jiraCountData?.jiraEpicsCount || 0) - (dbStats?.totalProjects || 0))} (مشاهده)
-                          </span>
+                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.jiraEpicsCount || 0) - (dbStats?.totalProjects || 0))} اپیک)</span>
                         )
                       )}
                     </td>
                   </tr>
 
-                  {/* Row 5: Epics without tasks */}
+                  {/* Row 6: Epics without tasks */}
                   <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
                       📁 اپیک‌های بدون تسک
@@ -2130,27 +2091,19 @@ const JiraSettingsPage = () => {
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
                       {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
                         <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                          ⚪ نیازمند محاسبه تطابق
                         </span>
                       ) : (
                         (jiraCountData?.jiraEpicsWithoutTasksCount === dbStats?.epicsWithoutTasksCount) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => openMismatchDiagnosticModal('epics')}
-                            style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35))', border: '1px solid rgba(245, 158, 11, 0.6)', color: '#FBBF24', padding: '0.2rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                            title="برای مشاهده گرید تحلیل اختلافات اپیک‌های بدون تسک کلیک فرمایید"
-                          >
-                            <Search size={13} color="#FBBF24" />
-                            <span>⚠️ اختلاف {Math.abs((jiraCountData?.jiraEpicsWithoutTasksCount || 0) - (dbStats?.epicsWithoutTasksCount || 0))}</span>
-                          </button>
+                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.jiraEpicsWithoutTasksCount || 0) - (dbStats?.epicsWithoutTasksCount || 0))} مورد)</span>
                         )
                       )}
                     </td>
                   </tr>
 
-                  {/* Row 6: Sprints */}
+                  {/* Row 7: Sprints */}
                   <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
                       🏃 اسپرینت‌های استخراج‌شده
@@ -2162,11 +2115,11 @@ const JiraSettingsPage = () => {
                       {dbStats?.totalSprints !== undefined ? `${(dbStats.totalSprints || 0).toLocaleString()} اسپرینت` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ ثبتی در دیتابیس</span>
+                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ ثبتی در دیتابیس</span>
                     </td>
                   </tr>
 
-                  {/* Row 7: Components */}
+                  {/* Row 8: Components */}
                   <tr>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
                       🏷️ کامپوننت‌های شناسایی‌شده
@@ -2178,7 +2131,7 @@ const JiraSettingsPage = () => {
                       {dbStats?.totalComponents !== undefined ? `${(dbStats.totalComponents || 0).toLocaleString()} نوع` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ ثبتی در دیتابیس</span>
+                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ ثبتی در دیتابیس</span>
                     </td>
                   </tr>
                 </tbody>
@@ -2720,44 +2673,54 @@ const JiraSettingsPage = () => {
               }}
             >
               {/* Modal Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ background: 'rgba(139, 92, 246, 0.2)', border: '1px solid #8B5CF6', width: '44px', height: '44px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A78BFA', fontSize: '1.3rem' }}>
+                  <div style={{ background: 'rgba(245, 158, 11, 0.2)', border: '1px solid #F59E0B', width: '44px', height: '44px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FBBF24', fontSize: '1.3rem' }}>
                     🔍
                   </div>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#F8FAFC' }}>
-                      گرید پایش زنده و تحلیل ریشه اختلافات ({mismatchModalData.category === 'epics' ? 'اپیک‌ها / پروژه‌ها' : 'تسک‌های سیستم'})
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#F8FAFC' }}>
+                      بررسی دقیق موارد اختلاف Jira و دیتابیس لوکال
                     </h3>
-                    <span style={{ fontSize: '0.78rem', color: '#A78BFA', fontWeight: 700 }}>
-                      تعداد کل بررسی‌شده: {mismatchModalData.totalCount} | موارد دارای اختلاف: {mismatchModalData.mismatchCount} موارد
-                    </span>
+                    <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', marginTop: '0.3rem', flexWrap: 'wrap', fontSize: '0.78rem' }}>
+                      <span style={{ color: '#94A3B8' }}>بر اساس همان کوئری‌های جدول مقایسه ({mismatchModalData.rebuildMonths || 3} ماهه)</span>
+                      <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.1rem 0.5rem', borderRadius: '6px', fontWeight: 800 }}>
+                        ⚠️ کل اختلافات: {mismatchModalData.mismatchCount || 0} مورد
+                      </span>
+                      {mismatchModalData.missingCount > 0 && (
+                        <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.1rem 0.5rem', borderRadius: '6px', fontWeight: 800 }}>
+                          📥 جامانده در دیتابیس: {mismatchModalData.missingCount} تسک
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <button
-                    type="button"
-                    onClick={handleSyncMissingTasks}
-                    disabled={syncingMissing}
-                    style={{
-                      background: 'linear-gradient(135deg, #10B981, #059669)',
-                      border: 'none',
-                      color: '#FFFFFF',
-                      padding: '0.45rem 1rem',
-                      borderRadius: '10px',
-                      fontSize: '0.82rem',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.45rem',
-                      boxShadow: '0 3px 12px rgba(16, 185, 129, 0.35)'
-                    }}
-                  >
-                    <RefreshCw size={14} className={syncingMissing ? 'spin' : ''} />
-                    <span>{syncingMissing ? 'در حال ذخیره‌سازی...' : '⚡ سینک و ذخیره فوری تسک‌های جامانده در دیتابیس'}</span>
-                  </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  {(mismatchModalData.missingCount > 0 || (mismatchModalData.missingKeys && mismatchModalData.missingKeys.length > 0)) && (
+                    <button
+                      type="button"
+                      onClick={handleSyncMissingTasks}
+                      disabled={syncingMissing}
+                      style={{
+                        background: 'linear-gradient(135deg, #10B981, #059669)',
+                        border: 'none',
+                        color: '#FFFFFF',
+                        padding: '0.5rem 1.15rem',
+                        borderRadius: '10px',
+                        fontSize: '0.84rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                        boxShadow: '0 3px 12px rgba(16, 185, 129, 0.4)'
+                      }}
+                    >
+                      <RefreshCw size={14} className={syncingMissing ? 'spin' : ''} />
+                      <span>{syncingMissing ? 'در حال ذخیره‌سازی...' : `⚡ ذخیره و سینک ${mismatchModalData.missingCount || mismatchModalData.missingKeys.length} مورد اختلاف در دیتابیس`}</span>
+                    </button>
+                  )}
 
                   <button
                     onClick={() => setMismatchModalData(null)}
@@ -2768,76 +2731,17 @@ const JiraSettingsPage = () => {
                 </div>
               </div>
 
-              {/* Filter / Search Bar */}
+              {/* Search Bar */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.3rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <button
-                    onClick={() => setMismatchTab('mismatched')}
-                    style={{
-                      padding: '0.35rem 0.85rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: mismatchTab === 'mismatched' ? 'linear-gradient(135deg, #F59E0B, #D97706)' : 'transparent',
-                      color: mismatchTab === 'mismatched' ? '#FFFFFF' : '#94A3B8',
-                      fontWeight: 700,
-                      fontSize: '0.8rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ⚠️ فقط دارای اختلاف ({mismatchModalData.mismatchCount || 0})
-                  </button>
-                  <button
-                    onClick={() => setMismatchTab('all')}
-                    style={{
-                      padding: '0.35rem 0.85rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: mismatchTab === 'all' ? 'linear-gradient(135deg, #8B5CF6, #6D28D9)' : 'transparent',
-                      color: mismatchTab === 'all' ? '#FFFFFF' : '#94A3B8',
-                      fontWeight: 700,
-                      fontSize: '0.8rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    📋 همه موارد ({mismatchModalData.totalCount || 0})
-                  </button>
-                  <button
-                    onClick={() => setMismatchTab('syncReport')}
-                    style={{
-                      padding: '0.35rem 0.85rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: mismatchTab === 'syncReport' ? 'linear-gradient(135deg, #3B82F6, #1D4ED8)' : 'transparent',
-                      color: mismatchTab === 'syncReport' ? '#FFFFFF' : '#94A3B8',
-                      fontWeight: 700,
-                      fontSize: '0.8rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🛠️ گزارش خطاهای همگام‌سازی ({syncReportData?.skippedOrFailedCount || 0})
-                  </button>
-                  <button
-                    onClick={() => { setMismatchTab('liveMapping'); if (!liveMappingData) fetchLiveMappingInspector(); }}
-                    style={{
-                      padding: '0.35rem 0.85rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: mismatchTab === 'liveMapping' ? 'linear-gradient(135deg, #10B981, #059669)' : 'transparent',
-                      color: mismatchTab === 'liveMapping' ? '#FFFFFF' : '#94A3B8',
-                      fontWeight: 700,
-                      fontSize: '0.8rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🔍 نگاشت نظیر به نظیر Jira به DB ({liveMappingData?.totalJiraIssues || 0})
-                  </button>
+                <div style={{ fontSize: '0.82rem', color: '#94A3B8' }}>
+                  فهرست زیر صرفاً شامل مواردی است که میان نتایج کوئری جیرا و دیتابیس لوکال تفاوت دارند:
                 </div>
 
                 <input
                   type="text"
                   value={mismatchSearch}
                   onChange={e => setMismatchSearch(e.target.value)}
-                  placeholder="🔍 جستجو بر اساس کلید (مثال: ORD-105 یا Task)..."
+                  placeholder="🔍 فیلتر سریع (شناسه، عنوان یا وضعیت)..."
                   style={{
                     background: 'rgba(15, 23, 42, 0.8)',
                     border: '1px solid rgba(139, 92, 246, 0.4)',
@@ -2851,367 +2755,99 @@ const JiraSettingsPage = () => {
                 />
               </div>
 
-              {/* Grid Table */}
+              {/* Clean Differences Table */}
               <div style={{ flex: 1, overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', background: 'rgba(15, 23, 42, 0.5)' }}>
-                {mismatchTab === 'liveMapping' ? (
-                  <div>
-                    {liveMappingLoading ? (
-                      <div style={{ padding: '2.5rem', textAlign: 'center', color: '#FBBF24', fontSize: '0.9rem', fontWeight: 700 }}>
-                        <RefreshCw size={18} className="animate-spin" style={{ display: 'inline', marginLeft: '0.4rem' }} /> ⏳ در حال استخراج و مپینگ نظیر به نظیر تمام تسک‌های جیرا با دیتابیس...
-                      </div>
-                    ) : (
-                      <>
-                        {liveMappingData && (() => {
-                          const allLiveMappings = liveMappingData.mappings || [];
-                          const isErrorItem = (m) => !m.inDb || m.classification === 'INVALID_KEY' || (m.recordStatus && m.recordStatus.includes('🔴'));
-                          const errorMappings = allLiveMappings.filter(isErrorItem);
-                          const matchedMappings = allLiveMappings.filter(m => !isErrorItem(m));
-
-                          return (
-                            <div>
-                              <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.12)', borderBottom: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', fontSize: '0.8rem', color: '#6EE7B7' }}>
-                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                  <span><strong>📊 خلاصه نگاشت:</strong> {liveMappingData.totalJiraIssues} آیتم از جیرا خوانده شد</span>
-                                  <span>| 🔗 <strong>تسک‌های دارای اپیک:</strong> {liveMappingData.withEpicCount}</span>
-                                  <span>| ⚪ <strong>تسک‌های بدون اپیک:</strong> {liveMappingData.withoutEpicCount}</span>
-                                  <span>| 🔹 <strong>زیرتسک‌ها:</strong> {liveMappingData.subtaskCount || 0}</span>
-                                  <span>| 📌 <strong>اپیک‌ها:</strong> {liveMappingData.epicsCount}</span>
-                                  <span>| 💾 <strong>کل در DB:</strong> {liveMappingData.dbTotalCount}</span>
-                                </div>
-                              </div>
-
-                              {/* Sub-tabs inside Live Mapping: Errors vs All vs Matched */}
-                              <div style={{ display: 'flex', gap: '0.6rem', padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(255,255,255,0.06)', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => setLiveMappingSubTab('errors')}
-                                  style={{
-                                    padding: '0.35rem 0.9rem',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    background: liveMappingSubTab === 'errors' ? 'linear-gradient(135deg, #EF4444, #DC2626)' : 'rgba(239, 68, 68, 0.15)',
-                                    color: liveMappingSubTab === 'errors' ? '#FFFFFF' : '#FCA5A5',
-                                    fontWeight: 800,
-                                    fontSize: '0.8rem',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.4rem'
-                                  }}
-                                >
-                                  <span>🔴 فقط خطادارها و سینک‌نشده‌ها</span>
-                                  <span style={{ background: 'rgba(0,0,0,0.35)', padding: '0.1rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem' }}>{errorMappings.length}</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => setLiveMappingSubTab('all')}
-                                  style={{
-                                    padding: '0.35rem 0.9rem',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    background: liveMappingSubTab === 'all' ? 'linear-gradient(135deg, #8B5CF6, #6D28D9)' : 'rgba(139, 92, 246, 0.15)',
-                                    color: liveMappingSubTab === 'all' ? '#FFFFFF' : '#DDD6FE',
-                                    fontWeight: 800,
-                                    fontSize: '0.8rem',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.4rem'
-                                  }}
-                                >
-                                  <span>📋 همه تسک‌های نگاشت</span>
-                                  <span style={{ background: 'rgba(0,0,0,0.35)', padding: '0.1rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem' }}>{allLiveMappings.length}</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => setLiveMappingSubTab('matched')}
-                                  style={{
-                                    padding: '0.35rem 0.9rem',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    background: liveMappingSubTab === 'matched' ? 'linear-gradient(135deg, #10B981, #059669)' : 'rgba(16, 185, 129, 0.15)',
-                                    color: liveMappingSubTab === 'matched' ? '#FFFFFF' : '#6EE7B7',
-                                    fontWeight: 800,
-                                    fontSize: '0.8rem',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.4rem'
-                                  }}
-                                >
-                                  <span>✅ سالم و تطابق‌یافته</span>
-                                  <span style={{ background: 'rgba(0,0,0,0.35)', padding: '0.1rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem' }}>{matchedMappings.length}</span>
-                                </button>
-                              </div>
-
-                              {/* Action Banner when in Errors tab */}
-                              {liveMappingSubTab === 'errors' && errorMappings.length > 0 && (
-                                <div style={{
-                                  margin: '0.75rem 1rem',
-                                  padding: '0.85rem 1.25rem',
-                                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(185, 28, 28, 0.12))',
-                                  border: '1px solid rgba(239, 68, 68, 0.45)',
-                                  borderRadius: '12px',
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  flexWrap: 'wrap',
-                                  gap: '1rem'
-                                }}>
-                                  <div>
-                                    <div style={{ fontWeight: 800, color: '#FCA5A5', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                      <span>⚠️</span>
-                                      <span>تعداد {errorMappings.length} تسک خطادار / سینک‌نشده شناسایی شد</span>
-                                    </div>
-                                    <div style={{ fontSize: '0.75rem', color: '#F87171', marginTop: '0.2rem' }}>
-                                      با کلیک روی دکمه مقابل، این تسک‌ها مستقیماً از جیرا استخراج و در دیتابیس ذخیره می‌شوند.
-                                    </div>
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={handleSyncMissingTasks}
-                                    disabled={syncingMissing}
-                                    style={{
-                                      background: 'linear-gradient(135deg, #EF4444, #B91C1C)',
-                                      border: 'none',
-                                      color: '#FFFFFF',
-                                      padding: '0.55rem 1.25rem',
-                                      borderRadius: '10px',
-                                      fontSize: '0.84rem',
-                                      fontWeight: 800,
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '0.5rem',
-                                      boxShadow: '0 4px 14px rgba(239, 68, 68, 0.45)'
-                                    }}
-                                  >
-                                    <RefreshCw size={15} className={syncingMissing ? 'spin' : ''} />
-                                    <span>{syncingMissing ? 'در حال همگام‌سازی...' : `⚡ ذخیره و سینک کل ${errorMappings.length} تسک خطادار در دیتابیس`}</span>
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'right' }}>
-                          <thead>
-                            <tr style={{ background: '#1E293B', color: '#F1F5F9', borderBottom: '2px solid #10B981', position: 'sticky', top: 0, zIndex: 10 }}>
-                              <th style={{ padding: '0.7rem 0.85rem', width: '110px', color: '#38BDF8', fontWeight: 800 }}>شناسه Jira</th>
-                              <th style={{ padding: '0.7rem 0.85rem', width: '100px', color: '#C084FC', fontWeight: 800 }}>نوع (Type)</th>
-                              <th style={{ padding: '0.7rem 0.85rem', width: '110px', color: '#F1F5F9', fontWeight: 800 }}>وضعیت خام Jira</th>
-                              <th style={{ padding: '0.7rem 0.85rem', color: '#FBBF24', fontWeight: 800 }}>منبع اپیک در Jira</th>
-                              <th style={{ padding: '0.7rem 0.85rem', width: '130px', color: '#6EE7B7', fontWeight: 800 }}>اپیک در DB</th>
-                              <th style={{ padding: '0.7rem 0.85rem', color: '#F1F5F9', fontWeight: 800 }}>وضعیت نهایی ذخیره در DB</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(() => {
-                              const isErrorItem = (m) => !m.inDb || m.classification === 'INVALID_KEY' || (m.recordStatus && m.recordStatus.includes('🔴'));
-                              const mappings = (liveMappingData?.mappings || []).filter(m => {
-                                if (liveMappingSubTab === 'errors') {
-                                  if (!isErrorItem(m)) return false;
-                                } else if (liveMappingSubTab === 'matched') {
-                                  if (isErrorItem(m)) return false;
-                                }
-
-                                if (mismatchSearch.trim()) {
-                                  const q = mismatchSearch.trim().toLowerCase();
-                                  const matchKey = (m.jiraKey || '').toLowerCase().includes(q);
-                                  const matchType = (m.jiraIssueType || '').toLowerCase().includes(q);
-                                  const matchStatus = (m.jiraRawStatus || '').toLowerCase().includes(q);
-                                  const matchEpic = (m.jiraEpicFieldVal || '').toLowerCase().includes(q);
-                                  if (!matchKey && !matchType && !matchStatus && !matchEpic) return false;
-                                }
-                                return true;
-                              });
-
-                              if (mappings.length === 0) {
-                                return (
-                                  <tr>
-                                    <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8' }}>
-                                      {liveMappingSubTab === 'errors' ? '🎉 عالی است! هیچ تسک خطاداری یافت نشد و تمام داده‌ها همگام هستند.' : 'هیچ داده‌ای مطابق فیلتر یافت نشد.'}
-                                    </td>
-                                  </tr>
-                                );
-                              }
-
-                              return mappings.map((m, idx) => {
-                                const isErr = isErrorItem(m);
-                                return (
-                                  <tr key={idx} style={{
-                                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                                    background: isErr ? 'rgba(239, 68, 68, 0.12)' : (m.classification === 'WITH_EPIC' ? 'rgba(16, 185, 129, 0.05)' : 'transparent')
-                                  }}>
-                                    <td style={{ padding: '0.65rem 0.85rem', fontFamily: 'monospace', fontWeight: 800, color: isErr ? '#F87171' : '#38BDF8' }}>
-                                      {m.jiraKey}
-                                    </td>
-                                    <td style={{ padding: '0.65rem 0.85rem', fontWeight: 700, color: '#C084FC' }}>
-                                      {m.jiraIssueType}
-                                    </td>
-                                    <td style={{ padding: '0.65rem 0.85rem', color: '#E2E8F0' }}>
-                                      {m.jiraRawStatus}
-                                    </td>
-                                    <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.76rem', color: '#FBBF24', fontFamily: 'monospace' }}>
-                                      {m.jiraEpicFieldVal}
-                                    </td>
-                                    <td style={{
-                                      padding: '0.65rem 0.85rem',
-                                      fontWeight: 800,
-                                      color: m.classification === 'WITH_EPIC' ? '#6EE7B7' : m.classification === 'SUB_TASK' ? '#60A5FA' : m.classification === 'EPIC_PROJECT' ? '#C084FC' : '#FBBF24'
-                                    }}>
-                                      {m.dbSavedParentEpic}
-                                    </td>
-                                    <td style={{
-                                      padding: '0.65rem 0.85rem',
-                                      fontSize: '0.78rem',
-                                      fontWeight: 700,
-                                      color: isErr ? '#F87171' : '#6EE7B7'
-                                    }}>
-                                      {m.recordStatus}
-                                    </td>
-                                  </tr>
-                                );
-                              });
-                            })()}
-                          </tbody>
-                        </table>
-                      </>
-                    )}
-                  </div>
-                ) : mismatchTab === 'syncReport' ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'right' }}>
-                    <thead>
-                      <tr style={{ background: '#1E293B', color: '#F1F5F9', borderBottom: '2px solid #3B82F6', position: 'sticky', top: 0, zIndex: 10 }}>
-                        <th style={{ padding: '0.8rem 1rem', width: '120px', color: '#38BDF8', fontWeight: 800 }}>شناسه کلید</th>
-                        <th style={{ padding: '0.8rem 1rem', color: '#F1F5F9', fontWeight: 800 }}>عنوان تسک در جیرا</th>
-                        <th style={{ padding: '0.8rem 1rem', color: '#FBBF24', fontWeight: 800 }}>علت عدم ذخیره‌سازی / خطای سیستم</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const details = (syncReportData?.skippedDetails || []).filter(item => {
-                          if (mismatchSearch.trim()) {
-                            const q = mismatchSearch.trim().toLowerCase();
-                            const matchId = (item.key || '').toLowerCase().includes(q);
-                            const matchTitle = (item.title || '').toLowerCase().includes(q);
-                            const matchReason = (item.reason || '').toLowerCase().includes(q);
-                            if (!matchId && !matchTitle && !matchReason) return false;
-                          }
-                          return true;
-                        });
-
-                        if (details.length === 0) {
-                          return (
-                            <tr>
-                              <td colSpan={3} style={{ padding: '2rem', textAlign: 'center', color: '#6EE7B7', fontWeight: 700 }}>
-                                ✅ تمام تسک‌های خوانده‌شده از جیرا بدون هیچ خطایی به صورت ۱۰۰٪ در دیتابیس ذخیره گردیده‌اند.
-                              </td>
-                            </tr>
-                          );
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'right' }}>
+                  <thead>
+                    <tr style={{ background: '#1E293B', color: '#F1F5F9', borderBottom: '2px solid rgba(245, 158, 11, 0.5)', position: 'sticky', top: 0, zIndex: 10 }}>
+                      <th style={{ padding: '0.75rem 0.9rem', width: '110px', color: '#38BDF8', fontWeight: 800 }}>شناسه کلید</th>
+                      <th style={{ padding: '0.75rem 0.9rem', width: '95px', color: '#C084FC', fontWeight: 800 }}>نوع</th>
+                      <th style={{ padding: '0.75rem 0.9rem', color: '#F1F5F9', fontWeight: 800 }}>عنوان در Jira / DB</th>
+                      <th style={{ padding: '0.75rem 0.9rem', width: '130px', color: '#38BDF8', fontWeight: 800 }}>وضعیت در Jira</th>
+                      <th style={{ padding: '0.75rem 0.9rem', width: '130px', color: '#C084FC', fontWeight: 800 }}>وضعیت در DB</th>
+                      <th style={{ padding: '0.75rem 0.9rem', color: '#FBBF24', fontWeight: 800 }}>نوع و شرح اختلاف</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const list = (mismatchModalData.mismatches || []).filter(item => {
+                        if (mismatchSearch.trim()) {
+                          const q = mismatchSearch.trim().toLowerCase();
+                          const matchId = (item.id || '').toLowerCase().includes(q);
+                          const matchTitle = (item.title || '').toLowerCase().includes(q);
+                          const matchReason = (item.reason || '').toLowerCase().includes(q);
+                          const matchJira = (item.jiraStatus || '').toLowerCase().includes(q);
+                          const matchDb = (item.dbStatus || '').toLowerCase().includes(q);
+                          if (!matchId && !matchTitle && !matchReason && !matchJira && !matchDb) return false;
                         }
+                        return true;
+                      });
 
-                        return details.map((item, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: 'rgba(239, 68, 68, 0.05)' }}>
-                            <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 800, color: '#F87171' }}>
-                              {item.key}
-                            </td>
-                            <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#E2E8F0' }}>
-                              {item.title}
-                            </td>
-                            <td style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: '#FBBF24', lineHeight: '1.5' }}>
-                              {item.reason}
+                      if (list.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={6} style={{ padding: '2.5rem', textAlign: 'center', color: '#6EE7B7', fontWeight: 700 }}>
+                              🎉 هیچ موردی دارای اختلاف نیست! تمام داده‌های این بخش بین جیرا و دیتابیس ۱۰۰٪ منطبق و یکپارچه هستند.
                             </td>
                           </tr>
-                        ));
-                      })()}
-                    </tbody>
-                  </table>
-                ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'right' }}>
-                    <thead>
-                      <tr style={{ background: '#1E293B', color: '#F1F5F9', borderBottom: '2px solid rgba(139, 92, 246, 0.4)', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 4px 15px rgba(0, 0, 0, 0.5)' }}>
-                        <th style={{ padding: '0.8rem 1rem', width: '110px', background: '#1E293B', color: '#38BDF8', fontWeight: 800 }}>شناسه کلید</th>
-                        <th style={{ padding: '0.8rem 1rem', background: '#1E293B', color: '#F1F5F9', fontWeight: 800 }}>عنوان / نام اصلی</th>
-                        <th style={{ padding: '0.8rem 1rem', width: '130px', background: '#1E293B', color: '#C084FC', fontWeight: 800 }}>وضعیت در دیتابیس</th>
-                        <th style={{ padding: '0.8rem 1rem', width: '140px', background: '#1E293B', color: '#38BDF8', fontWeight: 800 }}>وضعیت زنده در Jira</th>
-                        <th style={{ padding: '0.8rem 1rem', background: '#1E293B', color: '#F1F5F9', fontWeight: 800 }}>علت و توضیحات تحلیل</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const list = (mismatchModalData.allItems || []).filter(item => {
-                          if (mismatchTab === 'mismatched' && item.mismatchType === 'MATCHED') return false;
-                          if (mismatchSearch.trim()) {
-                            const q = mismatchSearch.trim().toLowerCase();
-                            const matchId = (item.id || '').toLowerCase().includes(q);
-                            const matchTitle = (item.title || '').toLowerCase().includes(q);
-                            const matchReason = (item.reason || '').toLowerCase().includes(q);
-                            if (!matchId && !matchTitle && !matchReason) return false;
-                          }
-                          return true;
-                        });
+                        );
+                      }
 
-                        if (list.length === 0) {
-                          return (
-                            <tr>
-                              <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8' }}>
-                                هیچ موردی مطابق فیلتر انتخابی یافت نشد.
-                              </td>
-                            </tr>
-                          );
-                        }
-
-                        return list.map((item, idx) => (
-                          <tr key={item.id || idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: item.mismatchType !== 'MATCHED' ? 'rgba(245, 158, 11, 0.04)' : 'transparent' }}>
-                            <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 800, color: '#38BDF8' }}>
+                      return list.map((item, idx) => {
+                        const isMissingInDb = item.mismatchType === 'JIRA_ONLY';
+                        return (
+                          <tr key={item.id || idx} style={{
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                            background: isMissingInDb ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.06)'
+                          }}>
+                            <td style={{ padding: '0.65rem 0.9rem', fontFamily: 'monospace', fontWeight: 800, color: isMissingInDb ? '#F87171' : '#38BDF8' }}>
                               {item.id}
                             </td>
-                            <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#E2E8F0' }}>
+                            <td style={{ padding: '0.65rem 0.9rem', color: '#C084FC', fontWeight: 600 }}>
+                              {item.issueType || 'Task'}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.9rem', fontWeight: 600, color: '#E2E8F0' }}>
                               {item.title}
                             </td>
-                            <td style={{ padding: '0.75rem 1rem' }}>
+                            <td style={{ padding: '0.65rem 0.9rem' }}>
                               <span style={{
-                                padding: '0.2rem 0.55rem',
+                                padding: '0.15rem 0.5rem',
                                 borderRadius: '6px',
                                 fontSize: '0.75rem',
                                 fontWeight: 700,
-                                background: item.inDb ? 'rgba(192, 132, 252, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                                color: item.inDb ? '#C084FC' : '#FCA5A5'
-                              }}>
-                                {item.dbStatus}
-                              </span>
-                            </td>
-                            <td style={{ padding: '0.75rem 1rem' }}>
-                              <span style={{
-                                padding: '0.2rem 0.55rem',
-                                borderRadius: '6px',
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                background: item.inJira ? 'rgba(56, 189, 248, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                                color: item.inJira ? '#38BDF8' : '#FCA5A5'
+                                background: item.jiraStatus.includes('🔴') ? 'rgba(239, 68, 68, 0.2)' : 'rgba(56, 189, 248, 0.2)',
+                                color: item.jiraStatus.includes('🔴') ? '#FCA5A5' : '#38BDF8'
                               }}>
                                 {item.jiraStatus}
                               </span>
                             </td>
-                            <td style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: item.mismatchType === 'MATCHED' ? '#6EE7B7' : '#FBBF24', lineHeight: '1.5' }}>
+                            <td style={{ padding: '0.65rem 0.9rem' }}>
+                              <span style={{
+                                padding: '0.15rem 0.5rem',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                background: item.dbStatus.includes('🔴') ? 'rgba(239, 68, 68, 0.2)' : 'rgba(192, 132, 252, 0.2)',
+                                color: item.dbStatus.includes('🔴') ? '#FCA5A5' : '#C084FC'
+                              }}>
+                                {item.dbStatus}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.65rem 0.9rem', fontSize: '0.78rem', color: isMissingInDb ? '#FCA5A5' : '#FBBF24', lineHeight: '1.5' }}>
                               {item.reason}
                             </td>
                           </tr>
-                        ));
-                      })()}
-                    </tbody>
-                  </table>
-                )}
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
               </div>
 
               {/* Modal Footer */}
               <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
-                  💡 جهت تطبیق کامل دیتابیس با سرور جیرا، می‌توانید دکمه <strong>«همگام‌سازی و بازسازی دیتابیس از Jira»</strong> را کلیک کنید.
+                  💡 با زدن دکمه سبز رنگ بالا، تسک‌های جامانده به صورت هدفمند و مستقیم در دیتابیس ثبت می‌گردند.
                 </span>
                 <button
                   onClick={() => setMismatchModalData(null)}
