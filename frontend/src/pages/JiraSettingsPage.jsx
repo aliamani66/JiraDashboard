@@ -1897,10 +1897,11 @@ const JiraSettingsPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Row 1: Tasks with epic */}
-                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
-                      ⚡ تسک‌های دارای اپیک
+                  {/* Row 1: Tasks with epic (includes subtasks with epic) */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', cursor: 'pointer', transition: 'background 0.2s ease' }} onClick={() => openMismatchDiagnosticModal('withEpicTasks')} title="کلیک کنید برای مشاهده گرید تحلیل دقیق زنده اختلافات تسک‌های دارای اپیک">
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <CheckCircle2 size={16} color="#6EE7B7" />
+                      <span>⚡ تسک‌های دارای اپیک (شامل زیرتسک‌های دارای اپیک)</span>
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
                       {jiraCountLoading || monthlySyncing || syncing ? (
@@ -1933,10 +1934,10 @@ const JiraSettingsPage = () => {
                     </td>
                   </tr>
 
-                  {/* Row 2: Tasks without epic */}
+                  {/* Row 2: Tasks without epic (includes subtasks without epic) */}
                   <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
-                      ⚠️ تسک‌های بدون اپیک
+                      ⚠️ تسک‌های بدون اپیک (شامل زیرتسک‌های بدون اپیک)
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
                       {jiraCountLoading || monthlySyncing || syncing ? (

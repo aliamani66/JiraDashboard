@@ -364,8 +364,8 @@ router.get('/jira-count', async (req, res) => {
     } catch (_) {}
 
     // Fetch all keys from DB (withEpic and unlinked)
-    const dbWithEpicRows = db.prepare(`SELECT id FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND parent_task_id IN (SELECT id FROM projects WHERE ${epicWhere2}) AND (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere2}${dbDateClause2}`).all();
-    const dbUnlinkedRows = db.prepare(`SELECT id FROM tasks WHERE (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects WHERE ${epicWhere2})) AND (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere2}${dbDateClause2}`).all();
+    const dbWithEpicRows = db.prepare(`SELECT id FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND parent_task_id IN (SELECT id FROM projects WHERE ${epicWhere2})${taskProjWhere2}${dbDateClause2}`).all();
+    const dbUnlinkedRows = db.prepare(`SELECT id FROM tasks WHERE (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects WHERE ${epicWhere2}))${taskProjWhere2}${dbDateClause2}`).all();
     const dbWithEpicKeys = new Set(dbWithEpicRows.map(r => r.id.toUpperCase()));
     const dbUnlinkedKeys = new Set(dbUnlinkedRows.map(r => r.id.toUpperCase()));
 
@@ -1051,23 +1051,21 @@ router.get('/db-stats', (req, res) => {
       }
     } catch (_) {}
 
-    // Unlinked tasks: tasks that do NOT have an Epic link or parent task in projects table
+    // Unlinked tasks: tasks/subtasks that do NOT have an Epic link or parent task in projects table
     let unlinkedTasksCount = 0;
     let unlinkedTasksList = [];
     try {
       unlinkedTasksCount = db.prepare(`
         SELECT COUNT(*) as c
         FROM tasks
-        WHERE (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects WHERE ${epicWhere}))
-          AND (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere}${dbDateClause}
+        WHERE (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects WHERE ${epicWhere}))${taskProjWhere}${dbDateClause}
       `).get()?.c || 0;
 
       if (unlinkedTasksCount > 0) {
         unlinkedTasksList = db.prepare(`
           SELECT id, title, project_id, parent_task_id as epic_id, status, assignee
           FROM tasks
-          WHERE (project_id IS NULL OR project_id = '' OR project_id NOT IN (SELECT id FROM projects WHERE id LIKE '%-%'))
-            AND (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects WHERE id LIKE '%-%'))
+          WHERE (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects WHERE id LIKE '%-%'))
           ORDER BY id DESC
           LIMIT 100
         `).all() || [];
@@ -1099,8 +1097,7 @@ router.get('/db-stats', (req, res) => {
       withEpicTasksCount = db.prepare(`
         SELECT COUNT(*) as c
         FROM tasks
-        WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND parent_task_id IN (SELECT id FROM projects WHERE ${epicWhere})
-          AND (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere}${dbDateClause}
+        WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND parent_task_id IN (SELECT id FROM projects WHERE ${epicWhere})${taskProjWhere}${dbDateClause}
       `).get()?.c || 0;
     } catch (_) {}
 
@@ -1476,15 +1473,13 @@ router.get('/live-mapping-inspector', async (req, res) => {
       }
 
       const isValidEpicKey = (k) => k && /^[A-Z][A-Z0-9_]*-\d+$/i.test(k);
-      const dbParentKey = (inDbTask?.parent_task_id && isValidEpicKey(inDbTask.parent_task_id)) ? inDbTask.parent_task_id.toUpperCase() : null;
+      const dbParentEpicKey = (inDbTask?.parent_task_id && isValidEpicKey(inDbTask.parent_task_id)) ? inDbTask.parent_task_id.toUpperCase() : null;
 
-      const parentTaskId = isValidEpicKey(jiraEpicKey) ? jiraEpicKey : (isSubtask ? null : dbParentKey);
-      const isWithEpic = !isSubtask && !!parentTaskId;
+      const parentTaskId = isValidEpicKey(jiraEpicKey) ? jiraEpicKey : dbParentEpicKey;
+      const isWithEpic = !!parentTaskId;
 
-      if (!isSubtask) {
-        if (isWithEpic) withEpicCount++;
-        else withoutEpicCount++;
-      }
+      if (isWithEpic) withEpicCount++;
+      else withoutEpicCount++;
 
       mappings.push({
         jiraKey: issueKey,
@@ -1493,10 +1488,10 @@ router.get('/live-mapping-inspector', async (req, res) => {
         jiraEpicFieldVal: epicSourceText,
         dbSavedKey: inDbTask ? inDbTask.id : parsed?.id || issueKey,
         dbMappedStatus: inDbTask ? inDbTask.status : parsed?.status || rawStatus,
-        dbSavedParentEpic: isValidEpicKey(parentTaskId) ? `🔗 ${parentTaskId}` : (isSubtask ? `⚪ بدون اپیک (پدر: ${subtaskParentKey || 'نامشخص'})` : '⚪ بدون اپیک'),
+        dbSavedParentEpic: isWithEpic ? `🔗 ${parentTaskId}${isSubtask && subtaskParentKey ? ` (پدر: ${subtaskParentKey})` : ''}` : (isSubtask ? `⚪ بدون اپیک (پدر: ${subtaskParentKey || 'نامشخص'})` : '⚪ بدون اپیک'),
         classification: isSubtask ? 'SUB_TASK' : (isWithEpic ? 'WITH_EPIC' : 'WITHOUT_EPIC'),
         recordStatus: inDbTask
-          ? (isSubtask ? `🔹 ذخیره‌شده به‌عنوان زیرتسک در ستون parent_key (تسک پدر: ${subtaskParentKey || 'نامشخص'})` : (isWithEpic ? '✅ ذخیره‌شده به‌عنوان تسک دارای اپیک' : '⚠️ ذخیره‌شده به‌عنوان تسک بدون اپیک'))
+          ? (isSubtask ? (isWithEpic ? `✅ ذخیره‌شده به‌عنوان زیرتسک دارای اپیک (اپیک: ${parentTaskId} | پدر: ${subtaskParentKey})` : `⚠️ ذخیره‌شده به‌عنوان زیرتسک بدون اپیک (پدر: ${subtaskParentKey || 'نامشخص'})`) : (isWithEpic ? '✅ ذخیره‌شده به‌عنوان تسک دارای اپیک' : '⚠️ ذخیره‌شده به‌عنوان تسک بدون اپیک'))
           : '🔴 هنوز در دیتابیس سینک نشده است',
         inDb: !!inDbTask
       });
