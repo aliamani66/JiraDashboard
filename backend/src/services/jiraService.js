@@ -752,19 +752,34 @@ async function fetchAllJiraProjects() {
   const { baseUrl, username, token } = getJiraConfig();
   if (!baseUrl || !token) throw new Error('تنظیمات آدرس یا توکن جیرا وارد نشده است.');
 
-  // Get local DB epic counts per project key
+  // Get epic counts per project key — try live from Jira first, fall back to DB
   let epicCountsMap = new Map();
+
+  // Try live Jira count: fetch all epics (no project filter) grouped by project key
   try {
-    const { getDb } = require('../db/database');
-    const db = getDb();
-    const rows = db.prepare('SELECT id FROM projects').all();
-    for (const row of rows) {
-      const pKey = row.id ? String(row.id).split('-')[0].toUpperCase() : '';
-      if (pKey) {
-        epicCountsMap.set(pKey, (epicCountsMap.get(pKey) || 0) + 1);
+    const epicRes = await jiraSearch('issuetype = Epic ORDER BY project ASC', ['project'], { maxResults: 2000, timeout: 12000, retries: 1 });
+    if (epicRes && epicRes.issues && epicRes.issues.length > 0) {
+      for (const issue of epicRes.issues) {
+        const pKey = issue.fields?.project?.key?.toUpperCase();
+        if (pKey) {
+          epicCountsMap.set(pKey, (epicCountsMap.get(pKey) || 0) + 1);
+        }
       }
     }
-  } catch (_) {}
+  } catch (_) {
+    // Fallback to DB counts
+    try {
+      const { getDb } = require('../db/database');
+      const db = getDb();
+      const rows = db.prepare('SELECT id FROM projects').all();
+      for (const row of rows) {
+        const pKey = row.id ? String(row.id).split('-')[0].toUpperCase() : '';
+        if (pKey) {
+          epicCountsMap.set(pKey, (epicCountsMap.get(pKey) || 0) + 1);
+        }
+      }
+    } catch (_2) {}
+  }
 
   const headersVariants = getAuthHeaderVariants(username, token);
   let projectsList = [];
