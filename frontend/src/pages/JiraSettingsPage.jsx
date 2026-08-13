@@ -251,6 +251,25 @@ const JiraSettingsPage = () => {
   const [jiraTotalCountLoading, setJiraTotalCountLoading] = useState(false);
   const [showUnlinkedModal, setShowUnlinkedModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
+  const [mismatchModalData, setMismatchModalData] = useState(null);
+  const [mismatchLoading, setMismatchLoading] = useState(false);
+  const [mismatchSearch, setMismatchSearch] = useState('');
+  const [mismatchTab, setMismatchTab] = useState('mismatched');
+
+  const openMismatchDiagnosticModal = async (category = 'epics') => {
+    try {
+      setMismatchLoading(true);
+      showToast(`🔍 در حال استخراج و تحلیل زنده اختلافات ${category === 'epics' ? 'اپیک‌ها' : 'تسک‌ها'}...`);
+      const months = parseInt(cfg?.rebuildMonths, 10) || 3;
+      const res = await api.getMismatchDetails(category, months);
+      setMismatchModalData(res);
+      setMismatchTab(res.mismatchCount > 0 ? 'mismatched' : 'all');
+    } catch (e) {
+      showToast('خطا در دریافت تحلیل اختلافات: ' + e.message, 'error');
+    } finally {
+      setMismatchLoading(false);
+    }
+  };
 
   const [rangeStartJalali, setRangeStartJalali] = useState(() => {
     const now = new Date();
@@ -1840,9 +1859,10 @@ const JiraSettingsPage = () => {
                   </tr>
 
                   {/* Row 4: Total Epics */}
-                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
-                      📂 کل اپیک‌ها (پروژه‌ها)
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', cursor: 'pointer', transition: 'background 0.2s ease' }} onClick={() => openMismatchDiagnosticModal('epics')} title="کلیک کنید برای مشاهده گرید تحلیل دقیق زنده اختلافات اپیک‌ها">
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>📂 کل اپیک‌ها (پروژه‌ها)</span>
+                      <span style={{ fontSize: '0.7rem', color: '#8B5CF6', background: 'rgba(139, 92, 246, 0.15)', padding: '0.1rem 0.4rem', borderRadius: '6px' }}>🔍 مشاهده تحلیل</span>
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
                       {jiraCountData?.jiraEpicsCount !== undefined ? `${jiraCountData.jiraEpicsCount.toLocaleString()} اپیک` : '—'}
@@ -1855,8 +1875,8 @@ const JiraSettingsPage = () => {
                         jiraCountData.jiraEpicsCount === dbStats.totalProjects ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
-                          <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>
-                            ⚠️ اختلاف {Math.abs(jiraCountData.jiraEpicsCount - dbStats.totalProjects)}
+                          <span style={{ background: 'rgba(245, 158, 11, 0.25)', color: '#FBBF24', padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800, boxShadow: '0 0 10px rgba(245, 158, 11, 0.3)' }}>
+                            ⚠️ اختلاف {Math.abs(jiraCountData.jiraEpicsCount - dbStats.totalProjects)} (مشاهده)
                           </span>
                         )
                       ) : '—'}
@@ -2459,6 +2479,225 @@ const JiraSettingsPage = () => {
               </motion.div>
             )}
           </AnimatePresence>
+      {/* 🔍 MISMATCH DIAGNOSTIC GRID MODAL */}
+      <AnimatePresence>
+        {mismatchModalData && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(11, 15, 25, 0.85)',
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '1.5rem',
+            direction: 'rtl'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 25 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 25 }}
+              style={{
+                background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.97), rgba(15, 23, 42, 0.99))',
+                border: '1px solid rgba(139, 92, 246, 0.45)',
+                boxShadow: '0 25px 70px -15px rgba(139, 92, 246, 0.3), 0 0 50px rgba(0, 0, 0, 0.8)',
+                borderRadius: '24px',
+                padding: '1.75rem',
+                maxWidth: '960px',
+                width: '100%',
+                maxHeight: '85vh',
+                display: 'flex',
+                flexDirection: 'column',
+                color: '#F8FAFC',
+                direction: 'rtl'
+              }}
+            >
+              {/* Modal Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ background: 'rgba(139, 92, 246, 0.2)', border: '1px solid #8B5CF6', width: '44px', height: '44px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A78BFA', fontSize: '1.3rem' }}>
+                    🔍
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#F8FAFC' }}>
+                      گرید پایش زنده و تحلیل ریشه اختلافات ({mismatchModalData.category === 'epics' ? 'اپیک‌ها / پروژه‌ها' : 'تسک‌های سیستم'})
+                    </h3>
+                    <span style={{ fontSize: '0.78rem', color: '#A78BFA', fontWeight: 700 }}>
+                      تعداد کل بررسی‌شده: {mismatchModalData.totalCount} | موارد دارای اختلاف: {mismatchModalData.mismatchCount} موارد
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setMismatchModalData(null)}
+                  style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#94A3B8', borderRadius: '10px', padding: '0.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Filter / Search Bar */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.3rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <button
+                    onClick={() => setMismatchTab('mismatched')}
+                    style={{
+                      padding: '0.35rem 0.85rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: mismatchTab === 'mismatched' ? 'linear-gradient(135deg, #F59E0B, #D97706)' : 'transparent',
+                      color: mismatchTab === 'mismatched' ? '#FFFFFF' : '#94A3B8',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ⚠️ فقط دارای اختلاف ({mismatchModalData.mismatchCount || 0})
+                  </button>
+                  <button
+                    onClick={() => setMismatchTab('all')}
+                    style={{
+                      padding: '0.35rem 0.85rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: mismatchTab === 'all' ? 'linear-gradient(135deg, #8B5CF6, #6D28D9)' : 'transparent',
+                      color: mismatchTab === 'all' ? '#FFFFFF' : '#94A3B8',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📋 همه موارد ({mismatchModalData.totalCount || 0})
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  value={mismatchSearch}
+                  onChange={e => setMismatchSearch(e.target.value)}
+                  placeholder="🔍 جستجو بر اساس کلید (مثال: ORD-105 یا ORD)..."
+                  style={{
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    border: '1px solid rgba(139, 92, 246, 0.4)',
+                    color: '#F8FAFC',
+                    borderRadius: '10px',
+                    padding: '0.45rem 0.85rem',
+                    fontSize: '0.82rem',
+                    minWidth: '260px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              {/* Grid Table */}
+              <div style={{ flex: 1, overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', background: 'rgba(15, 23, 42, 0.5)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'right' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(255, 255, 255, 0.06)', color: '#94A3B8', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', position: 'sticky', top: 0, zIndex: 10 }}>
+                      <th style={{ padding: '0.75rem 1rem', width: '110px' }}>شناسه کلید</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>عنوان / نام اصلی</th>
+                      <th style={{ padding: '0.75rem 1rem', width: '130px' }}>وضعیت در دیتابیس</th>
+                      <th style={{ padding: '0.75rem 1rem', width: '140px' }}>وضعیت زنده در Jira</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>علت و توضیحات تحلیل</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const list = (mismatchModalData.allItems || []).filter(item => {
+                        if (mismatchTab === 'mismatched' && item.mismatchType === 'MATCHED') return false;
+                        if (mismatchSearch.trim()) {
+                          const q = mismatchSearch.trim().toLowerCase();
+                          const matchId = (item.id || '').toLowerCase().includes(q);
+                          const matchTitle = (item.title || '').toLowerCase().includes(q);
+                          const matchReason = (item.reason || '').toLowerCase().includes(q);
+                          if (!matchId && !matchTitle && !matchReason) return false;
+                        }
+                        return true;
+                      });
+
+                      if (list.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8' }}>
+                              هیچ موردی مطابق فیلتر انتخابی یافت نشد.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return list.map((item, idx) => (
+                        <tr key={item.id || idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: item.mismatchType !== 'MATCHED' ? 'rgba(245, 158, 11, 0.04)' : 'transparent' }}>
+                          <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 800, color: '#38BDF8' }}>
+                            {item.id}
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#E2E8F0' }}>
+                            {item.title}
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem' }}>
+                            <span style={{
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              background: item.inDb ? 'rgba(192, 132, 252, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                              color: item.inDb ? '#C084FC' : '#FCA5A5'
+                            }}>
+                              {item.dbStatus}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem' }}>
+                            <span style={{
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              background: item.inJira ? 'rgba(56, 189, 248, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                              color: item.inJira ? '#38BDF8' : '#FCA5A5'
+                            }}>
+                              {item.jiraStatus}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: item.mismatchType === 'MATCHED' ? '#6EE7B7' : '#FBBF24', lineHeight: '1.5' }}>
+                            {item.reason}
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Modal Footer */}
+              <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
+                  💡 جهت تطبیق کامل دیتابیس با سرور جیرا، می‌توانید دکمه <strong>«همگام‌سازی و بازسازی دیتابیس از Jira»</strong> را کلیک کنید.
+                </span>
+                <button
+                  onClick={() => setMismatchModalData(null)}
+                  style={{
+                    padding: '0.55rem 1.4rem',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)',
+                    color: '#FFFFFF',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  متوجه شدم (بستن)
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* 🔮 CUSTOM MODERN CONFIRMATION MODAL */}
       <AnimatePresence>
         {confirmModal && (
