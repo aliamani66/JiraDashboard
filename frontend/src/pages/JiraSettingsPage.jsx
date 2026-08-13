@@ -1021,10 +1021,7 @@ const JiraSettingsPage = () => {
             <Zap size={16} className={diagLoading ? 'spin' : ''} />
             {diagLoading ? 'در حال پایش...' : 'پایش زنده API'}
           </button>
-          <button className="jsp-run-diag-btn" style={{ background: '#0EA5E9' }} onClick={handleSync} disabled={syncing}>
-            <RefreshCw size={16} className={syncing ? 'spin' : ''} />
-            {syncing ? 'در حال استخراج...' : '📦 استخراج اپیک‌ها (Epics)'}
-          </button>
+
           <button className="jsp-run-diag-btn" onClick={handleSave} disabled={saving}>
             <Save size={16} className={saving ? 'spin' : ''} />
             {saving ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}
