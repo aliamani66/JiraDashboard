@@ -647,7 +647,8 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     }
   }
 
-  let startDate = extractDateField(issue, mapping.dateMapping.taskStartDateField);
+  let createdAt = extractDateField(issue, 'created');
+  let startDate = extractDateField(issue, mapping.dateMapping.taskStartDateField) || createdAt;
   let dueDate = extractDateField(issue, mapping.dateMapping.taskDueDateField) || extractDateField(issue, 'duedate');
 
   let sprintName = null;
@@ -753,6 +754,7 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     estimate_hours: estSec ? Math.round((estSec / 3600) * 100) / 100 : 0,
     spent_hours: spentSec ? Math.round((spentSec / 3600) * 100) / 100 : 0,
     start_date: startDate,
+    created_at: createdAt || startDate,
     due_date: dueDate,
     is_waiting: isWaiting,
     waiting_for_team: waitingForTeam,
