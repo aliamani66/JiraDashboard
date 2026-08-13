@@ -1802,9 +1802,15 @@ const JiraSettingsPage = () => {
                         jiraCountData.withEpicCount === Math.max(0, (dbStats.totalTasks || 0) - (dbStats.unlinkedTasksCount || 0)) ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
-                          <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>
-                            ⚠️ اختلاف {Math.abs(jiraCountData.withEpicCount - Math.max(0, (dbStats.totalTasks || 0) - (dbStats.unlinkedTasksCount || 0)))}
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => openMismatchDiagnosticModal('totalTasks')}
+                            style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35))', border: '1px solid rgba(245, 158, 11, 0.6)', color: '#FBBF24', padding: '0.2rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                            title="برای مشاهده گرید تحلیل اختلافات کلیک فرمایید"
+                          >
+                            <Search size={13} color="#FBBF24" />
+                            <span>⚠️ اختلاف {Math.abs(jiraCountData.withEpicCount - Math.max(0, (dbStats.totalTasks || 0) - (dbStats.unlinkedTasksCount || 0)))}</span>
+                          </button>
                         )
                       ) : '—'}
                     </td>
@@ -1826,9 +1832,15 @@ const JiraSettingsPage = () => {
                         jiraCountData.withoutEpicCount === (dbStats.unlinkedTasksCount || 0) ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
-                          <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>
-                            ⚠️ اختلاف {Math.abs(jiraCountData.withoutEpicCount - (dbStats.unlinkedTasksCount || 0))}
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => openMismatchDiagnosticModal('totalTasks')}
+                            style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35))', border: '1px solid rgba(245, 158, 11, 0.6)', color: '#FBBF24', padding: '0.2rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                            title="برای مشاهده گرید تحلیل اختلافات کلیک فرمایید"
+                          >
+                            <Search size={13} color="#FBBF24" />
+                            <span>⚠️ اختلاف {Math.abs(jiraCountData.withoutEpicCount - (dbStats.unlinkedTasksCount || 0))}</span>
+                          </button>
                         )
                       ) : '—'}
                     </td>
@@ -1850,9 +1862,15 @@ const JiraSettingsPage = () => {
                         jiraCountData.total === dbStats.totalTasks ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#6EE7B7', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800 }}>✅ همگام کامل</span>
                         ) : (
-                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800 }}>
-                            ⚠️ اختلاف {Math.abs(jiraCountData.total - dbStats.totalTasks)} تسک
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => openMismatchDiagnosticModal('totalTasks')}
+                            style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(220, 38, 38, 0.35))', border: '1px solid rgba(239, 68, 68, 0.6)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                            title="برای مشاهده گرید تحلیل اختلافات کلیک فرمایید"
+                          >
+                            <Search size={13} color="#FCA5A5" />
+                            <span>⚠️ اختلاف {Math.abs(jiraCountData.total - dbStats.totalTasks)} تسک</span>
+                          </button>
                         )
                       ) : '—'}
                     </td>
