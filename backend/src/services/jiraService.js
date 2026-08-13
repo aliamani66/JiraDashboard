@@ -591,15 +591,17 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
 
   let epicKey = epicKeyOverride;
   if (!epicKey) {
-    // 1. Direct Jira epic field (check customfield_10006 first!)
-    if (issue.fields?.customfield_10006) {
+    // Strictly check the configured Epic Link field (e.g. customfield_10006) or standard Jira Epic fields
+    const configuredEpicField = customFields.epicLinkField || 'customfield_10006';
+
+    if (issue.fields?.[configuredEpicField]) {
+      const val = issue.fields[configuredEpicField];
+      epicKey = String(typeof val === 'object' ? (val.key || val.value) : val).toUpperCase();
+    } else if (issue.fields?.customfield_10006) {
       const v = issue.fields.customfield_10006;
       epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
     } else if (issue.fields?.epic?.key) {
       epicKey = String(issue.fields.epic.key).toUpperCase();
-    } else if (customFields.epicLinkField && issue.fields?.[customFields.epicLinkField]) {
-      const val = issue.fields[customFields.epicLinkField];
-      epicKey = String(typeof val === 'object' ? (val.key || val.value) : val).toUpperCase();
     } else if (issue.fields?.customfield_10014) {
       const v = issue.fields.customfield_10014;
       epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
@@ -608,23 +610,6 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
       epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
     } else if (issue.fields?.parent?.key && (issue.fields.parent?.fields?.issuetype?.name === 'Epic' || issue.fields.parent?.type === 'Epic')) {
       epicKey = String(issue.fields.parent.key).toUpperCase();
-    }
-
-    // 2. Scan fields for any known Epic key (MUST match KEY-NUMBER pattern, excluding parent object)
-    if (!epicKey && issue.fields) {
-      for (const [k, val] of Object.entries(issue.fields)) {
-        if (!val || k === 'parent') continue;
-        const strVal = typeof val === 'object' ? (val.key || val.value || JSON.stringify(val)) : String(val);
-        const matches = strVal.matchAll(/([A-Z][A-Z0-9_]*-\d+)/gi);
-        for (const match of matches) {
-          const candidateKey = match[1] ? match[1].toUpperCase() : null;
-          if (candidateKey && candidateKey !== (issue.key || '').toUpperCase()) {
-            epicKey = candidateKey;
-            break;
-          }
-        }
-        if (epicKey) break;
-      }
     }
   }
 
