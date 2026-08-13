@@ -7,6 +7,7 @@ const jiraMapping = require('../jiraMapping');
 const { authenticate } = require('../middleware/auth');
 const jiraService = require('../services/jiraService');
 const cacheService = require('../services/cacheService');
+const { getDb, saveDb } = require('../db/database');
 
 const router = express.Router();
 router.use(authenticate);
@@ -325,7 +326,7 @@ router.get('/jira-count', async (req, res) => {
     } catch (_) {}
 
     // 4. Calculate Epics without tasks from DB stats
-    const db = require('../services/cacheService').getDb();
+    const db = getDb();
     const jiraEpicsWithoutTasksCount = db.prepare('SELECT COUNT(*) as c FROM projects WHERE id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL)').get()?.c || 0;
 
     res.json({
