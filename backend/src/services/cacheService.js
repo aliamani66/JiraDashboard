@@ -797,40 +797,28 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 function autoLinkTasksToEpics() {
   try {
     const db = getDb();
-    // Get all epics grouped by project key prefix
-    const epics = db.prepare("SELECT id FROM projects WHERE id LIKE '%-%'").all().map(r => r.id);
-    if (epics.length === 0) return;
+    // Ensure all project_id values referenced in tasks exist as valid records in projects table
+    const taskProjects = db.prepare("SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''").all();
+    if (taskProjects.length === 0) return;
 
-    // Find tasks whose project_id is NOT a valid epic (not matching any projects.id)
-    const unlinkedTasks = db.prepare(
-      "SELECT id, project_id FROM tasks WHERE project_id NOT IN (SELECT id FROM projects)"
-    ).all();
-    if (unlinkedTasks.length === 0) return;
+    const insertMissingProject = db.prepare(`
+      INSERT OR IGNORE INTO projects (id, title, description, status, last_synced)
+      VALUES (?, ?, ?, 'In Progress', ?)
+    `);
 
-    const updateStmt = db.prepare('UPDATE tasks SET project_id = ? WHERE id = ?');
-    // Build a map: projectKeyPrefix -> list of epic IDs
-    const epicsByPrefix = {};
-    for (const epicId of epics) {
-      const prefix = epicId.split('-')[0].toUpperCase();
-      if (!epicsByPrefix[prefix]) epicsByPrefix[prefix] = [];
-      epicsByPrefix[prefix].push(epicId);
-    }
+    const now = new Date().toISOString();
 
     db.transaction(() => {
-      for (const task of unlinkedTasks) {
-        // Try to match by task's own key prefix (e.g. OPS-501 -> OPS -> OPS-101)
-        const taskPrefix = (task.id || '').split('-')[0].toUpperCase();
-        // Also try by project_id prefix if it's a plain project key
-        const projPrefix = (task.project_id || '').split('-')[0].toUpperCase();
-
-        const candidates = epicsByPrefix[taskPrefix] || epicsByPrefix[projPrefix] || [];
-        if (candidates.length > 0) {
-          // Assign to first available epic with same prefix
-          updateStmt.run(candidates[0], task.id);
+      for (const r of taskProjects) {
+        const pId = r.project_id;
+        if (!pId) continue;
+        if (pId.includes('-')) {
+          insertMissingProject.run(pId, `اپیک ${pId}`, `اپیک استخراج‌شده ${pId}`, now);
+        } else {
+          insertMissingProject.run(pId, `پروژه ${pId}`, `پروژه اصلی ${pId}`, now);
         }
       }
     })();
-    console.log(`Auto-linked ${unlinkedTasks.length} tasks to epics.`);
   } catch (err) {
     console.error('Auto-link tasks error:', err.message);
   }
