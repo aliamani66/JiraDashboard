@@ -414,19 +414,9 @@ const JiraSettingsPage = () => {
     ]);
   }, [fetchDbStats, fetchJiraCount]);
 
-  const handleEvaluateAndMatch = async () => {
-    try {
-      setEvaluatingMatch(true);
-      showToast('🔄 در حال استخراج همزمان داده‌های سرور جیرا و دیتابیس لوکال برای محاسبه وضعیت تطابق...', 'info');
-      const targetMonths = cfgRef.current?.rebuildMonths || 3;
-      await fetchBothStatsSync(targetMonths, true);
-      setMatchEvaluated(true);
-      showToast('✅ محاسبه و ارزیابی وضعیت تطابق با موفقیت انجام گردید.', 'success');
-    } catch (e) {
-      showToast('⚠️ خطا در ارزیابی وضعیت تطابق: ' + (e.message || ''), 'error');
-    } finally {
-      setEvaluatingMatch(false);
-    }
+  const handleEvaluateAndMatch = () => {
+    setMatchEvaluated(true);
+    showToast('✅ وضعیت تطابق بر اساس مقادیر فعلی ستون جیرا و دیتابیس با موفقیت محاسبه گردید.', 'success');
   };
 
   const fetchConfig = useCallback(async () => {
@@ -1767,10 +1757,10 @@ const JiraSettingsPage = () => {
                     boxShadow: '0 3px 10px rgba(16, 185, 129, 0.3)',
                     transition: 'all 0.2s ease'
                   }}
-                  title="کلیک کنید تا ابتدا آمار هر دو ستون استخراج شده و سپس ستون وضعیت تطابق محاسبه گردد"
+                  title="مقایسه فوری مقادیر موجود در ستون جیرا و ستون دیتابیس بدون هیچ درخواست جدید شبکه"
                 >
-                  <RefreshCw size={14} className={evaluatingMatch ? 'spin' : ''} />
-                  <span>{evaluatingMatch ? 'در حال دریافت و ارزیابی...' : '⚖️ محاسبه و به‌روزرسانی وضعیت تطابق'}</span>
+                  <CheckCircle size={14} />
+                  <span>⚖️ محاسبه و به‌روزرسانی وضعیت تطابق</span>
                 </button>
                 <button
                   type="button"
