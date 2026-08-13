@@ -1785,6 +1785,29 @@ const JiraSettingsPage = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button
                   type="button"
+                  onClick={() => { openMismatchDiagnosticModal('withEpicTasks'); setMismatchTab('liveMapping'); }}
+                  style={{
+                    background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)',
+                    border: 'none',
+                    color: '#FFFFFF',
+                    padding: '0.38rem 0.95rem',
+                    borderRadius: '9px',
+                    fontSize: '0.79rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    boxShadow: '0 3px 10px rgba(139, 92, 246, 0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="مشاهده مستقیم جدول نظیر به نظیر تمام تسک‌های جیرا و نحوه مپ شدن آن‌ها در دیتابیس"
+                >
+                  <Search size={14} />
+                  <span>🔍 نگاشت نظیر به نظیر Jira به DB</span>
+                </button>
+                <button
+                  type="button"
                   onClick={handleEvaluateAndMatch}
                   disabled={evaluatingMatch || jiraCountLoading || dbStatsLoading}
                   style={{
