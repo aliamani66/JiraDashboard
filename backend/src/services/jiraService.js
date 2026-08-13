@@ -824,8 +824,32 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
   const estSec = issue.fields?.aggregatetimeoriginalestimate || issue.fields?.timeoriginalestimate || 0;
   const spentSec = issue.fields?.aggregatetimespent || issue.fields?.timespent || 0;
 
-  const parentIssueKey = (issue.fields?.parent?.key && /^[A-Z][A-Z0-9_]*-\d+$/i.test(issue.fields.parent.key)) ? issue.fields.parent.key.toUpperCase() : null;
+  // Extract raw parent key from any possible representation in Jira payload
+  let rawParentKey = null;
+  if (issue.fields?.parent) {
+    const p = issue.fields.parent;
+    if (typeof p === 'string' && /^[A-Z][A-Z0-9_]*-\d+$/i.test(p)) {
+      rawParentKey = p.toUpperCase();
+    } else if (typeof p === 'object') {
+      const k = p.key || p.value || p.name;
+      if (k && /^[A-Z][A-Z0-9_]*-\d+$/i.test(k)) {
+        rawParentKey = String(k).toUpperCase();
+      }
+    }
+  }
+  if (!rawParentKey && issue.fields?.parentKey && /^[A-Z][A-Z0-9_]*-\d+$/i.test(issue.fields.parentKey)) {
+    rawParentKey = String(issue.fields.parentKey).toUpperCase();
+  }
+  if (!rawParentKey && issue.fields?.parent_key && /^[A-Z][A-Z0-9_]*-\d+$/i.test(issue.fields.parent_key)) {
+    rawParentKey = String(issue.fields.parent_key).toUpperCase();
+  }
+
   const parentTypeIsEpic = issue.fields?.parent?.fields?.issuetype?.name === 'Epic' || issue.fields?.parent?.type === 'Epic';
+  
+  // If parentTypeIsEpic, rawParentKey is actually an Epic key
+  if (parentTypeIsEpic && rawParentKey && !epicKey) {
+    epicKey = rawParentKey;
+  }
 
   const isSubtask = (
     issue.fields?.issuetype?.subtask || 
@@ -833,22 +857,22 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     issueTypeName.includes('subtask') || 
     issueTypeName.includes('sub task') || 
     issueTypeName.includes('زیرتسک') || 
-    (parentIssueKey && !parentTypeIsEpic)
+    (rawParentKey && rawParentKey !== (epicKey || '').toUpperCase() && !parentTypeIsEpic)
   ) ? 1 : 0;
 
   const actualProjectKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
 
   // 1. parent_key: STRICTLY for Sub-tasks! Stores parent task issue key (e.g. ORD-1480).
-  const parentKey = (isSubtask && parentIssueKey) ? parentIssueKey : null;
-
-  // 2. If item is NOT a subtask and parent is an Epic, parent.key IS the Epic key!
-  if (!epicKey && !isSubtask && parentIssueKey && parentTypeIsEpic) {
-    epicKey = parentIssueKey;
+  let parentKey = null;
+  if (rawParentKey && rawParentKey !== (epicKey || '').toUpperCase() && !parentTypeIsEpic) {
+    parentKey = rawParentKey;
+  } else if (isSubtask && rawParentKey && !parentTypeIsEpic) {
+    parentKey = rawParentKey;
   }
 
   const isRealEpicKey = epicKey && /^[A-Z][A-Z0-9_]*-\d+$/i.test(epicKey) && epicKey.toUpperCase() !== (issue.key || '').toUpperCase() && epicKey.toUpperCase() !== (parentKey || '');
   
-  // 3. parent_task_id / epic_id: STRICTLY for Epics! Stores the EPIC key (e.g. ORD-101), NEVER a parent task key!
+  // 2. parent_task_id / epic_id: STRICTLY for Epics! Stores the EPIC key (e.g. ORD-101), NEVER a parent task key!
   const parentTaskId = isRealEpicKey ? epicKey.toUpperCase() : null;
 
   return {
