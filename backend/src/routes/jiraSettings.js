@@ -316,11 +316,19 @@ router.get('/jira-count', async (req, res) => {
 
     const withEpicCount = Math.max(0, total - withoutEpicCount);
 
+    let jiraEpicsCount = 0;
+    try {
+      const epicJql = projectClause ? `${projectClause} AND issuetype = Epic` : `issuetype = Epic`;
+      const epicRes = await jiraService.jiraSearch(epicJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
+      jiraEpicsCount = epicRes.total !== undefined ? epicRes.total : 0;
+    } catch (_) {}
+
     res.json({
       success: true,
       total,
       withEpicCount,
       withoutEpicCount,
+      jiraEpicsCount,
       jql: countJql,
       withoutEpicJql,
       projectKey: projKeyStr
