@@ -835,6 +835,24 @@ function autoLinkTasksToEpics() {
     // Clean task IDs accidentally inserted into projects table
     db.prepare('DELETE FROM projects WHERE id IN (SELECT id FROM tasks)').run();
 
+    const cfg = jiraService.getJiraConfig();
+    const pKeyStr = (cfg.projectKey || '').trim().toUpperCase();
+    let pKeys = [];
+    if (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') {
+      pKeys = pKeyStr.split(',').map(k => k.trim()).filter(Boolean);
+      if (pKeys.length > 0) {
+        const likeClauses = pKeys.map(k => `id LIKE '${k}-%' OR id = '${k}'`).join(' OR ');
+        // Purge any epics or projects from other project keys (e.g. 2026, 2025, SG) when filtering by specific project
+        db.prepare(`DELETE FROM projects WHERE NOT (${likeClauses})`).run();
+      }
+    }
+
+    let pKeyFilter = '';
+    if (pKeys.length > 0) {
+      const pLike = pKeys.map(k => `parent_task_id LIKE '${k}-%'`).join(' OR ');
+      pKeyFilter = `AND (${pLike})`;
+    }
+
     // 1. Auto-insert any missing parent_task_id Epics into projects table so tasks are 100% linked
     db.prepare(`
       INSERT INTO projects (id, title, status, last_synced)
@@ -843,6 +861,7 @@ function autoLinkTasksToEpics() {
       WHERE parent_task_id IS NOT NULL 
         AND parent_task_id != '' 
         AND parent_task_id LIKE '%-%'
+        ${pKeyFilter}
         AND parent_task_id NOT IN (SELECT id FROM projects)
     `).run(now);
 
@@ -865,7 +884,7 @@ function autoLinkTasksToEpics() {
         AND parent_task_id IN (SELECT id FROM projects)
     `).run();
 
-    // 4. Ensure any task whose project_id is missing from projects table gets linked to standing project container (e.g. 'OPS' or 'ORD')
+    // 4. Ensure any task whose project_id is missing from projects table gets linked to standing project container (e.g. 'ORD')
     const unlinkedRows = db.prepare(`
       SELECT DISTINCT project_id, id FROM tasks
       WHERE (project_id NOT IN (SELECT id FROM projects) OR project_id IS NULL OR project_id = '')
@@ -873,19 +892,22 @@ function autoLinkTasksToEpics() {
     `).all();
 
     if (unlinkedRows && unlinkedRows.length > 0) {
+      const defaultFallback = pKeys[0] || 'ORD';
       const insertProj = db.prepare(`
         INSERT INTO projects (id, title, status, last_synced)
         VALUES (?, ?, 'In Progress', ?)
         ON CONFLICT(id) DO NOTHING
       `);
+
       db.transaction(() => {
         for (const r of unlinkedRows) {
-          const fallbackId = (r.project_id || r.id || '').split('-')[0].toUpperCase();
+          let fallbackId = (r.project_id || r.id || '').split('-')[0].toUpperCase();
+          if (pKeys.length > 0 && !pKeys.includes(fallbackId)) {
+            fallbackId = defaultFallback;
+          }
           if (fallbackId) {
             insertProj.run(fallbackId, `پروژه ${fallbackId}`, now);
-            if (!r.project_id) {
-              db.prepare('UPDATE tasks SET project_id = ? WHERE id = ?').run(fallbackId, r.id);
-            }
+            db.prepare('UPDATE tasks SET project_id = ? WHERE id = ?').run(fallbackId, r.id);
           }
         }
       })();
