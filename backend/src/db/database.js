@@ -197,6 +197,45 @@ async function initDb() {
   try { db.run("DELETE FROM task_relations WHERE task_id IS NULL OR task_id = '' OR INSTR(task_id, '-') = 0 OR task_id NOT LIKE '%-%'"); } catch (_) {}
   try { db.run("UPDATE tasks SET created_at = COALESCE(start_date, due_date, SUBSTR(last_synced, 1, 10)) WHERE created_at IS NULL OR created_at = ''"); } catch (_) {}
 
+  // Strict deduplication guarantee: keep only 1 record per unique Task ID and Project ID (case-insensitive)
+  try {
+    db.run(`
+      DELETE FROM tasks
+      WHERE rowid NOT IN (
+        SELECT MIN(rowid)
+        FROM tasks
+        GROUP BY UPPER(TRIM(id))
+      )
+    `);
+  } catch (_) {}
+
+  try {
+    db.run(`
+      DELETE FROM projects
+      WHERE rowid NOT IN (
+        SELECT MIN(rowid)
+        FROM projects
+        GROUP BY UPPER(TRIM(id))
+      )
+    `);
+  } catch (_) {}
+
+  try {
+    db.run(`
+      DELETE FROM task_relations
+      WHERE rowid NOT IN (
+        SELECT MIN(rowid)
+        FROM task_relations
+        GROUP BY UPPER(TRIM(task_id)), UPPER(TRIM(linked_task_id))
+      )
+    `);
+  } catch (_) {}
+
+  // Ensure unique case-insensitive indexes so duplicates can NEVER be inserted
+  try { db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_id_nocase ON tasks(id COLLATE NOCASE)"); } catch (_) {}
+  try { db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_id_nocase ON projects(id COLLATE NOCASE)"); } catch (_) {}
+  try { db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_task_relations_unique ON task_relations(task_id COLLATE NOCASE, linked_task_id COLLATE NOCASE)"); } catch (_) {}
+
 
   // Ensure Admin user always exists
   try {
