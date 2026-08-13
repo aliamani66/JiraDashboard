@@ -610,7 +610,7 @@ const JiraSettingsPage = () => {
         const jalaliEndStr = `${jEnd.jy}/${String(jEnd.jm).padStart(2,'0')}/${String(jEnd.jd).padStart(2,'0')} 23:59`;
 
         monthRanges.push({
-          monthIndex: (parseInt(cfg.rebuildMonths, 10) || 1) - i,
+          monthIndex: (parseInt(cfg.rebuildMonths, 10) || 3) - i,
           year: y,
           month: m + 1,
           jalaliName: monthInfo.jalali,
@@ -1007,7 +1007,7 @@ const JiraSettingsPage = () => {
             disabled={monthlySyncing}
           >
             <RefreshCw size={16} className={monthlySyncing ? 'spin' : ''} />
-            {monthlySyncing ? 'در حال بازسازی...' : '🔥 بازسازی کامل دیتابیس و سایت ({cfg.rebuildMonths || 1} ماه)'}
+            {monthlySyncing ? 'در حال بازسازی...' : `🔥 بازسازی کامل دیتابیس و سایت (${cfg.rebuildMonths || 3} ماه)`}
           </button>
           <button
             className="jsp-run-diag-btn"
@@ -1610,7 +1610,7 @@ const JiraSettingsPage = () => {
               </span>
             </div>
             <span style={{ fontSize: '0.82rem', color: '#6EE7B7', background: 'rgba(16, 185, 129, 0.18)', padding: '0.25rem 0.7rem', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.35)', fontWeight: 700 }}>
-              بازه فعلی: {cfg.rebuildMonths || 1} ماه گذشته
+              بازه فعلی: {cfg.rebuildMonths || 3} ماه گذشته
             </span>
           </div>
 
@@ -1626,16 +1626,16 @@ const JiraSettingsPage = () => {
               style={{
                 padding: '0.45rem 0.9rem',
                 borderRadius: '10px',
-                border: (cfg.rebuildMonths === 1 || !cfg.rebuildMonths) ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: (cfg.rebuildMonths === 1 || !cfg.rebuildMonths) ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: (cfg.rebuildMonths === 1 || !cfg.rebuildMonths) ? '#6EE7B7' : '#94A3B8',
-                fontWeight: (cfg.rebuildMonths === 1 || !cfg.rebuildMonths) ? 800 : 500,
+                border: cfg.rebuildMonths === 1 ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: cfg.rebuildMonths === 1 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: cfg.rebuildMonths === 1 ? '#6EE7B7' : '#94A3B8',
+                fontWeight: cfg.rebuildMonths === 1 ? 800 : 500,
                 cursor: 'pointer',
                 fontSize: '0.84rem',
                 transition: 'all 0.2s ease'
               }}
             >
-              🚀 ۱ ماه گذشته (سریع‌ترین - پیش‌فرض)
+              🚀 ۱ ماه گذشته (سریع‌ترین)
             </button>
 
             <button
@@ -1644,16 +1644,16 @@ const JiraSettingsPage = () => {
               style={{
                 padding: '0.45rem 0.9rem',
                 borderRadius: '10px',
-                border: cfg.rebuildMonths === 3 ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: cfg.rebuildMonths === 3 ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: cfg.rebuildMonths === 3 ? '#38BDF8' : '#94A3B8',
-                fontWeight: cfg.rebuildMonths === 3 ? 800 : 500,
+                border: (cfg.rebuildMonths === 3 || !cfg.rebuildMonths) ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: (cfg.rebuildMonths === 3 || !cfg.rebuildMonths) ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: (cfg.rebuildMonths === 3 || !cfg.rebuildMonths) ? '#38BDF8' : '#94A3B8',
+                fontWeight: (cfg.rebuildMonths === 3 || !cfg.rebuildMonths) ? 800 : 500,
                 cursor: 'pointer',
                 fontSize: '0.84rem',
                 transition: 'all 0.2s ease'
               }}
             >
-              📅 ۳ ماه گذشته
+              📅 ۳ ماه گذشته (پیش‌فرض)
             </button>
 
             <button
@@ -1716,13 +1716,13 @@ const JiraSettingsPage = () => {
             <span style={{ fontSize: '0.82rem', color: '#CBD5E1' }}>ورود دستی تعداد ماه:</span>
             <Input
               type="number"
-              value={cfg.rebuildMonths || 1}
+              value={cfg.rebuildMonths || 3}
               onChange={v => setCfg(prev => ({ ...prev, rebuildMonths: Math.max(1, parseInt(v, 10) || 1) }))}
               placeholder="1"
               style={{ width: '90px' }}
               mono
             />
-            <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>ماه (حدوداً {((cfg.rebuildMonths || 1) * 30)} روز)</span>
+            <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>ماه (حدوداً {((cfg.rebuildMonths || 3) * 30)} روز)</span>
           </div>
         </div>
         

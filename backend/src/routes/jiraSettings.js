@@ -270,7 +270,7 @@ router.get('/jira-count', async (req, res) => {
     }
 
     // Calculate configured rebuild date boundary (e.g. 1 month, 3 months, 60 months)
-    const rebuildMonths = parseInt(cfg.rebuildMonths, 10) || 1;
+    const rebuildMonths = parseInt(cfg.rebuildMonths, 10) || 3;
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - rebuildMonths);
     const startDateStr = startDate.toISOString().split('T')[0];
