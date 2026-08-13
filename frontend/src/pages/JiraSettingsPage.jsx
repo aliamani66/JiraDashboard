@@ -339,7 +339,7 @@ const JiraSettingsPage = () => {
       if (isManualTrigger) {
         showToast('🔄 در حال استخراج و مقایسه آمار زنده از سرور جیرا...', 'info');
       }
-      const targetMonths = customMonths || cfg.rebuildMonths || 3;
+      const targetMonths = customMonths || cfg?.rebuildMonths || 3;
       const countRes = await api.getJiraTotalCount(targetMonths);
       if (countRes && countRes.success) {
         setJiraCountData(countRes);
@@ -362,7 +362,7 @@ const JiraSettingsPage = () => {
     } finally {
       setJiraCountLoading(false);
     }
-  }, [cfg.rebuildMonths]);
+  }, [cfg?.rebuildMonths]);
 
   const fetchDbStats = useCallback(async () => {
     try {
@@ -1535,10 +1535,10 @@ const JiraSettingsPage = () => {
               style={{
                 padding: '0.3rem 0.65rem',
                 borderRadius: '8px',
-                border: cfg.rebuildMonths === 1 ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: cfg.rebuildMonths === 1 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: cfg.rebuildMonths === 1 ? '#6EE7B7' : '#94A3B8',
-                fontWeight: cfg.rebuildMonths === 1 ? 800 : 500,
+                border: cfg?.rebuildMonths === 1 ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: cfg?.rebuildMonths === 1 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: cfg?.rebuildMonths === 1 ? '#6EE7B7' : '#94A3B8',
+                fontWeight: cfg?.rebuildMonths === 1 ? 800 : 500,
                 cursor: 'pointer',
                 fontSize: '0.78rem',
                 transition: 'all 0.2s ease'
@@ -1553,10 +1553,10 @@ const JiraSettingsPage = () => {
               style={{
                 padding: '0.3rem 0.65rem',
                 borderRadius: '8px',
-                border: (cfg.rebuildMonths === 3 || !cfg.rebuildMonths) ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: (cfg.rebuildMonths === 3 || !cfg.rebuildMonths) ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: (cfg.rebuildMonths === 3 || !cfg.rebuildMonths) ? '#38BDF8' : '#94A3B8',
-                fontWeight: (cfg.rebuildMonths === 3 || !cfg.rebuildMonths) ? 800 : 500,
+                border: (cfg?.rebuildMonths === 3 || !cfg?.rebuildMonths) ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: (cfg?.rebuildMonths === 3 || !cfg?.rebuildMonths) ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: (cfg?.rebuildMonths === 3 || !cfg?.rebuildMonths) ? '#38BDF8' : '#94A3B8',
+                fontWeight: (cfg?.rebuildMonths === 3 || !cfg?.rebuildMonths) ? 800 : 500,
                 cursor: 'pointer',
                 fontSize: '0.78rem',
                 transition: 'all 0.2s ease'
@@ -1571,10 +1571,10 @@ const JiraSettingsPage = () => {
               style={{
                 padding: '0.3rem 0.65rem',
                 borderRadius: '8px',
-                border: cfg.rebuildMonths === 6 ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: cfg.rebuildMonths === 6 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: cfg.rebuildMonths === 6 ? '#FCD34D' : '#94A3B8',
-                fontWeight: cfg.rebuildMonths === 6 ? 800 : 500,
+                border: cfg?.rebuildMonths === 6 ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: cfg?.rebuildMonths === 6 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: cfg?.rebuildMonths === 6 ? '#FCD34D' : '#94A3B8',
+                fontWeight: cfg?.rebuildMonths === 6 ? 800 : 500,
                 cursor: 'pointer',
                 fontSize: '0.78rem',
                 transition: 'all 0.2s ease'
@@ -1589,10 +1589,10 @@ const JiraSettingsPage = () => {
               style={{
                 padding: '0.3rem 0.65rem',
                 borderRadius: '8px',
-                border: cfg.rebuildMonths === 12 ? '1px solid #A78BFA' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: cfg.rebuildMonths === 12 ? 'rgba(167, 139, 250, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: cfg.rebuildMonths === 12 ? '#C4B5FD' : '#94A3B8',
-                fontWeight: cfg.rebuildMonths === 12 ? 800 : 500,
+                border: cfg?.rebuildMonths === 12 ? '1px solid #A78BFA' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: cfg?.rebuildMonths === 12 ? 'rgba(167, 139, 250, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: cfg?.rebuildMonths === 12 ? '#C4B5FD' : '#94A3B8',
+                fontWeight: cfg?.rebuildMonths === 12 ? 800 : 500,
                 cursor: 'pointer',
                 fontSize: '0.78rem',
                 transition: 'all 0.2s ease'
@@ -1607,10 +1607,10 @@ const JiraSettingsPage = () => {
               style={{
                 padding: '0.3rem 0.65rem',
                 borderRadius: '8px',
-                border: cfg.rebuildMonths === 60 ? '1px solid #EC4899' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: cfg.rebuildMonths === 60 ? 'rgba(236, 72, 153, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: cfg.rebuildMonths === 60 ? '#F472B6' : '#94A3B8',
-                fontWeight: cfg.rebuildMonths === 60 ? 800 : 500,
+                border: cfg?.rebuildMonths === 60 ? '1px solid #EC4899' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: cfg?.rebuildMonths === 60 ? 'rgba(236, 72, 153, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: cfg?.rebuildMonths === 60 ? '#F472B6' : '#94A3B8',
+                fontWeight: cfg?.rebuildMonths === 60 ? 800 : 500,
                 cursor: 'pointer',
                 fontSize: '0.78rem',
                 transition: 'all 0.2s ease'
@@ -1624,7 +1624,7 @@ const JiraSettingsPage = () => {
               <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>دستی:</span>
               <Input
                 type="number"
-                value={cfg.rebuildMonths || 3}
+                value={cfg?.rebuildMonths || 3}
                 onChange={v => setCfg(prev => ({ ...prev, rebuildMonths: Math.max(1, parseInt(v, 10) || 3) }))}
                 placeholder="3"
                 style={{ width: '65px', padding: '0.2rem 0.4rem', fontSize: '0.78rem' }}
