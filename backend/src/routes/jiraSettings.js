@@ -336,6 +336,7 @@ router.get('/jira-count', async (req, res) => {
       withoutEpicCount,
       jiraEpicsCount,
       jiraEpicsWithoutTasksCount,
+      rebuildMonths,
       jql: countJql,
       withoutEpicJql,
       projectKey: projKeyStr

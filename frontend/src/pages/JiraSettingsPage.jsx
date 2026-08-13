@@ -332,19 +332,22 @@ const JiraSettingsPage = () => {
   const [jiraCountLoading, setJiraCountLoading] = useState(false);
   const [jiraCountError, setJiraCountError] = useState(null);
 
+  const cfgRef = useRef(cfg);
+  useEffect(() => { cfgRef.current = cfg; }, [cfg]);
+
   const fetchJiraCount = useCallback(async (isManualTrigger = false, customMonths = null) => {
     try {
       setJiraCountLoading(true);
       setJiraCountError(null);
+      const targetMonths = customMonths || cfgRef.current?.rebuildMonths || 3;
       if (isManualTrigger) {
-        showToast('🔄 در حال استخراج و مقایسه آمار زنده از سرور جیرا...', 'info');
+        showToast(`🔄 در حال استخراج و مقایسه آمار زنده (${targetMonths} ماهه) از سرور جیرا...`, 'info');
       }
-      const targetMonths = customMonths || cfg?.rebuildMonths || 3;
       const countRes = await api.getJiraTotalCount(targetMonths);
       if (countRes && countRes.success) {
         setJiraCountData(countRes);
         if (isManualTrigger) {
-          showToast('✅ آمار زنده سرور جیرا با موفقیت دریافت گردید.', 'success');
+          showToast(`✅ آمار زنده سرور جیرا (${targetMonths} ماهه) با موفقیت دریافت گردید.`, 'success');
         }
       } else {
         const errMsg = countRes?.message || 'خطای نامشخص در دریافت آمار زنده از جیرا';
@@ -1743,7 +1746,9 @@ const JiraSettingsPage = () => {
                 <thead>
                   <tr style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#94A3B8', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
                     <th style={{ padding: '0.65rem 0.9rem' }}>نوع داده / شاخص</th>
-                    <th style={{ padding: '0.65rem 0.9rem', color: '#38BDF8' }}>🌐 سرور جیرا (Jira Live)</th>
+                    <th style={{ padding: '0.65rem 0.9rem', color: '#38BDF8' }}>
+                      🌐 سرور جیرا (Jira Live {jiraCountData?.rebuildMonths ? `- ${jiraCountData.rebuildMonths} ماهه` : (cfg?.rebuildMonths ? `- ${cfg.rebuildMonths} ماهه` : '')})
+                    </th>
                     <th style={{ padding: '0.65rem 0.9rem', color: '#C084FC' }}>💾 دیتابیس سیستم (SQLite)</th>
                     <th style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>📊 وضعیت تطابق</th>
                   </tr>
