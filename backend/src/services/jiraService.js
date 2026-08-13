@@ -245,12 +245,13 @@ async function fetchEpics() {
       (projKeyStr || '').split(',').map(k => k.trim().toUpperCase().replace(/["']/g, '')).filter(Boolean)
     );
 
-    const filteredIssues = (configuredProjKeys.size > 0 && projKeyStr !== 'ALL' && projKeyStr !== '*')
-      ? allIssues.filter(issue => {
-          const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
-          return configuredProjKeys.has(issueProjKey);
-        })
-      : allIssues;
+    const filteredIssues = allIssues.filter(issue => {
+      const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
+      const issueTypeName = (issue.fields?.issuetype?.name || '').toLowerCase().trim();
+      const isEpicType = issueTypeName === 'epic';
+      const isConfiguredProj = (configuredProjKeys.size > 0 && projKeyStr !== 'ALL' && projKeyStr !== '*') ? configuredProjKeys.has(issueProjKey) : true;
+      return isEpicType && isConfiguredProj;
+    });
 
     return filteredIssues.map(issue => {
       // 1. Extract Confluence Link (Custom Field, Description, or Config Fallback)
@@ -548,6 +549,12 @@ async function fetchTasksForEpic(epicKey) {
   }
 }
 function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysSet = null) {
+  if (!issue || !issue.fields) return null;
+  const issueTypeName = (issue.fields?.issuetype?.name || '').toLowerCase().trim();
+  if (issueTypeName === 'epic') {
+    // Epics are saved into projects table only, NEVER into tasks table!
+    return null;
+  }
   const cfg = getJiraConfig();
   const mapping = cfg.mapping || jiraMapping;
   const customFields = mapping.customFields || {};
