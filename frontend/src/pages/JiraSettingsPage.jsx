@@ -1759,7 +1759,7 @@ const JiraSettingsPage = () => {
                   }}
                   title="مقایسه فوری مقادیر موجود در ستون جیرا و ستون دیتابیس بدون هیچ درخواست جدید شبکه"
                 >
-                  <CheckCircle size={14} />
+                  <CheckCircle2 size={14} />
                   <span>⚖️ محاسبه و به‌روزرسانی وضعیت تطابق</span>
                 </button>
                 <button
