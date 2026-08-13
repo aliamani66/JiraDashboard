@@ -359,6 +359,7 @@ const JiraSettingsPage = () => {
     try {
       setJiraCountLoading(true);
       setJiraCountError(null);
+      setJiraCountData(null);
       const targetMonths = customMonths || cfgRef.current?.rebuildMonths || 3;
       if (isManualTrigger) {
         showToast(`🔄 در حال استخراج و مقایسه آمار زنده (${targetMonths} ماهه) از سرور جیرا...`, 'info');
@@ -1793,13 +1794,17 @@ const JiraSettingsPage = () => {
                       ⚡ تسک‌های دارای اپیک
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
-                      {jiraCountData?.withEpicCount !== undefined ? `${jiraCountData.withEpicCount.toLocaleString()} تسک` : '—'}
+                      {jiraCountLoading ? (
+                        <span style={{ color: '#FBBF24', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> ⏳ در حال دریافت...</span>
+                      ) : jiraCountData?.withEpicCount !== undefined ? `${jiraCountData.withEpicCount.toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
-                      {dbStats?.withEpicTasksCount !== undefined ? `${(dbStats.withEpicTasksCount || 0).toLocaleString()} تسک` : '—'}
+                      {dbStatsLoading ? '⏳...' : dbStats?.withEpicTasksCount !== undefined ? `${(dbStats.withEpicTasksCount || 0).toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {jiraCountData?.withEpicMismatchCount !== undefined ? (
+                      {jiraCountLoading || dbStatsLoading ? (
+                        <span style={{ color: '#94A3B8', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> 🔄 در حال تحلیل...</span>
+                      ) : jiraCountData?.withEpicMismatchCount !== undefined ? (
                         jiraCountData.withEpicMismatchCount === 0 ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
@@ -1823,13 +1828,17 @@ const JiraSettingsPage = () => {
                       ⚠️ تسک‌های بدون اپیک
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
-                      {jiraCountData?.withoutEpicCount !== undefined ? `${jiraCountData.withoutEpicCount.toLocaleString()} تسک` : '—'}
+                      {jiraCountLoading ? (
+                        <span style={{ color: '#FBBF24', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> ⏳ در حال دریافت...</span>
+                      ) : jiraCountData?.withoutEpicCount !== undefined ? `${jiraCountData.withoutEpicCount.toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: (dbStats?.unlinkedTasksCount || 0) > 0 ? '#FCA5A5' : '#6EE7B7' }}>
-                      {dbStats?.unlinkedTasksCount !== undefined ? `${(dbStats.unlinkedTasksCount || 0).toLocaleString()} تسک` : '—'}
+                      {dbStatsLoading ? '⏳...' : dbStats?.unlinkedTasksCount !== undefined ? `${(dbStats.unlinkedTasksCount || 0).toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {jiraCountData?.unlinkedMismatchCount !== undefined ? (
+                      {jiraCountLoading || dbStatsLoading ? (
+                        <span style={{ color: '#94A3B8', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> 🔄 در حال تحلیل...</span>
+                      ) : jiraCountData?.unlinkedMismatchCount !== undefined ? (
                         jiraCountData.unlinkedMismatchCount === 0 ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
@@ -1853,13 +1862,17 @@ const JiraSettingsPage = () => {
                       📝 مجموع کل تسک‌های غیر‌اپیک
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8', fontSize: '0.88rem' }}>
-                      {jiraCountData?.total !== undefined ? `${jiraCountData.total.toLocaleString()} تسک` : '—'}
+                      {jiraCountLoading ? (
+                        <span style={{ color: '#FBBF24', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> ⏳ در حال دریافت...</span>
+                      ) : jiraCountData?.total !== undefined ? `${jiraCountData.total.toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC', fontSize: '0.88rem' }}>
-                      {dbStats?.totalTasks !== undefined ? `${dbStats.totalTasks.toLocaleString()} تسک` : '—'}
+                      {dbStatsLoading ? '⏳...' : dbStats?.totalTasks !== undefined ? `${dbStats.totalTasks.toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {jiraCountData?.totalMismatchCount !== undefined ? (
+                      {jiraCountLoading || dbStatsLoading ? (
+                        <span style={{ color: '#94A3B8', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> 🔄 در حال تحلیل...</span>
+                      ) : jiraCountData?.totalMismatchCount !== undefined ? (
                         jiraCountData.totalMismatchCount === 0 ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#6EE7B7', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800 }}>✅ همگام کامل</span>
                         ) : (
@@ -1884,13 +1897,17 @@ const JiraSettingsPage = () => {
                       <span style={{ fontSize: '0.7rem', color: '#8B5CF6', background: 'rgba(139, 92, 246, 0.15)', padding: '0.1rem 0.4rem', borderRadius: '6px' }}>🔍 مشاهده تحلیل</span>
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
-                      {jiraCountData?.jiraEpicsCount !== undefined ? `${jiraCountData.jiraEpicsCount.toLocaleString()} اپیک` : '—'}
+                      {jiraCountLoading ? (
+                        <span style={{ color: '#FBBF24', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> ⏳ در حال دریافت...</span>
+                      ) : jiraCountData?.jiraEpicsCount !== undefined ? `${jiraCountData.jiraEpicsCount.toLocaleString()} اپیک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
-                      {dbStats?.totalProjects !== undefined ? `${(dbStats.totalProjects || 0).toLocaleString()} اپیک` : '—'}
+                      {dbStatsLoading ? '⏳...' : dbStats?.totalProjects !== undefined ? `${(dbStats.totalProjects || 0).toLocaleString()} اپیک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {jiraCountData?.jiraEpicsCount !== undefined && dbStats?.totalProjects !== undefined ? (
+                      {jiraCountLoading || dbStatsLoading ? (
+                        <span style={{ color: '#94A3B8', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> 🔄 در حال تحلیل...</span>
+                      ) : jiraCountData?.jiraEpicsCount !== undefined && dbStats?.totalProjects !== undefined ? (
                         jiraCountData.jiraEpicsCount === dbStats.totalProjects ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
