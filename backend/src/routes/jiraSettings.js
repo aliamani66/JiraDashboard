@@ -1025,6 +1025,12 @@ router.get('/mismatch-details', async (req, res) => {
       }
     }
 
+    const now = new Date();
+    const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
+    const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
+    const dateClause = `created >= "${startDateStr}"`;
+    const fullClause = projectFilter ? `${projectFilter.replace(/^AND\s+/i, '')} AND ${dateClause}` : dateClause;
+
     let items = [];
 
     if (category === 'epics') {
@@ -1100,11 +1106,11 @@ router.get('/mismatch-details', async (req, res) => {
         });
       }
     } else if (category === 'unlinkedTasks') {
-      const dbUnlinked = db.prepare("SELECT id, project_id, title, status FROM tasks WHERE parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects) ORDER BY id ASC").all();
+      const dbUnlinked = db.prepare("SELECT id, project_id, title, status FROM tasks WHERE (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects)) AND (is_subtask IS NULL OR is_subtask = 0) ORDER BY id ASC").all();
       const dbUnlinkedMap = new Map();
       for (const t of dbUnlinked) dbUnlinkedMap.set(t.id.toUpperCase(), t);
 
-      const jql = `issuetype != Epic ${projectFilter} AND "Epic Link" is EMPTY AND parent is EMPTY ORDER BY created ASC`;
+      const jql = `${fullClause} AND issuetype != Epic AND ("Epic Link" is EMPTY OR parent is EMPTY) ORDER BY created ASC`;
       let jiraUnlinked = [];
       try {
         const jiraRes = await jiraService.jiraSearch(jql, ['summary', 'status', 'project'], { maxResults: 2000, timeout: 15000 });
@@ -1130,7 +1136,7 @@ router.get('/mismatch-details', async (req, res) => {
 
         if (inDb && !inJira) {
           mismatchType = 'DB_ONLY';
-          reason = `⚠️ تسک بدون اپیک «${key}» در دیتابیس لوکال هست، اما در سرور جیرا نیست.`;
+          reason = `⚠️ تسک بدون اپیک «${key}» در دیتابیس لوکال هست، اما در سرور جیرا نیامد.`;
         } else if (!inDb && inJira) {
           mismatchType = 'JIRA_ONLY';
           reason = `🌐 تسک بدون اپیک «${key}» در سرور جیرا هست، ولی در دیتابیس سینک نشده است.`;
@@ -1147,15 +1153,60 @@ router.get('/mismatch-details', async (req, res) => {
           inJira: !!inJira
         });
       }
+    } else if (category === 'withEpicTasks') {
+      const dbWithEpic = db.prepare("SELECT id, project_id, title, status FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND parent_task_id IN (SELECT id FROM projects) AND (is_subtask IS NULL OR is_subtask = 0) ORDER BY id ASC").all();
+      const dbWithEpicMap = new Map();
+      for (const t of dbWithEpic) dbWithEpicMap.set(t.id.toUpperCase(), t);
+
+      const jql = `${fullClause} AND issuetype != Epic AND ("Epic Link" is NOT EMPTY OR parent is NOT EMPTY) ORDER BY created ASC`;
+      let jiraWithEpic = [];
+      try {
+        const jiraRes = await jiraService.jiraSearch(jql, ['summary', 'status', 'project'], { maxResults: 2000, timeout: 15000 });
+        if (jiraRes && jiraRes.issues) jiraWithEpic = jiraRes.issues;
+      } catch (err) {}
+
+      const jiraWithEpicMap = new Map();
+      for (const jw of jiraWithEpic) {
+        jiraWithEpicMap.set(jw.key.toUpperCase(), {
+          id: jw.key,
+          title: jw.fields?.summary || jw.key,
+          status: jw.fields?.status?.name || 'In Progress'
+        });
+      }
+
+      const allKeys = new Set([...dbWithEpicMap.keys(), ...jiraWithEpicMap.keys()]);
+      for (const key of allKeys) {
+        const inDb = dbWithEpicMap.get(key);
+        const inJira = jiraWithEpicMap.get(key);
+
+        let mismatchType = 'MATCHED';
+        let reason = '✅ تطابق کامل';
+
+        if (inDb && !inJira) {
+          mismatchType = 'DB_ONLY';
+          reason = `⚠️ تسک دارای اپیک «${key}» در دیتابیس موجود است، اما در سرور جیرا نیست.`;
+        } else if (!inDb && inJira) {
+          mismatchType = 'JIRA_ONLY';
+          reason = `🌐 تسک دارای اپیک «${key}» در سرور جیرا موجود است، ولی هنوز در دیتابیس سینک نشده است.`;
+        }
+
+        items.push({
+          id: key,
+          title: inJira?.title || inDb?.title || `تسک ${key}`,
+          dbStatus: inDb ? (inDb.status || 'موجود') : '🔴 ناموجود در دیتابیس',
+          jiraStatus: inJira ? (inJira.status || 'موجود') : '🔴 ناموجود در جیرا',
+          mismatchType,
+          reason,
+          inDb: !!inDb,
+          inJira: !!inJira
+        });
+      }
     } else {
-      const dbTasks = db.prepare("SELECT id, project_id, title, status FROM tasks ORDER BY id ASC").all();
+      const dbTasks = db.prepare("SELECT id, project_id, title, status FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0) ORDER BY id ASC").all();
       const dbTaskMap = new Map();
       for (const t of dbTasks) dbTaskMap.set(t.id.toUpperCase(), t);
 
-      const projCleanFilter = projectFilter ? projectFilter.replace(/^AND\s+/i, '') : '';
-      const jql = projCleanFilter
-        ? `${projCleanFilter} AND issuetype != Epic ORDER BY created ASC`
-        : `issuetype != Epic ORDER BY created ASC`;
+      const jql = `${fullClause} AND issuetype != Epic ORDER BY created ASC`;
 
       let jiraTasks = [];
       try {

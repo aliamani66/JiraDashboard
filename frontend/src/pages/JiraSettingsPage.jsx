@@ -1804,9 +1804,9 @@ const JiraSettingsPage = () => {
                         ) : (
                           <button
                             type="button"
-                            onClick={() => openMismatchDiagnosticModal('totalTasks')}
+                            onClick={() => openMismatchDiagnosticModal('withEpicTasks')}
                             style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35))', border: '1px solid rgba(245, 158, 11, 0.6)', color: '#FBBF24', padding: '0.2rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                            title="برای مشاهده گرید تحلیل اختلافات کلیک فرمایید"
+                            title="برای مشاهده گرید تحلیل اختلافات تسک‌های دارای اپیک کلیک فرمایید"
                           >
                             <Search size={13} color="#FBBF24" />
                             <span>⚠️ اختلاف {Math.abs(jiraCountData.withEpicCount - Math.max(0, (dbStats.totalTasks || 0) - (dbStats.unlinkedTasksCount || 0)))}</span>
