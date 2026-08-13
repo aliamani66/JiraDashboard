@@ -227,26 +227,40 @@ router.get('/stats', (req, res) => {
   }
 });
 
-// Project detail with tasks
-router.get('/projects/:id', (req, res) => {
+// Project detail with all linked tasks (and auto-fetch from Jira if missing)
+router.get('/projects/:id', async (req, res) => {
   try {
     const db = getDb();
-    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+    const epicId = req.params.id;
+    let project = db.prepare('SELECT * FROM projects WHERE UPPER(id) = UPPER(?)').get(epicId);
     
     if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
+      return res.status(404).json({ error: 'Project / Epic not found' });
     }
 
-    let tasks = db.prepare(`SELECT * FROM tasks WHERE project_id = ? OR id LIKE (? || '-%') ORDER BY sort_order ASC, id ASC`).all(req.params.id, req.params.id);
+    const taskQuery = `
+      SELECT * FROM tasks 
+      WHERE UPPER(parent_task_id) = UPPER(?) 
+         OR UPPER(epic_id) = UPPER(?) 
+         OR UPPER(project_id) = UPPER(?) 
+         OR id LIKE (? || '-%') 
+      ORDER BY sort_order ASC, id ASC
+    `;
+
+    let tasks = db.prepare(taskQuery).all(epicId, epicId, epicId, epicId);
     
-    if (tasks.length === 0) {
+    // If no tasks in DB or refresh/sync requested, fetch directly from Jira and persist to DB
+    if (tasks.length === 0 || req.query.sync === 'true' || req.query.refresh === 'true') {
       try {
         const cacheService = require('../services/cacheService');
-        if (cacheService.autoLinkTasksToEpics) {
-          cacheService.autoLinkTasksToEpics();
-          tasks = db.prepare(`SELECT * FROM tasks WHERE project_id = ? OR id LIKE (? || '-%') ORDER BY sort_order ASC, id ASC`).all(req.params.id, req.params.id);
+        if (cacheService.syncSingleEpicFromJira) {
+          await cacheService.syncSingleEpicFromJira(epicId);
+          tasks = db.prepare(taskQuery).all(epicId, epicId, epicId, epicId);
+          project = db.prepare('SELECT * FROM projects WHERE UPPER(id) = UPPER(?)').get(epicId) || project;
         }
-      } catch (_) {}
+      } catch (syncErr) {
+        console.error(`Auto-fetch tasks for epic ${epicId} failed:`, syncErr.message);
+      }
     }
 
     project.tasks = tasks;
@@ -289,14 +303,34 @@ router.get('/projects/:id', (req, res) => {
 
     res.json(project);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch project' });
+    res.status(500).json({ error: 'Failed to fetch project: ' + err.message });
+  }
+});
+
+// POST /api/projects/:id/sync - Explicitly sync and save all issues of this Epic from Jira
+router.post('/projects/:id/sync', async (req, res) => {
+  try {
+    const epicId = req.params.id;
+    const cacheService = require('../services/cacheService');
+    const result = await cacheService.syncSingleEpicFromJira(epicId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در همگام‌سازی اپیک: ' + err.message });
   }
 });
 
 router.get('/projects/:id/gantt', (req, res) => {
   try {
     const db = getDb();
-    const tasks = db.prepare('SELECT * FROM tasks WHERE project_id = ? ORDER BY sort_order ASC, id ASC').all(req.params.id);
+    const epicId = req.params.id;
+    const tasks = db.prepare(`
+      SELECT * FROM tasks 
+      WHERE UPPER(parent_task_id) = UPPER(?) 
+         OR UPPER(epic_id) = UPPER(?) 
+         OR UPPER(project_id) = UPPER(?) 
+         OR id LIKE (? || '-%') 
+      ORDER BY sort_order ASC, id ASC
+    `).all(epicId, epicId, epicId, epicId);
     
     const formatted = tasks.map(t => {
       const est = t.estimate_hours || 0;

@@ -1143,6 +1143,104 @@ function updateProjectStats() {
   }
 }
 
+async function syncSingleEpicFromJira(epicKey) {
+  if (!epicKey) return { success: false, message: 'شناسه اپیک الزامی است' };
+  const cleanEpicKey = epicKey.trim().toUpperCase();
+  const db = getDb();
+  const syncTime = new Date().toISOString();
+
+  try {
+    const tasks = await jiraService.fetchTasksForEpic(cleanEpicKey);
+    if (!tasks || tasks.length === 0) {
+      return { success: true, count: 0, message: `هیچ تسکی در جیرا برای اپیک ${cleanEpicKey} یافت نشد.` };
+    }
+
+    const insertTask = db.prepare(`
+      INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, epic_id, last_synced)
+      VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @epic_id, @last_synced)
+      ON CONFLICT(id) DO UPDATE SET
+        title=excluded.title,
+        description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE tasks.description END,
+        status=excluded.status,
+        assignee=excluded.assignee,
+        estimate_hours=excluded.estimate_hours,
+        spent_hours=excluded.spent_hours,
+        start_date=COALESCE(excluded.start_date, tasks.start_date),
+        due_date=COALESCE(excluded.due_date, tasks.due_date),
+        is_waiting=excluded.is_waiting,
+        waiting_for_team=excluded.waiting_for_team,
+        waiting_reason=excluded.waiting_reason,
+        sprint_name=excluded.sprint_name,
+        sprint_start_date=excluded.sprint_start_date,
+        sprint_end_date=excluded.sprint_end_date,
+        priority=excluded.priority,
+        labels=excluded.labels,
+        component=excluded.component,
+        sort_order=excluded.sort_order,
+        is_subtask=excluded.is_subtask,
+        parent_task_id=COALESCE(excluded.parent_task_id, tasks.parent_task_id),
+        epic_id=COALESCE(excluded.epic_id, tasks.epic_id),
+        last_synced=excluded.last_synced
+    `);
+
+    const insertRelation = db.prepare(`
+      INSERT INTO task_relations (task_id, linked_task_id, relation_type, relationship, title, status, assignee, start_date, due_date, created_at)
+      VALUES (@task_id, @linked_task_id, @relation_type, @relationship, @title, @status, @assignee, @start_date, @due_date, @created_at)
+    `);
+
+    db.transaction(() => {
+      for (const task of tasks) {
+        task.last_synced = syncTime;
+        task.parent_task_id = cleanEpicKey;
+        task.epic_id = cleanEpicKey;
+        if (!task.project_id) {
+          task.project_id = cleanEpicKey.split('-')[0] || cleanEpicKey;
+        }
+        insertTask.run(task);
+
+        if (task.linked_tasks) {
+          let links = [];
+          try { links = typeof task.linked_tasks === 'string' ? JSON.parse(task.linked_tasks) : task.linked_tasks; } catch (_) {}
+          if (Array.isArray(links)) {
+            try { db.prepare('DELETE FROM task_relations WHERE task_id = ?').run(task.id); } catch (_) {}
+            for (const link of links) {
+              if (link && link.key) {
+                try {
+                  insertRelation.run({
+                    task_id: task.id,
+                    linked_task_id: link.key.toUpperCase(),
+                    relation_type: link.linkType || 'Relates',
+                    relationship: link.relationship || 'relates to',
+                    title: link.title || link.key,
+                    status: link.status || null,
+                    assignee: link.assignee || null,
+                    start_date: link.start_date || null,
+                    due_date: link.due_date || null,
+                    created_at: syncTime
+                  });
+                } catch (_) {}
+              }
+            }
+          }
+        }
+      }
+    })();
+
+    autoLinkTasksToEpics();
+    updateProjectStats();
+    saveDb();
+
+    return {
+      success: true,
+      count: tasks.length,
+      message: `${tasks.length} ایشو برای اپیک ${cleanEpicKey} از جیرا دریافت و در دیتابیس ذخیره گردید.`
+    };
+  } catch (err) {
+    console.error(`Error syncing epic ${cleanEpicKey} from Jira:`, err.message);
+    return { success: false, message: err.message };
+  }
+}
+
 function initCron() {
   if (jiraService.isConfigured) {
     cron.schedule(`*/${SYNC_INTERVAL} * * * *`, syncFromJira);
@@ -1155,6 +1253,8 @@ module.exports = {
   syncMonthlyLastYearFromJira,
   syncDateRangeFromJira,
   syncSingleMonthFromJira,
+  syncSingleEpicFromJira,
+  updateProjectStats,
   getLastSync,
   autoLinkTasksToEpics,
   initCron

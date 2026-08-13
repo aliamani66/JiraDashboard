@@ -474,7 +474,16 @@ async function fetchTasksForEpic(epicKey) {
   const mapping = cfg.mapping || jiraMapping;
   const customFields = mapping.customFields || {};
   try {
-    const jql = `("Epic Link" = ${epicKey} OR parent = ${epicKey}) ORDER BY rank ASC`;
+    const cleanEpicKey = epicKey.trim().toUpperCase();
+    const customEpicField = customFields.epicLinkField || 'customfield_10006';
+    
+    // Robust JQL to capture ALL issues linked to this Epic in Jira (Epic Link, Parent, customfield, or Linked Issues)
+    const jqlCandidates = [
+      `("Epic Link" = "${cleanEpicKey}" OR parent = "${cleanEpicKey}" OR "${customEpicField}" = "${cleanEpicKey}" OR issue in linkedIssues("${cleanEpicKey}")) ORDER BY created ASC`,
+      `("Epic Link" = "${cleanEpicKey}" OR parent = "${cleanEpicKey}") ORDER BY created ASC`,
+      `parent = "${cleanEpicKey}" ORDER BY created ASC`
+    ];
+
     const fields = [
       'summary', 
       'description',
@@ -501,8 +510,16 @@ async function fetchTasksForEpic(epicKey) {
       customFields.waitingReasonField
     ];
 
-    const data = await jiraSearch(jql, fields);
-    const allIssues = data.issues || [];
+    let allIssues = [];
+    for (const jql of jqlCandidates) {
+      try {
+        const data = await jiraSearch(jql, fields, { maxResults: 1000, timeout: 10000 });
+        if (data && Array.isArray(data.issues) && data.issues.length > 0) {
+          allIssues = data.issues;
+          break;
+        }
+      } catch (_) {}
+    }
 
     return allIssues.map((issue, index) => {
       const rawStatus = issue.fields?.status?.name || 'To Do';
