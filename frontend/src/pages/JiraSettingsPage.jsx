@@ -610,7 +610,7 @@ const JiraSettingsPage = () => {
         const jalaliEndStr = `${jEnd.jy}/${String(jEnd.jm).padStart(2,'0')}/${String(jEnd.jd).padStart(2,'0')} 23:59`;
 
         monthRanges.push({
-          monthIndex: 60 - i,
+          monthIndex: (parseInt(cfg.rebuildMonths, 10) || 1) - i,
           year: y,
           month: m + 1,
           jalaliName: monthInfo.jalali,
@@ -1007,7 +1007,7 @@ const JiraSettingsPage = () => {
             disabled={monthlySyncing}
           >
             <RefreshCw size={16} className={monthlySyncing ? 'spin' : ''} />
-            {monthlySyncing ? 'در حال بازسازی...' : '🔥 بازسازی کامل دیتابیس و سایت'}
+            {monthlySyncing ? 'در حال بازسازی...' : '🔥 بازسازی کامل دیتابیس و سایت ({cfg.rebuildMonths || 1} ماه)'}
           </button>
           <button
             className="jsp-run-diag-btn"
@@ -1592,6 +1592,139 @@ const JiraSettingsPage = () => {
               <motion.div key="database" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
 <Section icon={Server} title="تنظیمات سرور و دیتابیس (Server & Database Management)" color="#10B981" defaultOpen={true}>
         <p className="jsp-section-desc">پایش زنده وضعیت دیتابیس SQLite، تعداد کل تسک‌های ثبت‌شده، حجم فایل و به‌روزرسانی سیستم.</p>
+
+        {/* 🗓️ CONFIGURABLE TIMEFRAME FOR FULL REBUILD & LIVE JIRA COUNT */}
+        <div style={{
+          background: 'rgba(15, 23, 42, 0.65)',
+          border: '1px solid rgba(16, 185, 129, 0.35)',
+          borderRadius: '14px',
+          padding: '1.1rem 1.25rem',
+          marginBottom: '1.25rem',
+          boxShadow: '0 8px 25px rgba(0,0,0,0.3)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Calendar size={18} color="#10B981" />
+              <span style={{ fontWeight: 800, color: '#E2E8F0', fontSize: '0.95rem' }}>
+                🗓️ بازه زمانی بازسازی دیتابیس و آمار زنده جیرا (Timeframe Scope)
+              </span>
+            </div>
+            <span style={{ fontSize: '0.82rem', color: '#6EE7B7', background: 'rgba(16, 185, 129, 0.18)', padding: '0.25rem 0.7rem', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.35)', fontWeight: 700 }}>
+              بازه فعلی: {cfg.rebuildMonths || 1} ماه گذشته
+            </span>
+          </div>
+
+          <p style={{ fontSize: '0.82rem', color: '#94A3B8', marginBottom: '0.85rem', lineHeight: '1.55' }}>
+            تعیین کنید بازسازی کامل دیتابیس و کوئری‌های مقایسه زنده جیرا تا چند ماه گذشته را پوشش دهند. برای سرعت بالا، بازه ۱ ماه پیشنهاد می‌شود.
+          </p>
+
+          {/* Quick Selection Pills */}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.85rem' }}>
+            <button
+              type="button"
+              onClick={() => setCfg(prev => ({ ...prev, rebuildMonths: 1 }))}
+              style={{
+                padding: '0.45rem 0.9rem',
+                borderRadius: '10px',
+                border: (cfg.rebuildMonths === 1 || !cfg.rebuildMonths) ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: (cfg.rebuildMonths === 1 || !cfg.rebuildMonths) ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: (cfg.rebuildMonths === 1 || !cfg.rebuildMonths) ? '#6EE7B7' : '#94A3B8',
+                fontWeight: (cfg.rebuildMonths === 1 || !cfg.rebuildMonths) ? 800 : 500,
+                cursor: 'pointer',
+                fontSize: '0.84rem',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              🚀 ۱ ماه گذشته (سریع‌ترین - پیش‌فرض)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCfg(prev => ({ ...prev, rebuildMonths: 3 }))}
+              style={{
+                padding: '0.45rem 0.9rem',
+                borderRadius: '10px',
+                border: cfg.rebuildMonths === 3 ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: cfg.rebuildMonths === 3 ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: cfg.rebuildMonths === 3 ? '#38BDF8' : '#94A3B8',
+                fontWeight: cfg.rebuildMonths === 3 ? 800 : 500,
+                cursor: 'pointer',
+                fontSize: '0.84rem',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              📅 ۳ ماه گذشته
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCfg(prev => ({ ...prev, rebuildMonths: 6 }))}
+              style={{
+                padding: '0.45rem 0.9rem',
+                borderRadius: '10px',
+                border: cfg.rebuildMonths === 6 ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: cfg.rebuildMonths === 6 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: cfg.rebuildMonths === 6 ? '#FCD34D' : '#94A3B8',
+                fontWeight: cfg.rebuildMonths === 6 ? 800 : 500,
+                cursor: 'pointer',
+                fontSize: '0.84rem',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              🗓️ ۶ ماه گذشته
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCfg(prev => ({ ...prev, rebuildMonths: 12 }))}
+              style={{
+                padding: '0.45rem 0.9rem',
+                borderRadius: '10px',
+                border: cfg.rebuildMonths === 12 ? '1px solid #A78BFA' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: cfg.rebuildMonths === 12 ? 'rgba(167, 139, 250, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: cfg.rebuildMonths === 12 ? '#C4B5FD' : '#94A3B8',
+                fontWeight: cfg.rebuildMonths === 12 ? 800 : 500,
+                cursor: 'pointer',
+                fontSize: '0.84rem',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              📅 ۱ سال گذشته (۱۲ ماه)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCfg(prev => ({ ...prev, rebuildMonths: 60 }))}
+              style={{
+                padding: '0.45rem 0.9rem',
+                borderRadius: '10px',
+                border: cfg.rebuildMonths === 60 ? '1px solid #EC4899' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: cfg.rebuildMonths === 60 ? 'rgba(236, 72, 153, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                color: cfg.rebuildMonths === 60 ? '#F472B6' : '#94A3B8',
+                fontWeight: cfg.rebuildMonths === 60 ? 800 : 500,
+                cursor: 'pointer',
+                fontSize: '0.84rem',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              🔥 ۵ سال گذشته (۶۰ ماه)
+            </button>
+          </div>
+
+          {/* Manual Months Input */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <span style={{ fontSize: '0.82rem', color: '#CBD5E1' }}>ورود دستی تعداد ماه:</span>
+            <Input
+              type="number"
+              value={cfg.rebuildMonths || 1}
+              onChange={v => setCfg(prev => ({ ...prev, rebuildMonths: Math.max(1, parseInt(v, 10) || 1) }))}
+              placeholder="1"
+              style={{ width: '90px' }}
+              mono
+            />
+            <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>ماه (حدوداً {((cfg.rebuildMonths || 1) * 30)} روز)</span>
+          </div>
+        </div>
         
         {/* 📊 DATABASE STATS TILE CARD */}
         <div style={{

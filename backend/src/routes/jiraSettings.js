@@ -269,10 +269,11 @@ router.get('/jira-count', async (req, res) => {
       else if (projects.length === 1) projectClause = `project = ${projects[0]}`;
     }
 
-    // Calculate exact 5-year date boundary (60 months) to match Full Site Rebuild scope
-    const fiveYearsAgo = new Date();
-    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-    const startDateStr = fiveYearsAgo.toISOString().split('T')[0];
+    // Calculate configured rebuild date boundary (e.g. 1 month, 3 months, 60 months)
+    const rebuildMonths = parseInt(cfg.rebuildMonths, 10) || 1;
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - rebuildMonths);
+    const startDateStr = startDate.toISOString().split('T')[0];
     const dateClause = `created >= "${startDateStr}"`;
     const fullClause = projectClause ? `${projectClause} AND ${dateClause}` : dateClause;
 
