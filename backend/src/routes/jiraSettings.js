@@ -932,24 +932,49 @@ router.get('/db-stats', (req, res) => {
       ? ` AND (created_at >= '${startDateStr}' OR start_date >= '${startDateStr}' OR due_date >= '${startDateStr}')`
       : '';
 
-    let totalTasks = 0;
     let totalProjects = 0;
-    let doneTasks = 0;
-    let waitingTasks = 0;
-    let inProgressTasks = 0;
     let dbSizeMb = '0.00';
     let lastSynced = null;
     let componentsList = [];
 
+    const isValidEpicKey = (k) => k && /^[A-Z][A-Z0-9_]*-\d+$/i.test(k);
+
+    let allTasks = [];
+    try {
+      allTasks = db.prepare(`SELECT id, project_id, parent_task_id, is_subtask, status, is_waiting FROM tasks`).all() || [];
+    } catch (_) {}
+
+    const pKeys = (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*')
+      ? projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean) : [];
+
+    if (pKeys.length > 0) {
+      allTasks = allTasks.filter(t => pKeys.some(k => (t.id || '').toUpperCase().startsWith(`${k}-`)));
+    }
+
+    const totalTasks = allTasks.length;
+    let withEpicTasksCount = 0;
+    let unlinkedTasksCount = 0;
     let subtasksCount = 0;
-    try { totalTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE 1=1${taskProjWhere}`).get()?.count || 0; } catch (_) {}
-    try { subtasksCount = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE is_subtask = 1${taskProjWhere}`).get()?.count || 0; } catch (_) {}
-    try { totalProjects = db.prepare(`SELECT COUNT(*) as count FROM projects WHERE ${epicWhere}`).get()?.count || 0; } catch (_) {}
-    try { doneTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('done', 'completed')${taskProjWhere}`).get()?.count || 0; } catch (_) {}
-    try { waitingTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE (is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked'))${taskProjWhere}`).get()?.count || 0; } catch (_) {}
-    try { inProgressTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('in progress', 'in_progress')${taskProjWhere}`).get()?.count || 0; } catch (_) {}
+    let doneTasks = 0;
+    let waitingTasks = 0;
+    let inProgressTasks = 0;
+
+    for (const t of allTasks) {
+      if (t.is_subtask === 1) subtasksCount++;
+      const st = (t.status || '').toLowerCase();
+      if (['done', 'completed'].includes(st)) doneTasks++;
+      else if (t.is_waiting === 1 || ['waiting', 'onholding', 'blocked'].includes(st)) waitingTasks++;
+      else if (['in progress', 'in_progress'].includes(st)) inProgressTasks++;
+
+      if (isValidEpicKey(t.parent_task_id)) {
+        withEpicTasksCount++;
+      } else {
+        unlinkedTasksCount++;
+      }
+    }
 
     const todoTasks = Math.max(0, totalTasks - doneTasks - waitingTasks - inProgressTasks);
+    try { totalProjects = db.prepare(`SELECT COUNT(*) as count FROM projects WHERE ${epicWhere}`).get()?.count || 0; } catch (_) {}
 
     try {
       const volumeDir = '/app/data_volume';
@@ -1051,26 +1076,7 @@ router.get('/db-stats', (req, res) => {
       }
     } catch (_) {}
 
-    // Unlinked tasks: tasks/subtasks that do NOT have an Epic link
-    let unlinkedTasksCount = 0;
-    let unlinkedTasksList = [];
-    try {
-      unlinkedTasksCount = db.prepare(`
-        SELECT COUNT(*) as c
-        FROM tasks
-        WHERE (parent_task_id IS NULL OR parent_task_id = '' OR INSTR(parent_task_id, '-') = 0)${taskProjWhere}
-      `).get()?.c || 0;
-
-      if (unlinkedTasksCount > 0) {
-        unlinkedTasksList = db.prepare(`
-          SELECT id, title, project_id, parent_task_id as epic_id, status, assignee
-          FROM tasks
-          WHERE (parent_task_id IS NULL OR parent_task_id = '' OR INSTR(parent_task_id, '-') = 0)
-          ORDER BY id DESC
-          LIMIT 100
-        `).all() || [];
-      }
-    } catch (_) {}
+    const unlinkedTasksList = allTasks.filter(t => !isValidEpicKey(t.parent_task_id)).slice(0, 100);
 
     // Epics without tasks: epics in projects table that have 0 tasks attached
     let epicsWithoutTasksCount = 0;
@@ -1090,15 +1096,6 @@ router.get('/db-stats', (req, res) => {
           LIMIT 50
         `).all() || [];
       }
-    } catch (_) {}
-
-    let withEpicTasksCount = 0;
-    try {
-      withEpicTasksCount = db.prepare(`
-        SELECT COUNT(*) as c
-        FROM tasks
-        WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND INSTR(parent_task_id, '-') > 0${taskProjWhere}
-      `).get()?.c || 0;
     } catch (_) {}
 
     res.json({
