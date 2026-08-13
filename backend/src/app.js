@@ -11,6 +11,7 @@ const projectRoutes = require('./routes/projects');
 const syncRoutes = require('./routes/sync');
 const userRoutes = require('./routes/users');
 const jiraSettingsRoutes = require('./routes/jiraSettings');
+const databaseManagerRoutes = require('./routes/databaseManager');
 
 const path = require('path');
 const fs = require('fs');
@@ -32,6 +33,7 @@ app.use('/api', projectRoutes);
 app.use('/api/sync', syncRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/jira', jiraSettingsRoutes);
+app.use('/api/db', databaseManagerRoutes);
 
 // Static frontend serving if built
 const frontendDistPath = path.join(__dirname, '../../frontend/dist');

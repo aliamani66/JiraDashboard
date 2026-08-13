@@ -11,6 +11,7 @@ import SprintsPage from './pages/SprintsPage';
 import UserManagementPage from './pages/UserManagementPage';
 import JiraSettingsPage from './pages/JiraSettingsPage';
 import ManagerReportPage from './pages/ManagerReportPage';
+import DatabaseManagerPage from './pages/DatabaseManagerPage';
 
 import ErrorBoundary from './components/common/ErrorBoundary';
 
@@ -96,6 +97,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <JiraSettingsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/database-manager" 
+              element={
+                <ProtectedRoute>
+                  <DatabaseManagerPage />
                 </ProtectedRoute>
               } 
             />

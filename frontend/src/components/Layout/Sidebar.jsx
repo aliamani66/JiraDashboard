@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Clock, ChevronRight, TrendingUp, Users, Settings, Flame, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, LogOut, Clock, ChevronRight, TrendingUp, Users, Settings, Flame, BarChart3, Database } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
 
@@ -100,6 +100,17 @@ const Sidebar = ({ isOpen, toggle }) => {
             >
               <Settings size={20} className="nav-icon" />
               <span className="nav-text">تنظیمات و پایش جیرا</span>
+            </NavLink>
+          )}
+
+          {hasPerm('jira_settings') && (
+            <NavLink 
+              to="/database-manager" 
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              title="کنسول و مدیریت دیتابیس سیستم"
+            >
+              <Database size={20} className="nav-icon" />
+              <span className="nav-text">دیتابیس سیستم</span>
             </NavLink>
           )}
         </nav>
