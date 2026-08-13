@@ -952,9 +952,9 @@ router.get('/db-stats', (req, res) => {
       unlinkedTasksCount = db.prepare(`
         SELECT COUNT(*) as c
         FROM tasks
-        WHERE (project_id IS NULL OR project_id = '' OR project_id NOT IN (SELECT id FROM projects WHERE id LIKE '%-%'))
-          AND (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects WHERE id LIKE '%-%'))
-      `).get().c || 0;
+        WHERE (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects WHERE ${epicWhere}))
+          AND (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere}${dbDateClause}
+      `).get()?.c || 0;
 
       if (unlinkedTasksCount > 0) {
         unlinkedTasksList = db.prepare(`
@@ -975,14 +975,14 @@ router.get('/db-stats', (req, res) => {
       epicsWithoutTasksCount = db.prepare(`
         SELECT COUNT(*) as c
         FROM projects
-        WHERE id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != '')
-      `).get().c || 0;
+        WHERE ${epicWhere} AND id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''${dbDateClause})
+      `).get()?.c || 0;
 
       if (epicsWithoutTasksCount > 0) {
         epicsWithoutTasksList = db.prepare(`
           SELECT id, title, status
           FROM projects
-          WHERE id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != '')
+          WHERE ${epicWhere} AND id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''${dbDateClause})
           LIMIT 50
         `).all() || [];
       }
