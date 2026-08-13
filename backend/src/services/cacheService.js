@@ -829,7 +829,20 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 function autoLinkTasksToEpics() {
   try {
     const db = getDb();
-    // 1. Propagate epic project_id from parent task to sub-tasks
+    const now = new Date().toISOString();
+
+    // 1. Auto-insert any missing parent_task_id Epics into projects table so tasks are 100% linked
+    db.prepare(`
+      INSERT INTO projects (id, title, status, last_synced)
+      SELECT DISTINCT parent_task_id, 'اپیک ' || parent_task_id, 'In Progress', ?
+      FROM tasks
+      WHERE parent_task_id IS NOT NULL 
+        AND parent_task_id != '' 
+        AND parent_task_id LIKE '%-%'
+        AND parent_task_id NOT IN (SELECT id FROM projects)
+    `).run(now);
+
+    // 2. Propagate epic project_id from parent task to sub-tasks
     db.prepare(`
       UPDATE tasks
       SET project_id = (SELECT t2.project_id FROM tasks t2 WHERE t2.id = tasks.parent_task_id)
@@ -839,7 +852,7 @@ function autoLinkTasksToEpics() {
         AND (SELECT t2.project_id FROM tasks t2 WHERE t2.id = tasks.parent_task_id) IN (SELECT id FROM projects)
     `).run();
 
-    // 2. Direct parent task as epic if parent_task_id is in projects table
+    // 3. Direct parent task as epic if parent_task_id is in projects table
     db.prepare(`
       UPDATE tasks
       SET project_id = parent_task_id
@@ -848,14 +861,14 @@ function autoLinkTasksToEpics() {
         AND parent_task_id IN (SELECT id FROM projects)
     `).run();
 
-    // 3. Ensure any task whose project_id is missing from projects table gets linked to standing project container (e.g. 'OPS' or 'ORD')
+    // 4. Ensure any task whose project_id is missing from projects table gets linked to standing project container (e.g. 'OPS' or 'ORD')
     const unlinkedRows = db.prepare(`
       SELECT DISTINCT project_id, id FROM tasks
-      WHERE project_id NOT IN (SELECT id FROM projects) OR project_id IS NULL OR project_id = ''
+      WHERE (project_id NOT IN (SELECT id FROM projects) OR project_id IS NULL OR project_id = '')
+        AND (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects))
     `).all();
 
     if (unlinkedRows && unlinkedRows.length > 0) {
-      const now = new Date().toISOString();
       const insertProj = db.prepare(`
         INSERT INTO projects (id, title, status, last_synced)
         VALUES (?, ?, 'In Progress', ?)
@@ -866,7 +879,9 @@ function autoLinkTasksToEpics() {
           const fallbackId = (r.project_id || r.id || '').split('-')[0].toUpperCase();
           if (fallbackId) {
             insertProj.run(fallbackId, `پروژه ${fallbackId}`, now);
-            db.prepare('UPDATE tasks SET project_id = ? WHERE id = ?').run(fallbackId, r.id);
+            if (!r.project_id) {
+              db.prepare('UPDATE tasks SET project_id = ? WHERE id = ?').run(fallbackId, r.id);
+            }
           }
         }
       })();

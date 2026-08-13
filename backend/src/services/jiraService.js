@@ -565,6 +565,9 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     } else if (customFields.epicLinkField && issue.fields?.[customFields.epicLinkField]) {
       const val = issue.fields[customFields.epicLinkField];
       epicKey = String(typeof val === 'object' ? (val.key || val.value) : val).toUpperCase();
+    } else if (issue.fields?.customfield_10006) {
+      const v = issue.fields.customfield_10006;
+      epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
     } else if (issue.fields?.customfield_10014) {
       const v = issue.fields.customfield_10014;
       epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
@@ -572,10 +575,7 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
       const v = issue.fields.customfield_10008;
       epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
     } else if (issue.fields?.parent?.key) {
-      const pKey = String(issue.fields.parent.key).toUpperCase();
-      if (knownEpicKeysSet && knownEpicKeysSet.has(pKey)) {
-        epicKey = pKey;
-      }
+      epicKey = String(issue.fields.parent.key).toUpperCase();
     }
 
     // 2. Scan ALL fields for any known Epic key
@@ -587,13 +587,8 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
         for (const match of matches) {
           const candidateKey = match[1] ? match[1].toUpperCase() : null;
           if (candidateKey && candidateKey !== (issue.key || '').toUpperCase()) {
-            if (knownEpicKeysSet && knownEpicKeysSet.size > 0 && knownEpicKeysSet.has(candidateKey)) {
-              epicKey = candidateKey;
-              break;
-            } else if (!knownEpicKeysSet || knownEpicKeysSet.size === 0) {
-              epicKey = candidateKey;
-              break;
-            }
+            epicKey = candidateKey;
+            break;
           }
         }
         if (epicKey) break;
