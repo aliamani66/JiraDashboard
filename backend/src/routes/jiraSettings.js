@@ -941,7 +941,7 @@ router.get('/db-stats', (req, res) => {
 
     let allTasks = [];
     try {
-      allTasks = db.prepare(`SELECT id, project_id, parent_task_id, is_subtask, status, is_waiting, created_at, start_date FROM tasks`).all() || [];
+      allTasks = db.prepare(`SELECT id, project_id, parent_task_id, is_subtask, status, is_waiting FROM tasks`).all() || [];
     } catch (_) {}
 
     const pKeys = (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*')
@@ -949,13 +949,6 @@ router.get('/db-stats', (req, res) => {
 
     if (pKeys.length > 0) {
       allTasks = allTasks.filter(t => pKeys.some(k => (t.id || '').toUpperCase().startsWith(`${k}-`)));
-    }
-
-    if (rebuildMonths < 60) {
-      allTasks = allTasks.filter(t => {
-        const cDate = (t.created_at || t.start_date || '').substring(0, 10);
-        return !cDate || cDate >= startDateStr;
-      });
     }
 
     const totalTasks = allTasks.length;
