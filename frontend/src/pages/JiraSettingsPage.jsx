@@ -1863,30 +1863,6 @@ const JiraSettingsPage = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={handleEvaluateAndMatch}
-                  disabled={evaluatingMatch || jiraCountLoading || dbStatsLoading}
-                  style={{
-                    background: 'linear-gradient(135deg, #10B981, #059669)',
-                    border: 'none',
-                    color: '#FFFFFF',
-                    padding: '0.38rem 0.95rem',
-                    borderRadius: '9px',
-                    fontSize: '0.79rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                    boxShadow: '0 3px 10px rgba(16, 185, 129, 0.3)',
-                    transition: 'all 0.2s ease'
-                  }}
-                  title="مقایسه فوری مقادیر موجود در ستون جیرا و ستون دیتابیس بدون هیچ درخواست جدید شبکه"
-                >
-                  <CheckCircle2 size={14} />
-                  <span>⚖️ محاسبه و به‌روزرسانی وضعیت تطابق</span>
-                </button>
-                <button
-                  type="button"
                   onClick={() => fetchJiraCount(true)}
                   disabled={jiraCountLoading}
                   style={{
@@ -1967,16 +1943,12 @@ const JiraSettingsPage = () => {
                       {dbStatsLoading || monthlySyncing || syncing ? '⏳...' : dbStats?.withEpicTasksCount !== undefined ? `${(dbStats.withEpicTasksCount || 0).toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
-                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند محاسبه تطابق
-                        </span>
+                      {jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ color: '#94A3B8', fontSize: '0.74rem' }}>⏳ در حال محاسبه...</span>
+                      ) : (jiraCountData?.withEpicCount === dbStats?.withEpicTasksCount) ? (
+                        <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
                       ) : (
-                        (jiraCountData?.withEpicCount === dbStats?.withEpicTasksCount) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
-                        ) : (
-                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.withEpicCount || 0) - (dbStats?.withEpicTasksCount || 0))} مورد)</span>
-                        )
+                        <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.withEpicCount || 0) - (dbStats?.withEpicTasksCount || 0))} مورد)</span>
                       )}
                     </td>
                   </tr>
@@ -1995,16 +1967,12 @@ const JiraSettingsPage = () => {
                       {dbStatsLoading || monthlySyncing || syncing ? '⏳...' : dbStats?.unlinkedTasksCount !== undefined ? `${(dbStats.unlinkedTasksCount || 0).toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
-                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند محاسبه تطابق
-                        </span>
+                      {jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ color: '#94A3B8', fontSize: '0.74rem' }}>⏳ در حال محاسبه...</span>
+                      ) : (jiraCountData?.withoutEpicCount === dbStats?.unlinkedTasksCount) ? (
+                        <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
                       ) : (
-                        (jiraCountData?.withoutEpicCount === dbStats?.unlinkedTasksCount) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
-                        ) : (
-                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.withoutEpicCount || 0) - (dbStats?.unlinkedTasksCount || 0))} مورد)</span>
-                        )
+                        <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.withoutEpicCount || 0) - (dbStats?.unlinkedTasksCount || 0))} مورد)</span>
                       )}
                     </td>
                   </tr>
@@ -2023,16 +1991,12 @@ const JiraSettingsPage = () => {
                       {dbStatsLoading || monthlySyncing || syncing ? '⏳...' : dbStats?.subtasksCount !== undefined ? `${(dbStats.subtasksCount || 0).toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
-                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند محاسبه تطابق
-                        </span>
+                      {jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ color: '#94A3B8', fontSize: '0.74rem' }}>⏳ در حال محاسبه...</span>
+                      ) : (jiraCountData?.subtaskCount === dbStats?.subtasksCount) ? (
+                        <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
                       ) : (
-                        (jiraCountData?.subtaskCount === dbStats?.subtasksCount) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
-                        ) : (
-                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.subtaskCount || 0) - (dbStats?.subtasksCount || 0))} مورد)</span>
-                        )
+                        <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.subtaskCount || 0) - (dbStats?.subtasksCount || 0))} مورد)</span>
                       )}
                     </td>
                   </tr>
@@ -2051,16 +2015,12 @@ const JiraSettingsPage = () => {
                       {dbStatsLoading || monthlySyncing || syncing ? '⏳...' : dbStats?.totalTasks !== undefined ? `${dbStats.totalTasks.toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
-                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند محاسبه تطابق
-                        </span>
+                      {jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ color: '#94A3B8', fontSize: '0.74rem' }}>⏳ در حال محاسبه...</span>
+                      ) : (jiraCountData?.total === dbStats?.totalTasks) ? (
+                        <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (همگام کامل)</span>
                       ) : (
-                        (jiraCountData?.total === dbStats?.totalTasks) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (همگام کامل)</span>
-                        ) : (
-                          <span style={{ background: 'rgba(239, 68, 68, 0.25)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.total || 0) - (dbStats?.totalTasks || 0))} تسک)</span>
-                        )
+                        <span style={{ background: 'rgba(239, 68, 68, 0.25)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.total || 0) - (dbStats?.totalTasks || 0))} تسک)</span>
                       )}
                     </td>
                   </tr>
@@ -2091,16 +2051,12 @@ const JiraSettingsPage = () => {
                       {dbStatsLoading ? '⏳...' : dbStats?.totalProjects !== undefined ? `${(dbStats.totalProjects || 0).toLocaleString()} اپیک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center', verticalAlign: 'top' }}>
-                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
-                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند محاسبه تطابق
-                        </span>
+                      {jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ color: '#94A3B8', fontSize: '0.74rem' }}>⏳ در حال محاسبه...</span>
+                      ) : (jiraCountData?.jiraEpicsCount === dbStats?.totalProjects) ? (
+                        <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
                       ) : (
-                        (jiraCountData?.jiraEpicsCount === dbStats?.totalProjects) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
-                        ) : (
-                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.jiraEpicsCount || 0) - (dbStats?.totalProjects || 0))} اپیک)</span>
-                        )
+                        <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.jiraEpicsCount || 0) - (dbStats?.totalProjects || 0))} اپیک)</span>
                       )}
                     </td>
                   </tr>
@@ -2117,17 +2073,45 @@ const JiraSettingsPage = () => {
                       {dbStats?.epicsWithoutTasksCount !== undefined ? `${(dbStats.epicsWithoutTasksCount || 0).toLocaleString()} اپیک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
-                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
-                          ⚪ نیازمند محاسبه تطابق
-                        </span>
+                      {jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ color: '#94A3B8', fontSize: '0.74rem' }}>⏳ در حال محاسبه...</span>
+                      ) : (jiraCountData?.jiraEpicsWithoutTasksCount === dbStats?.epicsWithoutTasksCount) ? (
+                        <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
                       ) : (
-                        (jiraCountData?.jiraEpicsWithoutTasksCount === dbStats?.epicsWithoutTasksCount) ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ بدون اختلاف (تطابق کامل)</span>
-                        ) : (
-                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.jiraEpicsWithoutTasksCount || 0) - (dbStats?.epicsWithoutTasksCount || 0))} مورد)</span>
-                        )
+                        <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>⚠️ اختلاف دارد ({Math.abs((jiraCountData?.jiraEpicsWithoutTasksCount || 0) - (dbStats?.epicsWithoutTasksCount || 0))} مورد)</span>
                       )}
+                    </td>
+                  </tr>
+
+                  {/* Row 7: Sprints */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
+                      🏃 اسپرینت‌های استخراج‌شده
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
+                      {dbStats?.totalSprints !== undefined ? `${(dbStats.totalSprints || 0).toLocaleString()} اسپرینت` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
+                      {dbStats?.totalSprints !== undefined ? `${(dbStats.totalSprints || 0).toLocaleString()} اسپرینت` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ ثبتی در دیتابیس</span>
+                    </td>
+                  </tr>
+
+                  {/* Row 8: Components */}
+                  <tr>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
+                      🏷️ کامپوننت‌های شناسایی‌شده
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
+                      {dbStats?.totalComponents !== undefined ? `${(dbStats.totalComponents || 0).toLocaleString()} نوع` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
+                      {dbStats?.totalComponents !== undefined ? `${(dbStats.totalComponents || 0).toLocaleString()} نوع` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ ثبتی در دیتابیس</span>
                     </td>
                   </tr>
 
