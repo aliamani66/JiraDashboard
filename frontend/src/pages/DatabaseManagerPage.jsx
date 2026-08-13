@@ -330,7 +330,7 @@ const DatabaseManagerPage = () => {
                     <tr style={{ background: '#1E293B', color: '#94A3B8', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 3px 8px rgba(0, 0, 0, 0.5)' }}>
                       <th style={{ padding: '0.7rem 0.8rem', textAlign: 'center', width: '40px', background: '#1E293B' }}>#</th>
                       {tableData.columns.map(col => (
-                        <th key={col.name} style={{ padding: '0.7rem 0.8rem', background: '#1E293B', color: col.name === 'parent_task_id' ? '#6EE7B7' : (col.name === 'parent_key' ? '#60A5FA' : '#94A3B8'), fontWeight: 800 }}>
+                        <th key={col.name} style={{ padding: '0.7rem 0.8rem', background: '#1E293B', color: (col.name === 'epic_id' || col.name === 'parent_task_id') ? '#6EE7B7' : (col.name === 'parent_key' ? '#60A5FA' : '#94A3B8'), fontWeight: 800 }}>
                           {col.name} {col.pk ? '🔑' : ''}
                         </th>
                       ))}
@@ -339,7 +339,7 @@ const DatabaseManagerPage = () => {
                   <tbody>
                     {tableData.rows.map((row, idx) => {
                       const rowNum = (currentPage - 1) * limit + idx + 1;
-                      const hasEpic = isValidEpicKey(row.parent_task_id);
+                      const hasEpic = isValidEpicKey(row.epic_id || row.parent_task_id);
                       return (
                         <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.01)' }}>
                           <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', color: '#64748B', fontWeight: 600 }}>{rowNum}</td>
@@ -347,8 +347,8 @@ const DatabaseManagerPage = () => {
                             const val = row[col.name];
                             return (
                               <td key={col.name} style={{ padding: '0.55rem 0.8rem', color: '#E2E8F0', whiteSpace: 'nowrap', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {col.name === 'parent_task_id' ? (
-                                  hasEpic ? (
+                                {(col.name === 'epic_id' || col.name === 'parent_task_id') ? (
+                                  hasEpic && val ? (
                                     <span style={{ background: 'rgba(16, 185, 129, 0.18)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#6EE7B7', padding: '0.15rem 0.45rem', borderRadius: '5px', fontWeight: 700, fontSize: '0.74rem' }}>
                                       ⚡ {val}
                                     </span>

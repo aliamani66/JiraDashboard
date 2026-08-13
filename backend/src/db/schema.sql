@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     sort_order INTEGER DEFAULT 0,
     is_subtask INTEGER DEFAULT 0,
     parent_task_id TEXT,
+    epic_id TEXT,
     parent_key TEXT,
     created_at TEXT,
     last_synced TEXT,

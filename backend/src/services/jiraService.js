@@ -809,6 +809,7 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     sort_order: index,
     is_subtask: isSubtask,
     parent_task_id: parentTaskId,
+    epic_id: parentTaskId,
     parent_key: parentKey
   };
 }

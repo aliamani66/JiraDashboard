@@ -58,7 +58,7 @@ router.get('/data/:tableName', (req, res) => {
 
     let allRows = [];
     if (tableName === 'tasks') {
-      allRows = db.prepare(`SELECT id, project_id, parent_task_id, parent_key, title, status, is_subtask, is_waiting, assignee, sprint_name, created_at, start_date, due_date FROM tasks ORDER BY id DESC`).all() || [];
+      allRows = db.prepare(`SELECT id, project_id, epic_id, parent_task_id, parent_key, title, status, is_subtask, is_waiting, assignee, sprint_name, created_at, start_date, due_date FROM tasks ORDER BY id DESC`).all() || [];
 
       if (filterCategory === 'with_epic') {
         allRows = allRows.filter(t => isValidEpicKey(t.parent_task_id));
