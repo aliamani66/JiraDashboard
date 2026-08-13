@@ -287,12 +287,14 @@ router.get('/jira-count', async (req, res) => {
     }
 
     // Calculate configured rebuild date boundary (e.g. 1 month, 3 months, 6 months, 60 months) starting from 1st of starting month
-    const rebuildMonths = parseInt(req.query.months, 10) || parseInt(cfg.rebuildMonths, 10) || 3;
+    const rebuildMonths = parseInt(req.query.months, 10) || parseInt(cfg.rebuildMonths, 10) || 60;
     const now = new Date();
     const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
     const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
-    const dateClause = `created >= "${startDateStr}"`;
-    const fullClause = projectClause ? `${projectClause} AND ${dateClause}` : dateClause;
+    const dateClause = rebuildMonths < 60 ? `created >= "${startDateStr}"` : '';
+    const fullClause = projectClause
+      ? (dateClause ? `${projectClause} AND ${dateClause}` : projectClause)
+      : (dateClause || '');
 
     // 1. Total Non-Epic Tasks Count JQL (Last 5 Years)
     const countJql = `${fullClause} AND issuetype != Epic`;
