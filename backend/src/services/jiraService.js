@@ -379,8 +379,41 @@ async function fetchEpics() {
       const rawStatus = issue.fields?.status?.name || 'To Do';
       const mappedStatus = mapping.statusMapping[rawStatus] || rawStatus;
 
-      // 5. Extract Full Labels & Issue Links (Relations) for Epic
-      const labels = Array.isArray(issue.fields?.labels) ? issue.fields.labels : [];
+      // 5. Extract Full Labels (from standard 'labels' field AND any custom multi-select / label fields)
+      const labelSet = new Set();
+      if (Array.isArray(issue.fields?.labels)) {
+        for (const l of issue.fields.labels) {
+          if (typeof l === 'string' && l.trim()) labelSet.add(l.trim());
+          else if (l && typeof l === 'object') {
+            const val = l.value || l.name || l.label;
+            if (val) labelSet.add(String(val).trim());
+          }
+        }
+      }
+      // Inspect all fields on the issue for any custom multi-select labels
+      if (issue.fields && typeof issue.fields === 'object') {
+        for (const [fKey, fVal] of Object.entries(issue.fields)) {
+          if (fKey.startsWith('customfield_') && fVal) {
+            if (Array.isArray(fVal)) {
+              for (const item of fVal) {
+                if (typeof item === 'string' && item.trim()) {
+                  labelSet.add(item.trim());
+                } else if (item && typeof item === 'object') {
+                  const val = item.value || item.name || item.label;
+                  if (val && typeof val === 'string' && val.trim()) {
+                    labelSet.add(val.trim());
+                  }
+                }
+              }
+            } else if (typeof fVal === 'string' && (/\d{4}/.test(fVal) || /Q[1-4]/i.test(fVal) || /فصل|بهار|تابستان|پاییز|زمستان/.test(fVal))) {
+              labelSet.add(fVal.trim());
+            } else if (typeof fVal === 'object' && fVal.value) {
+              labelSet.add(String(fVal.value).trim());
+            }
+          }
+        }
+      }
+      const labels = Array.from(labelSet);
       const rawLinks = Array.isArray(issue.fields?.issuelinks) ? issue.fields.issuelinks : [];
       const linkedTasks = [];
       const relationsToSave = [];

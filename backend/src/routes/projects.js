@@ -6,14 +6,69 @@ const mapping = require('../jiraMapping');
 const router = express.Router();
 router.use(authenticate);
 
-// Helper: extract quarter labels (e.g. 1405Q1, 1404Q3) from a JSON labels string
-function extractQuarterLabels(labelsJson) {
-  try {
-    const arr = JSON.parse(labelsJson || '[]');
-    return arr.filter(l => /^\d{4}Q[1-4]$/i.test(l)).map(l => l.toUpperCase());
-  } catch {
-    return [];
+// Helper: Convert Persian/Arabic digits to English digits
+function toEnglishDigits(str) {
+  if (!str) return '';
+  const p2e = { '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4', '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9', '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
+  return String(str).replace(/[۰-۹٠-٩]/g, c => p2e[c] || c);
+}
+
+// Helper: Normalize any quarter string (e.g. 1404 Q1, 1404-Q2, ۱۴۰۵ Q1, بهار ۱۴۰۴, Q1 1404) to standard "YYYY QX"
+function normalizeQuarterLabel(rawLabel) {
+  if (!rawLabel) return null;
+  const str = toEnglishDigits(String(rawLabel).trim());
+
+  // Pattern 1: 1404 Q1, 1404-Q1, 1404_Q1, 1404Q1, 1404/Q1, 2024 Q1
+  const m1 = str.match(/\b(13\d\d|14\d\d|20\d\d)[\s_\-\/]*[qQ]([1-4])\b/);
+  if (m1) {
+    return `${m1[1]} Q${m1[2]}`;
   }
+
+  // Pattern 2: Q1 1404, Q1-1404, Q1_1404
+  const m2 = str.match(/\b[qQ]([1-4])[\s_\-\/]*(13\d\d|14\d\d|20\d\d)\b/);
+  if (m2) {
+    return `${m2[2]} Q${m2[1]}`;
+  }
+
+  // Pattern 3: فصل اول / بهار ۱۴۰۴
+  const seasons = [
+    { regex: /(?:بهار|فصل\s*اول|سه\s*ماهه\s*اول)[\s_\-]*(\d{4})/i, q: 'Q1' },
+    { regex: /(?:تابستان|فصل\s*دوم|سه\s*ماهه\s*دوم)[\s_\-]*(\d{4})/i, q: 'Q2' },
+    { regex: /(?:پاییز|فصل\s*سوم|سه\s*ماهه\s*سوم)[\s_\-]*(\d{4})/i, q: 'Q3' },
+    { regex: /(?:زمستان|فصل\s*چهارم|سه\s*ماهه\s*چهارم)[\s_\-]*(\d{4})/i, q: 'Q4' }
+  ];
+  for (const s of seasons) {
+    const sm = str.match(s.regex);
+    if (sm) {
+      return `${sm[1]} ${s.q}`;
+    }
+  }
+
+  return null;
+}
+
+// Helper: extract all quarter labels from JSON or raw array
+function extractQuarterLabels(labelsInput) {
+  if (!labelsInput) return [];
+  let arr = [];
+  if (Array.isArray(labelsInput)) {
+    arr = labelsInput;
+  } else if (typeof labelsInput === 'string') {
+    try {
+      const parsed = JSON.parse(labelsInput);
+      if (Array.isArray(parsed)) arr = parsed;
+      else arr = [labelsInput];
+    } catch (_) {
+      arr = labelsInput.split(/[,|]/);
+    }
+  }
+
+  const results = new Set();
+  for (const item of arr) {
+    const norm = normalizeQuarterLabel(item);
+    if (norm) results.add(norm);
+  }
+  return Array.from(results);
 }
 
 // List all projects with summary stats
@@ -22,11 +77,11 @@ router.get('/projects', (req, res) => {
     const db = getDb();
     const projects = db.prepare(`
       SELECT p.*,
-        IFNULL((SELECT COUNT(*) FROM tasks WHERE project_id = p.id OR project_id = (SELECT id FROM projects WHERE id = p.id) OR id LIKE (p.id || '-%')), 0) as calc_total_tasks,
-        IFNULL((SELECT COUNT(*) FROM tasks WHERE (project_id = p.id OR id LIKE (p.id || '-%')) AND (LOWER(status) IN ('done', 'completed', 'resolved'))), 0) as calc_completed_tasks,
-        IFNULL((SELECT COUNT(*) FROM tasks WHERE (project_id = p.id OR id LIKE (p.id || '-%')) AND (is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked'))), 0) as calc_waiting_tasks,
-        IFNULL((SELECT SUM(estimate_hours) FROM tasks WHERE project_id = p.id OR id LIKE (p.id || '-%')), 0) as total_estimate_hours,
-        IFNULL((SELECT SUM(spent_hours) FROM tasks WHERE project_id = p.id OR id LIKE (p.id || '-%')), 0) as total_spent_hours
+        IFNULL((SELECT COUNT(*) FROM tasks WHERE UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)), 0) as calc_total_tasks,
+        IFNULL((SELECT COUNT(*) FROM tasks WHERE (UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)) AND (LOWER(status) IN ('done', 'completed', 'resolved'))), 0) as calc_completed_tasks,
+        IFNULL((SELECT COUNT(*) FROM tasks WHERE (UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)) AND (is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked'))), 0) as calc_waiting_tasks,
+        IFNULL((SELECT SUM(estimate_hours) FROM tasks WHERE UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)), 0) as total_estimate_hours,
+        IFNULL((SELECT SUM(spent_hours) FROM tasks WHERE UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)), 0) as total_spent_hours
       FROM projects p
     `).all();
 
@@ -41,9 +96,9 @@ router.get('/projects', (req, res) => {
       const compRows = db.prepare(`
         SELECT component, COUNT(*) as count 
         FROM tasks 
-        WHERE project_id = ? OR id LIKE (? || '-%')
+        WHERE UPPER(parent_task_id) = UPPER(?) OR UPPER(epic_id) = UPPER(?) OR UPPER(project_id) = UPPER(?)
         GROUP BY component
-      `).all(p.id, p.id);
+      `).all(p.id, p.id, p.id);
       
       const compObj = {};
       for (const row of compRows) {
@@ -60,9 +115,9 @@ router.get('/projects', (req, res) => {
       const statusRows = db.prepare(`
         SELECT status, is_waiting, COUNT(*) as count 
         FROM tasks 
-        WHERE project_id = ? OR id LIKE (? || '-%')
+        WHERE UPPER(parent_task_id) = UPPER(?) OR UPPER(epic_id) = UPPER(?) OR UPPER(project_id) = UPPER(?)
         GROUP BY status, is_waiting
-      `).all(p.id, p.id);
+      `).all(p.id, p.id, p.id);
 
       const statusMap = { done: 0, active: 0, waiting: 0, todo: 0 };
       for (const row of statusRows) {
@@ -79,9 +134,12 @@ router.get('/projects', (req, res) => {
       }
       p.status_map = statusMap;
 
-      // Quarter labels — collect unique quarters from all tasks of this project
-      const labelRows = db.prepare(`SELECT labels FROM tasks WHERE project_id = ? OR id LIKE (? || '-%')`).all(p.id, p.id);
+      // Quarter labels — collect from BOTH Epic's own labels AND all linked tasks
       const quarterSet = new Set();
+      if (p.labels) {
+        extractQuarterLabels(p.labels).forEach(q => quarterSet.add(q));
+      }
+      const labelRows = db.prepare(`SELECT labels FROM tasks WHERE UPPER(parent_task_id) = UPPER(?) OR UPPER(epic_id) = UPPER(?) OR UPPER(project_id) = UPPER(?)`).all(p.id, p.id, p.id);
       for (const row of labelRows) {
         extractQuarterLabels(row.labels).forEach(q => quarterSet.add(q));
       }
@@ -104,23 +162,42 @@ router.get('/projects', (req, res) => {
       featuredComponents: mapping.featuredComponents || ['learning', 'meeting', 'support']
     });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch projects' });
+    res.status(500).json({ error: 'Failed to fetch projects: ' + err.message });
   }
 });
 
-// All unique quarter labels across all projects
+// All unique quarter labels across all projects and tasks
 router.get('/quarters', (req, res) => {
   try {
     const db = getDb();
-    const rows = db.prepare(`SELECT DISTINCT labels FROM tasks WHERE labels IS NOT NULL AND labels != '[]'`).all();
     const quarterSet = new Set();
-    for (const row of rows) {
-      extractQuarterLabels(row.labels).forEach(q => quarterSet.add(q));
+
+    // From Projects (Epics)
+    const projRows = db.prepare(`SELECT DISTINCT labels FROM projects WHERE labels IS NOT NULL AND labels != '[]' AND labels != ''`).all();
+    for (const r of projRows) {
+      extractQuarterLabels(r.labels).forEach(q => quarterSet.add(q));
     }
-    const quarters = Array.from(quarterSet).sort();
+
+    // From Tasks
+    const taskRows = db.prepare(`SELECT DISTINCT labels FROM tasks WHERE labels IS NOT NULL AND labels != '[]' AND labels != ''`).all();
+    for (const r of taskRows) {
+      extractQuarterLabels(r.labels).forEach(q => quarterSet.add(q));
+    }
+
+    const quarters = Array.from(quarterSet).sort((a, b) => {
+      // Sort chronologically (e.g. 1404 Q1 < 1404 Q2 < 1405 Q1)
+      const parseQ = (s) => {
+        const parts = s.split(' ');
+        const year = parseInt(parts[0], 10) || 0;
+        const qNum = parseInt((parts[1] || '').replace(/\D/g, ''), 10) || 0;
+        return year * 10 + qNum;
+      };
+      return parseQ(a) - parseQ(b);
+    });
+
     res.json({ quarters });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch quarters' });
+    res.status(500).json({ error: 'Failed to fetch quarters: ' + err.message });
   }
 });
 
@@ -176,6 +253,9 @@ router.get('/projects/:id', (req, res) => {
     project.waitingTasks = tasks.filter(t => t.is_waiting === 1 || t.status === 'OnHolding' || t.status === 'Waiting' || t.status === 'Blocked');
     
     const quarterSet = new Set();
+    if (project.labels) {
+      extractQuarterLabels(project.labels).forEach(q => quarterSet.add(q));
+    }
     const statusMap = { done: 0, active: 0, waiting: 0, todo: 0 };
 
     for (const t of tasks) {
