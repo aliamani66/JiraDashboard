@@ -81,8 +81,8 @@ async function syncFromJira() {
 
     // Step 2: Fetch tasks per epic (correct project_id guaranteed)
     const insertTask = db.prepare(`
-      INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, created_at, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, last_synced)
-      VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @created_at, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @last_synced)
+      INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, created_at, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, parent_key, last_synced)
+      VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @created_at, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @parent_key, @last_synced)
       ON CONFLICT(id) DO UPDATE SET
         project_id=excluded.project_id,
         title=excluded.title,
@@ -106,6 +106,7 @@ async function syncFromJira() {
         sort_order=excluded.sort_order,
         is_subtask=excluded.is_subtask,
         parent_task_id=excluded.parent_task_id,
+        parent_key=excluded.parent_key,
         last_synced=excluded.last_synced
     `);
 

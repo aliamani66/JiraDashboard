@@ -186,6 +186,7 @@ async function initDb() {
   try { db.run("CREATE TABLE IF NOT EXISTS task_estimate_history (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, old_estimate REAL DEFAULT 0, new_estimate REAL DEFAULT 0, delta_hours REAL DEFAULT 0, changed_at TEXT NOT NULL)"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN is_subtask INTEGER DEFAULT 0"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT"); } catch (_) {}
+  try { db.run("ALTER TABLE tasks ADD COLUMN parent_key TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN description TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN created_at TEXT"); } catch (_) {}
   try { db.run("UPDATE tasks SET created_at = COALESCE(start_date, due_date, SUBSTR(last_synced, 1, 10)) WHERE created_at IS NULL OR created_at = ''"); } catch (_) {}

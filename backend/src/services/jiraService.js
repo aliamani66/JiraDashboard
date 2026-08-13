@@ -780,9 +780,13 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
   const spentSec = issue.fields?.aggregatetimespent || issue.fields?.timespent || 0;
   const isSubtask = (issue.fields?.issuetype?.subtask || issueTypeName.includes('sub-task') || issueTypeName.includes('subtask')) ? 1 : 0;
   const actualProjectKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
-  const parentKey = (issue.fields?.parent?.key && /^[A-Z0-9_]+-\d+$/i.test(issue.fields.parent.key)) ? issue.fields.parent.key.toUpperCase() : null;
-  const isRealEpicKey = epicKey && /^[A-Z0-9_]+-\d+$/i.test(epicKey);
-  const parentTaskId = isSubtask ? parentKey : (isRealEpicKey ? epicKey.toUpperCase() : (parentKey || null));
+  const parentIssueKey = (issue.fields?.parent?.key && /^[A-Z][A-Z0-9_]*-\d+$/i.test(issue.fields.parent.key)) ? issue.fields.parent.key.toUpperCase() : null;
+  const isRealEpicKey = epicKey && /^[A-Z][A-Z0-9_]*-\d+$/i.test(epicKey) && (knownEpicKeysSet ? knownEpicKeysSet.has(epicKey.toUpperCase()) : true);
+  
+  // parent_key stores the parent task issue key for subtasks (e.g. ORD-1480)
+  const parentKey = isSubtask ? parentIssueKey : null;
+  // parent_task_id stores strictly the EPIC key (e.g. ORD-101), NEVER a task key!
+  const parentTaskId = isRealEpicKey ? epicKey.toUpperCase() : null;
 
   return {
     id: issue.key,
@@ -807,7 +811,8 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     component: component,
     sort_order: index,
     is_subtask: isSubtask,
-    parent_task_id: parentTaskId
+    parent_task_id: parentTaskId,
+    parent_key: parentKey
   };
 }
 
