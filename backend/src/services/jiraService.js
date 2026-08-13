@@ -44,6 +44,29 @@ function getJiraConfig() {
   const isConfigured = mockMode || !!(baseUrl && token);
   const currentMapping = (config && config.jira && config.jira.mapping) || jiraMapping;
 
+  let statusMappingObj = currentMapping.statusMapping || {};
+  if (dbSettingMap['JIRA_STATUS_MAPPING']) {
+    try {
+      const rawSm = dbSettingMap['JIRA_STATUS_MAPPING'];
+      statusMappingObj = typeof rawSm === 'object' ? rawSm : JSON.parse(rawSm);
+    } catch (_) {}
+  }
+
+  const effectiveMapping = {
+    ...currentMapping,
+    statusMapping: statusMappingObj,
+    customFields: {
+      ...currentMapping.customFields,
+      epicLinkField: dbSettingMap['JIRA_EPIC_LINK_FIELD'] || currentMapping.customFields?.epicLinkField || 'customfield_10006',
+      sprintField: dbSettingMap['JIRA_SPRINT_FIELD'] || currentMapping.customFields?.sprintField || 'customfield_10004',
+      waitingTeamField: dbSettingMap['JIRA_WAITING_TEAM_FIELD'] || currentMapping.customFields?.waitingTeamField || '',
+      waitingReasonField: dbSettingMap['JIRA_WAITING_REASON_FIELD'] || currentMapping.customFields?.waitingReasonField || '',
+      confluenceLinkField: dbSettingMap['JIRA_CONFLUENCE_LINK_FIELD'] || currentMapping.customFields?.confluenceLinkField || '',
+      capabilitiesField: dbSettingMap['JIRA_CAPABILITIES_FIELD'] || currentMapping.customFields?.capabilitiesField || '',
+      categoryField: dbSettingMap['JIRA_CATEGORY_FIELD'] || currentMapping.customFields?.categoryField || ''
+    }
+  };
+
   return {
     baseUrl: mockMode ? 'https://mock.jira.local (حالت داده تستی / ماک)' : baseUrl,
     username,
@@ -51,7 +74,7 @@ function getJiraConfig() {
     projectKey,
     mockMode,
     isConfigured,
-    mapping: currentMapping
+    mapping: effectiveMapping
   };
 }
 
@@ -246,7 +269,9 @@ async function fetchEpics() {
     );
 
     const filteredIssues = allIssues.filter(issue => {
-      const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
+      const issueKey = (issue.key || '').trim().toUpperCase();
+      if (!/^[A-Z0-9_]+-\d+$/i.test(issueKey)) return false;
+      const issueProjKey = (issue.fields?.project?.key || issueKey.split('-')[0] || '').toUpperCase();
       const issueTypeName = (issue.fields?.issuetype?.name || '').toLowerCase().trim();
       const isEpicType = issueTypeName === 'epic';
       const isConfiguredProj = (configuredProjKeys.size > 0 && projKeyStr !== 'ALL' && projKeyStr !== '*') ? configuredProjKeys.has(issueProjKey) : true;
@@ -550,6 +575,11 @@ async function fetchTasksForEpic(epicKey) {
 }
 function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysSet = null) {
   if (!issue || !issue.fields) return null;
+  const issueKey = (issue.key || '').trim().toUpperCase();
+  if (!/^[A-Z0-9_]+-\d+$/i.test(issueKey)) {
+    // Issue key MUST match PROJECT-NUMBER pattern (e.g. ORD-1001), otherwise ignore completely!
+    return null;
+  }
   const issueTypeName = (issue.fields?.issuetype?.name || '').toLowerCase().trim();
   if (issueTypeName === 'epic') {
     // Epics are saved into projects table only, NEVER into tasks table!

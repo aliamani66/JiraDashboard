@@ -134,7 +134,15 @@ function getFullConfigObject() {
       defaultSpaceKey: getVal('CONFLUENCE_DEFAULT_SPACE', 'OPS'),
     },
     waitingStatuses: getVal('JIRA_WAITING_STATUSES', 'OnHolding,Waiting,Blocked,On Hold').split(',').map(s => s.trim()),
-    statusMapping: jiraMapping.statusMapping || {},
+    statusMapping: (() => {
+      try {
+        const raw = getVal('JIRA_STATUS_MAPPING', '');
+        return raw ? (typeof raw === 'object' ? raw : JSON.parse(raw)) : (jiraMapping.statusMapping || {});
+      } catch (_) {
+        return jiraMapping.statusMapping || {};
+      }
+    })(),
+    rebuildMonths: parseInt(getVal('JIRA_REBUILD_MONTHS', '3'), 10) || 3,
     customFields: {
       epicLinkField: getVal('JIRA_EPIC_LINK_FIELD', 'customfield_10006'),
       sprintField: getVal('JIRA_SPRINT_FIELD', 'customfield_10004'),
@@ -232,6 +240,14 @@ router.put('/config', (req, res) => {
 
     if (body.featuredComponents && Array.isArray(body.featuredComponents)) {
       updates.JIRA_FEATURED_COMPONENTS = body.featuredComponents.join(',');
+    }
+
+    if (body.statusMapping !== undefined && body.statusMapping !== null) {
+      updates.JIRA_STATUS_MAPPING = typeof body.statusMapping === 'string' ? body.statusMapping : JSON.stringify(body.statusMapping);
+    }
+
+    if (body.rebuildMonths !== undefined && body.rebuildMonths !== null) {
+      updates.JIRA_REBUILD_MONTHS = String(body.rebuildMonths);
     }
 
     // Write to both SQLite system_settings table and .env file
@@ -432,6 +448,30 @@ router.post('/sync-single-month', async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, message: 'خطا در همگام‌سازی ماه: ' + err.message });
+  }
+});
+
+// POST Inject artificial mismatches for UI verification
+router.post('/inject-test-mismatches', (req, res) => {
+  try {
+    const db = getDb();
+    const tasksWithEpic = db.prepare("SELECT id FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND created_at >= '2026-06-01' LIMIT 3").all().map(r => r.id);
+    const tasksUnlinked = db.prepare("SELECT id FROM tasks WHERE (parent_task_id IS NULL OR parent_task_id = '') AND created_at >= '2026-06-01' LIMIT 1").all().map(r => r.id);
+    const epics = db.prepare("SELECT id FROM projects LIMIT 2").all().map(r => r.id);
+
+    for (const id of tasksWithEpic) db.prepare("DELETE FROM tasks WHERE id = ?").run(id);
+    for (const id of tasksUnlinked) db.prepare("DELETE FROM tasks WHERE id = ?").run(id);
+    for (const id of epics) db.prepare("DELETE FROM projects WHERE id = ?").run(id);
+
+    res.json({
+      success: true,
+      message: 'مغایرت مصنوعی برای تست جدول مقایسه ایجاد گردید.',
+      deletedTasksWithEpic: tasksWithEpic,
+      deletedTasksUnlinked: tasksUnlinked,
+      deletedEpics: epics
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
