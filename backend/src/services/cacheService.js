@@ -819,33 +819,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 }
 
 function autoLinkTasksToEpics() {
-  try {
-    const db = getDb();
-    // Ensure all project_id values referenced in tasks exist as valid records in projects table
-    const taskProjects = db.prepare("SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''").all();
-    if (taskProjects.length === 0) return;
-
-    const insertMissingProject = db.prepare(`
-      INSERT OR IGNORE INTO projects (id, title, description, status, last_synced)
-      VALUES (?, ?, ?, 'In Progress', ?)
-    `);
-
-    const now = new Date().toISOString();
-
-    db.transaction(() => {
-      for (const r of taskProjects) {
-        const pId = r.project_id;
-        if (!pId) continue;
-        if (pId.includes('-')) {
-          insertMissingProject.run(pId, `اپیک ${pId}`, `اپیک استخراج‌شده ${pId}`, now);
-        } else {
-          insertMissingProject.run(pId, `پروژه ${pId}`, `پروژه اصلی ${pId}`, now);
-        }
-      }
-    })();
-  } catch (err) {
-    console.error('Auto-link tasks error:', err.message);
-  }
+  // Real Epics are fetched and saved directly from Jira by fetchEpics().
+  // No fake or dummy project records are auto-inserted into the projects table.
 }
 
 function initCron() {
