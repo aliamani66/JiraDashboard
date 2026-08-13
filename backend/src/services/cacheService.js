@@ -19,7 +19,8 @@ async function syncFromJira() {
   const syncTime = new Date().toISOString();
 
   try {
-    // Clear previous tasks and projects before full rebuild (ensures DB count = Jira fetch count)
+    // Clear previous tasks, relations, history and projects before full rebuild (ensures DB count = Jira fetch count)
+    db.prepare('DELETE FROM task_relations').run();
     db.prepare('DELETE FROM tasks').run();
     db.prepare('DELETE FROM projects').run();
     db.prepare('DELETE FROM task_estimate_history').run();
@@ -31,8 +32,8 @@ async function syncFromJira() {
     console.log(`Fetched ${epics.length} epics from Jira.`);
     
     const insertProject = db.prepare(`
-      INSERT INTO projects (id, title, description, status, capabilities, category, confluence_link, start_date, due_date, last_synced)
-      VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @last_synced)
+      INSERT INTO projects (id, title, description, status, capabilities, category, confluence_link, start_date, due_date, labels, assignee, priority, linked_tasks, last_synced)
+      VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @labels, @assignee, @priority, @linked_tasks, @last_synced)
       ON CONFLICT(id) DO UPDATE SET
         title=excluded.title,
         description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE projects.description END,
@@ -40,9 +41,18 @@ async function syncFromJira() {
         capabilities=excluded.capabilities,
         category=excluded.category,
         confluence_link=excluded.confluence_link,
-        start_date=excluded.start_date,
-        due_date=excluded.due_date,
+        start_date=COALESCE(excluded.start_date, projects.start_date),
+        due_date=COALESCE(excluded.due_date, projects.due_date),
+        labels=COALESCE(excluded.labels, projects.labels),
+        assignee=COALESCE(excluded.assignee, projects.assignee),
+        priority=COALESCE(excluded.priority, projects.priority),
+        linked_tasks=COALESCE(excluded.linked_tasks, projects.linked_tasks),
         last_synced=excluded.last_synced
+    `);
+
+    const insertEpicRelation = db.prepare(`
+      INSERT INTO task_relations (task_id, linked_task_id, relation_type, relationship, title, status, assignee, start_date, due_date, created_at)
+      VALUES (@task_id, @linked_task_id, @relation_type, @relationship, @title, @status, @assignee, @start_date, @due_date, @created_at)
     `);
 
     db.transaction(() => {
@@ -50,8 +60,20 @@ async function syncFromJira() {
         epic.last_synced = syncTime;
         if (!epic.capabilities) epic.capabilities = '';
         if (!epic.confluence_link) epic.confluence_link = null;
+        if (!epic.labels) epic.labels = '[]';
+        if (!epic.assignee) epic.assignee = null;
+        if (!epic.priority) epic.priority = 'Medium';
+        if (!epic.linked_tasks) epic.linked_tasks = '[]';
         insertProject.run(epic);
         projectsSynced++;
+
+        if (Array.isArray(epic.raw_relations) && epic.raw_relations.length > 0) {
+          try { db.prepare('DELETE FROM task_relations WHERE task_id = ?').run(epic.id); } catch (_) {}
+          for (const rel of epic.raw_relations) {
+            rel.created_at = syncTime;
+            try { insertEpicRelation.run(rel); } catch (_) {}
+          }
+        }
       }
     })();
 
@@ -267,15 +289,7 @@ async function syncFromJira() {
     }
 
     autoLinkTasksToEpics();
-
-    // Update task counts per project
-    try {
-      db.prepare(`UPDATE projects SET
-        total_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0)),
-        completed_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (status = 'Done' OR status = 'Completed')),
-        waiting_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (is_waiting = 1 OR status = 'OnHolding' OR status = 'Waiting'))
-      `).run();
-    } catch (_) {}
+    updateProjectStats();
 
     // Real DB counts for accuracy
     const dbTotalTasks = db.prepare('SELECT COUNT(*) as c FROM tasks').get().c;
@@ -711,19 +725,44 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   if (Number(monthIndex) === 1 || epicCountInDb === 0) {
     try {
       const epics = await jiraService.fetchEpics();
+      const insertEpicRelation = db.prepare(`
+        INSERT INTO task_relations (task_id, linked_task_id, relation_type, relationship, title, status, assignee, start_date, due_date, created_at)
+        VALUES (@task_id, @linked_task_id, @relation_type, @relationship, @title, @status, @assignee, @start_date, @due_date, @created_at)
+      `);
       db.transaction(() => {
         const insertProject = db.prepare(`
-          INSERT INTO projects (id, title, description, status, capabilities, category, confluence_link, start_date, due_date, last_synced)
-          VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @last_synced)
+          INSERT INTO projects (id, title, description, status, capabilities, category, confluence_link, start_date, due_date, labels, assignee, priority, linked_tasks, last_synced)
+          VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @labels, @assignee, @priority, @linked_tasks, @last_synced)
           ON CONFLICT(id) DO UPDATE SET
             title=excluded.title,
             description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE projects.description END,
             status=excluded.status,
+            capabilities=excluded.capabilities,
+            category=excluded.category,
+            confluence_link=excluded.confluence_link,
+            start_date=COALESCE(excluded.start_date, projects.start_date),
+            due_date=COALESCE(excluded.due_date, projects.due_date),
+            labels=COALESCE(excluded.labels, projects.labels),
+            assignee=COALESCE(excluded.assignee, projects.assignee),
+            priority=COALESCE(excluded.priority, projects.priority),
+            linked_tasks=COALESCE(excluded.linked_tasks, projects.linked_tasks),
             last_synced=excluded.last_synced
         `);
         for (const epic of epics) {
           epic.last_synced = syncTime;
+          if (!epic.labels) epic.labels = '[]';
+          if (!epic.assignee) epic.assignee = null;
+          if (!epic.priority) epic.priority = 'Medium';
+          if (!epic.linked_tasks) epic.linked_tasks = '[]';
           insertProject.run(epic);
+
+          if (Array.isArray(epic.raw_relations) && epic.raw_relations.length > 0) {
+            try { db.prepare('DELETE FROM task_relations WHERE task_id = ?').run(epic.id); } catch (_) {}
+            for (const rel of epic.raw_relations) {
+              rel.created_at = syncTime;
+              try { insertEpicRelation.run(rel); } catch (_) {}
+            }
+          }
         }
       })();
       autoLinkTasksToEpics();
@@ -930,17 +969,10 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     console.log(`[SYNC][${monthLabel}] Tasks saved: ${savedCount}, skipped (wrong project): ${skippedCount}`);
 
     autoLinkTasksToEpics();
+    updateProjectStats();
 
     const tasksInDb = db.prepare('SELECT COUNT(*) as c FROM tasks').get();
     console.log(`[SYNC][${monthLabel}] Total tasks in DB after sync: ${tasksInDb.c}`);
-
-    try {
-      db.prepare(`UPDATE projects SET
-        total_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0)),
-        completed_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (status = 'Done' OR status = 'Completed')),
-        waiting_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (is_waiting = 1 OR status = 'OnHolding' OR status = 'Waiting'))
-      `).run();
-    } catch (_) {}
 
     saveDb();
 
@@ -1070,6 +1102,44 @@ function autoLinkTasksToEpics() {
     saveDb();
   } catch (e) {
     console.error('Error in autoLinkTasksToEpics:', e.message);
+  }
+}
+
+function updateProjectStats() {
+  try {
+    const db = getDb();
+    db.prepare(`
+      UPDATE projects SET
+        total_tasks = (
+          SELECT COUNT(*) FROM tasks 
+          WHERE UPPER(parent_task_id) = UPPER(projects.id) 
+             OR UPPER(epic_id) = UPPER(projects.id) 
+             OR UPPER(project_id) = UPPER(projects.id)
+        ),
+        completed_tasks = (
+          SELECT COUNT(*) FROM tasks 
+          WHERE (UPPER(parent_task_id) = UPPER(projects.id) OR UPPER(epic_id) = UPPER(projects.id) OR UPPER(project_id) = UPPER(projects.id))
+            AND (status = 'Done' OR status = 'Completed')
+        ),
+        waiting_tasks = (
+          SELECT COUNT(*) FROM tasks 
+          WHERE (UPPER(parent_task_id) = UPPER(projects.id) OR UPPER(epic_id) = UPPER(projects.id) OR UPPER(project_id) = UPPER(projects.id))
+            AND (status = 'Waiting' OR status = 'OnHolding' OR is_waiting = 1)
+        ),
+        progress = (
+          SELECT CASE 
+            WHEN COUNT(*) = 0 THEN 0 
+            ELSE ROUND(CAST(SUM(CASE WHEN status = 'Done' OR status = 'Completed' THEN 1 ELSE 0 END) AS FLOAT) * 100.0 / COUNT(*), 1)
+          END
+          FROM tasks 
+          WHERE UPPER(parent_task_id) = UPPER(projects.id) 
+             OR UPPER(epic_id) = UPPER(projects.id) 
+             OR UPPER(project_id) = UPPER(projects.id)
+        )
+    `).run();
+    saveDb();
+  } catch (err) {
+    console.error('Failed to update project stats:', err.message);
   }
 }
 

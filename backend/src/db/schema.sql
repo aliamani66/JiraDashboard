@@ -12,6 +12,13 @@ CREATE TABLE IF NOT EXISTS projects (
     total_tasks INTEGER DEFAULT 0,
     completed_tasks INTEGER DEFAULT 0,
     waiting_tasks INTEGER DEFAULT 0,
+    labels TEXT DEFAULT '[]',
+    assignee TEXT,
+    priority TEXT DEFAULT 'Medium',
+    is_waiting INTEGER DEFAULT 0,
+    waiting_reason TEXT,
+    waiting_for_team TEXT,
+    linked_tasks TEXT DEFAULT '[]',
     last_synced TEXT
 );
 

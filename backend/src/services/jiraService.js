@@ -297,6 +297,9 @@ async function fetchEpics() {
       'created',
       'labels', 
       'components',
+      'issuelinks',
+      'assignee',
+      'priority',
       mapping.dateMapping.epicStartDateField, 
       mapping.dateMapping.epicDueDateField,
       customFields.confluenceLinkField,
@@ -376,6 +379,38 @@ async function fetchEpics() {
       const rawStatus = issue.fields?.status?.name || 'To Do';
       const mappedStatus = mapping.statusMapping[rawStatus] || rawStatus;
 
+      // 5. Extract Full Labels & Issue Links (Relations) for Epic
+      const labels = Array.isArray(issue.fields?.labels) ? issue.fields.labels : [];
+      const rawLinks = Array.isArray(issue.fields?.issuelinks) ? issue.fields.issuelinks : [];
+      const linkedTasks = [];
+      const relationsToSave = [];
+
+      for (const link of rawLinks) {
+        const target = link.outwardIssue || link.inwardIssue;
+        const relType = link.type?.name || 'Related';
+        const relDesc = link.outwardIssue ? (link.type?.outward || 'relates to') : (link.type?.inward || 'relates to');
+        if (target && target.key) {
+          linkedTasks.push({
+            key: target.key,
+            type: relType,
+            relationship: relDesc,
+            title: target.fields?.summary || target.key,
+            status: target.fields?.status?.name || 'To Do'
+          });
+          relationsToSave.push({
+            task_id: issue.key,
+            linked_task_id: target.key.toUpperCase(),
+            relation_type: relType,
+            relationship: relDesc,
+            title: target.fields?.summary || null,
+            status: target.fields?.status?.name || null,
+            assignee: target.fields?.assignee?.displayName || null,
+            start_date: target.fields?.created?.split('T')[0] || null,
+            due_date: target.fields?.duedate || null
+          });
+        }
+      }
+
       return {
         id: issue.key,
         title: issue.fields?.summary || issue.key,
@@ -385,7 +420,12 @@ async function fetchEpics() {
         capabilities,
         confluence_link: confluenceLink,
         start_date: startDate,
-        due_date: dueDate
+        due_date: dueDate,
+        labels: JSON.stringify(labels),
+        assignee: issue.fields?.assignee ? issue.fields.assignee.displayName : null,
+        priority: issue.fields?.priority?.name || 'Medium',
+        linked_tasks: JSON.stringify(linkedTasks),
+        raw_relations: relationsToSave
       };
     });
   } catch (err) {

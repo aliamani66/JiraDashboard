@@ -231,6 +231,15 @@ async function initDb() {
     `);
   } catch (_) {}
 
+  // Ensure projects table has new extended fields (labels, assignee, priority, is_waiting, waiting_reason, waiting_for_team, linked_tasks)
+  try { db.run("ALTER TABLE projects ADD COLUMN labels TEXT DEFAULT '[]'"); } catch (_) {}
+  try { db.run("ALTER TABLE projects ADD COLUMN assignee TEXT"); } catch (_) {}
+  try { db.run("ALTER TABLE projects ADD COLUMN priority TEXT DEFAULT 'Medium'"); } catch (_) {}
+  try { db.run("ALTER TABLE projects ADD COLUMN is_waiting INTEGER DEFAULT 0"); } catch (_) {}
+  try { db.run("ALTER TABLE projects ADD COLUMN waiting_reason TEXT"); } catch (_) {}
+  try { db.run("ALTER TABLE projects ADD COLUMN waiting_for_team TEXT"); } catch (_) {}
+  try { db.run("ALTER TABLE projects ADD COLUMN linked_tasks TEXT DEFAULT '[]'"); } catch (_) {}
+
   // Ensure unique case-insensitive indexes so duplicates can NEVER be inserted
   try { db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_id_nocase ON tasks(id COLLATE NOCASE)"); } catch (_) {}
   try { db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_id_nocase ON projects(id COLLATE NOCASE)"); } catch (_) {}
