@@ -298,54 +298,36 @@ router.get('/jira-count', async (req, res) => {
 
     // 1. Total Non-Epic Tasks Count JQL
     const countJql = `${fullClause} AND issuetype != Epic`;
-    const withoutEpicJql = `${fullClause} AND issuetype != Epic AND parent IS EMPTY`;
-    const withEpicJql = `${fullClause} AND issuetype != Epic AND parent IS NOT EMPTY`;
+    const epicJql = projectClause ? `${projectClause} AND issuetype = Epic` : `issuetype = Epic`;
     const subJql = fullClause
       ? `${fullClause} AND (issuetype in subtaskIssueTypes() OR issuetype IN ("Sub-task", "Subtask", "sub-task", "Sub-Task", "زیرتسک"))`
-      : (projectClause ? `${projectClause} AND (issuetype in subtaskIssueTypes() OR issuetype IN ("Sub-task", "Subtask", "sub-task", "Sub-Task", "زیرتسک"))` : `issuetype in subtaskIssueTypes() OR issuetype IN ("Sub-task", "Subtask", "sub-task", "Sub-Task", "زیرتسک")`);
-    const epicJql = projectClause ? `${projectClause} AND issuetype = Epic` : `issuetype = Epic`;
+      : `issuetype in subtaskIssueTypes() OR issuetype IN ("Sub-task", "Subtask", "sub-task", "Sub-Task", "زیرتسک")`;
+    const withEpicJql = `${fullClause} AND issuetype != Epic AND ("Epic Link" is NOT EMPTY OR parent IS NOT EMPTY)`;
+    const withoutEpicJql = `${fullClause} AND issuetype != Epic AND ("Epic Link" is EMPTY OR parent IS EMPTY)`;
 
-    // Run ALL Jira count queries concurrently in parallel with singlePage: true & ['key'] only (READ-ONLY)
-    const [countRes, withoutRes, withRes, subRes, epicRes] = await Promise.all([
-      jiraService.jiraSearch(countJql, ['key'], { maxResults: 1, timeout: 6000, retries: 1, singlePage: true }).catch(() => ({ total: 0 })),
-      jiraService.jiraSearch(withoutEpicJql, ['key'], { maxResults: 1, timeout: 6000, retries: 1, singlePage: true }).catch(async () => {
-        try {
-          return await jiraService.jiraSearch(`${fullClause} AND issuetype != Epic AND "Epic Link" is EMPTY`, ['key'], { maxResults: 1, timeout: 4000, retries: 1, singlePage: true });
-        } catch (_) { return { total: 0 }; }
-      }),
-      jiraService.jiraSearch(withEpicJql, ['key'], { maxResults: 1, timeout: 6000, retries: 1, singlePage: true }).catch(async () => {
-        try {
-          return await jiraService.jiraSearch(`${fullClause} AND issuetype != Epic AND "Epic Link" is NOT EMPTY`, ['key'], { maxResults: 1, timeout: 4000, retries: 1, singlePage: true });
-        } catch (_) { return { total: 0 }; }
-      }),
-      jiraService.jiraSearch(subJql, ['key'], { maxResults: 1, timeout: 6000, retries: 1, singlePage: true }).catch(async () => {
-        try {
-          const fallbackSub1 = fullClause ? `${fullClause} AND issuetype in subtaskIssueTypes()` : `issuetype in subtaskIssueTypes()`;
-          return await jiraService.jiraSearch(fallbackSub1, ['key'], { maxResults: 1, timeout: 4000, retries: 1, singlePage: true });
-        } catch (_) {
-          try {
-            const fallbackSub2 = fullClause ? `${fullClause} AND parent IS NOT EMPTY` : `parent IS NOT EMPTY`;
-            return await jiraService.jiraSearch(fallbackSub2, ['key'], { maxResults: 1, timeout: 4000, retries: 1, singlePage: true });
-          } catch (_) {
-            return { total: 0 };
-          }
-        }
-      }),
-      jiraService.jiraSearch(epicJql, ['key'], { maxResults: 1, timeout: 6000, retries: 1, singlePage: true }).catch(() => ({ total: 0 }))
+    // Run ALL count queries in parallel with strict 3500ms timeout (READ-ONLY)
+    const [countRes, epicRes, subRes, withRes, withoutRes] = await Promise.all([
+      jiraService.jiraSearch(countJql, ['key'], { maxResults: 1, timeout: 3500, retries: 1, singlePage: true }).catch(() => ({ total: 0 })),
+      jiraService.jiraSearch(epicJql, ['key'], { maxResults: 1, timeout: 3500, retries: 1, singlePage: true }).catch(() => ({ total: 0 })),
+      jiraService.jiraSearch(subJql, ['key'], { maxResults: 1, timeout: 3500, retries: 1, singlePage: true }).catch(() => ({ total: 0 })),
+      jiraService.jiraSearch(withEpicJql, ['key'], { maxResults: 1, timeout: 3500, retries: 1, singlePage: true }).catch(() => ({ total: 0 })),
+      jiraService.jiraSearch(withoutEpicJql, ['key'], { maxResults: 1, timeout: 3500, retries: 1, singlePage: true }).catch(() => ({ total: 0 }))
     ]);
 
     const total = countRes?.total !== undefined ? countRes.total : 0;
-    let withoutEpicCount = withoutRes?.total !== undefined ? withoutRes.total : 0;
+    const jiraEpicsCount = epicRes?.total !== undefined ? epicRes.total : 0;
+    const subtaskCount = subRes?.total !== undefined ? subRes.total : 0;
     let withEpicCount = withRes?.total !== undefined ? withRes.total : 0;
+    let withoutEpicCount = withoutRes?.total !== undefined ? withoutRes.total : 0;
 
     // Cross-validate and balance counts accurately
-    if (withoutEpicCount === 0 && withEpicCount > 0) {
-      withoutEpicCount = Math.max(0, total - withEpicCount);
-    } else if (withEpicCount === 0 && withoutEpicCount > 0) {
+    if (withEpicCount === 0 && withoutEpicCount > 0 && total >= withoutEpicCount) {
       withEpicCount = Math.max(0, total - withoutEpicCount);
+    } else if (withoutEpicCount === 0 && withEpicCount > 0 && total >= withEpicCount) {
+      withoutEpicCount = Math.max(0, total - withEpicCount);
+    } else if (withEpicCount === 0 && withoutEpicCount === 0 && total > 0) {
+      withEpicCount = total;
     }
-    const subtaskCount = subRes?.total !== undefined ? subRes.total : 0;
-    const jiraEpicsCount = epicRes?.total !== undefined ? epicRes.total : 0;
 
     // Fast DB calculations (READ-ONLY)
     const db = getDb();
