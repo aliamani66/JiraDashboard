@@ -224,6 +224,7 @@ const StatusMappingEditor = ({ mapping, onChange }) => {
 
 // ─────────────────────────── MAIN PAGE ────────────────────────────
 const JiraSettingsPage = () => {
+  const [activeTab, setActiveTab] = useState('database');
   const [cfg, setCfg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1029,6 +1030,78 @@ const JiraSettingsPage = () => {
         </div>
       </div>
 
+      {/* 🏷️ TAB NAVIGATION BAR */}
+      <div className="jsp-tabs-nav" style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '0.75rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('database')}
+          style={{
+            padding: '0.7rem 1.4rem',
+            borderRadius: '12px',
+            border: activeTab === 'database' ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.12)',
+            background: activeTab === 'database' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+            color: activeTab === 'database' ? '#6EE7B7' : '#94A3B8',
+            fontWeight: activeTab === 'database' ? 800 : 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.92rem',
+            transition: 'all 0.2s ease',
+            boxShadow: activeTab === 'database' ? '0 4px 15px rgba(16, 185, 129, 0.25)' : 'none'
+          }}
+        >
+          <Database size={18} />
+          📊 پایش دیتابیس و بازسازی دیتای سیستم
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('connection')}
+          style={{
+            padding: '0.7rem 1.4rem',
+            borderRadius: '12px',
+            border: activeTab === 'connection' ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.12)',
+            background: activeTab === 'connection' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+            color: activeTab === 'connection' ? '#38BDF8' : '#94A3B8',
+            fontWeight: activeTab === 'connection' ? 800 : 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.92rem',
+            transition: 'all 0.2s ease',
+            boxShadow: activeTab === 'connection' ? '0 4px 15px rgba(56, 189, 248, 0.25)' : 'none'
+          }}
+        >
+          <Server size={18} />
+          🔌 اتصال و آدرس‌های API جیرا
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('mapping')}
+          style={{
+            padding: '0.7rem 1.4rem',
+            borderRadius: '12px',
+            border: activeTab === 'mapping' ? '1px solid #EC4899' : '1px solid rgba(255, 255, 255, 0.12)',
+            background: activeTab === 'mapping' ? 'rgba(236, 72, 153, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+            color: activeTab === 'mapping' ? '#F472B6' : '#94A3B8',
+            fontWeight: activeTab === 'mapping' ? 800 : 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.92rem',
+            transition: 'all 0.2s ease',
+            boxShadow: activeTab === 'mapping' ? '0 4px 15px rgba(236, 72, 153, 0.25)' : 'none'
+          }}
+        >
+          <Cpu size={18} />
+          🛠️ نگاشت فیلدهای کاستوم و وضعیت‌ها
+        </button>
+      </div>
+
       {/* 📅 POPUP MODAL FOR CUSTOM RANGE JIRA EXTRACTION */}
       <AnimatePresence>
         {showRangeModal && (
@@ -1437,192 +1510,12 @@ const JiraSettingsPage = () => {
         </motion.div>
       )}
 
-      {/* ── 1. CONNECTION ── */}
-      <Section icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
-        <div className="jsp-grid-2">
-          <Field label="آدرس پایه Jira (Base URL)" hint="مثال: https://10.100.71.140:8443 یا https://jira.company.com">
-            <Input value={cfg.connection?.baseUrl} onChange={v => set('connection', 'baseUrl', v)} placeholder="https://10.100.71.140:8443" />
-          </Field>
-          <Field label="نام کاربری / ایمیل حساب Jira" hint="نام کاربری یا ایمیل حساب جیرا">
-            <Input value={cfg.connection?.username} onChange={v => set('connection', 'username', v)} placeholder="m.ghafoory" />
-          </Field>
-          <Field label="API Token / کلمه عبور جیرا" hint="کلمه عبور یا توکن اختصاصی حساب جیرا">
-            <Input value={cfg.connection?.token} onChange={v => set('connection', 'token', v)} placeholder="NzIyMzUz..." password />
-          </Field>
-          <Field label="کلید پروژه اصلی (Project Key)" hint="مثال: ORD، OPS، DEV">
-            <Input value={cfg.connection?.projectKey} onChange={v => set('connection', 'projectKey', v)} placeholder="ORD" mono />
-          </Field>
-          <Field label="فاصله سینک خودکار (دقیقه)" hint="هر چند دقیقه داده‌های جیرا سینک شود">
-            <Input value={cfg.connection?.syncIntervalMinutes} onChange={v => set('connection', 'syncIntervalMinutes', v)} placeholder="60" mono />
-          </Field>
+      
 
-          {/* 🌟 Multi-Select Jira Project Discovery Combo */}
-          <div style={{ gridColumn: 'span 2', marginTop: '0.5rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--glass-border)', borderRadius: '14px', padding: '1.1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div>
-                <strong style={{ color: '#38BDF8', fontSize: '0.94rem' }}>🌐 انتخاب چندتایی پروژه‌های Jira (Project Selector Combo):</strong>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  با زدن دکمه روبرو، لیست کامل پروژه‌های موجود در سرور جیرا دریافت می‌شود و می‌توانید چند پروژه را تیک بزنید.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="jsp-run-diag-btn secondary"
-                onClick={handleFetchProjects}
-                disabled={fetchingProjects}
-                style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem' }}
-              >
-                <RefreshCw size={14} className={fetchingProjects ? 'spin' : ''} />
-                {fetchingProjects ? 'در حال دریافت لیست...' : '🔍 دریافت لیست پروژه‌های Jira'}
-              </button>
-            </div>
-
-            {/* List of Discovered Projects Pills */}
-            {discoveredProjects.length > 0 ? (
-              <div>
-                {/* 🔍 Mini Live Search Box, Active Projects Toggle & Counter */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.65rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, flexWrap: 'wrap' }}>
-                    <input
-                      type="text"
-                      value={projectSearchTerm}
-                      onChange={e => setProjectSearchTerm(e.target.value)}
-                      placeholder="🔍 جستجوی سریع پروژه‌ها (نام یا کلید)..."
-                      style={{
-                        flex: 1,
-                        maxWidth: '280px',
-                        background: 'rgba(0, 0, 0, 0.4)',
-                        border: '1px solid rgba(56, 189, 248, 0.4)',
-                        color: '#FFFFFF',
-                        borderRadius: '8px',
-                        padding: '0.35rem 0.75rem',
-                        fontSize: '0.82rem',
-                        outline: 'none'
-                      }}
-                    />
-
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.82rem', color: '#E2E8F0', cursor: 'pointer', userSelect: 'none', background: 'rgba(255, 255, 255, 0.06)', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-                      <input
-                        type="checkbox"
-                        checked={onlyActiveProjects}
-                        onChange={e => setOnlyActiveProjects(e.target.checked)}
-                        style={{ accentColor: '#38BDF8', width: '15px', height: '15px', cursor: 'pointer' }}
-                      />
-                      <span>🔥 فقط پروژه‌های دارای اپیک (اپیک &gt; ۰)</span>
-                    </label>
-                  </div>
-
-                  <span style={{ fontSize: '0.8rem', color: '#38BDF8', fontWeight: 'bold' }}>
-                    📊 {filteredDiscoveredProjects.length} از {discoveredProjects.length} پروژه
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '12px', border: '1px solid var(--glass-border)', maxHeight: '200px', overflowY: 'auto' }}>
-                  {filteredDiscoveredProjects.length === 0 ? (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.5rem' }}>
-                      نتیجه‌ای برای عبارات «{projectSearchTerm}» یافت نشد.
-                    </div>
-                  ) : (
-                    filteredDiscoveredProjects.map(p => {
-                      const isSel = selectedProjectKeys.includes(p.key);
-                      return (
-                        <button
-                          key={p.key}
-                          type="button"
-                          onClick={() => toggleProjectKey(p.key)}
-                          style={{
-                            padding: '0.42rem 0.9rem',
-                            borderRadius: '20px',
-                            border: isSel ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.15)',
-                            background: isSel ? 'linear-gradient(135deg, rgba(14,165,233,0.35), rgba(59,130,246,0.35))' : 'rgba(255,255,255,0.05)',
-                            color: isSel ? '#FFFFFF' : 'var(--text-secondary)',
-                            fontWeight: isSel ? '800' : '500',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.45rem',
-                            fontSize: '0.84rem',
-                            boxShadow: isSel ? '0 0 12px rgba(56,189,248,0.3)' : 'none',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          {isSel ? '✅' : '➕'} <strong>{p.key}</strong> <small style={{ opacity: 0.85 }}>({p.name})</small>
-                          {p.epicCount !== undefined && (
-                            <span style={{
-                              background: isSel ? 'rgba(255, 255, 255, 0.25)' : 'rgba(56, 189, 248, 0.2)',
-                              color: isSel ? '#FFFFFF' : '#38BDF8',
-                              padding: '0.1rem 0.5rem',
-                              borderRadius: '10px',
-                              fontSize: '0.75rem',
-                              fontWeight: 'bold',
-                              marginRight: '0.2rem'
-                            }}>
-                              {p.epicCount} اپیک
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.85rem', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.85rem', borderRadius: '8px' }}>
-                💡 برای دریافت لیست و کمبو باکس زنده تمام پروژه‌های سرور جیرا، دکمه <strong>«🔍 دریافت لیست پروژه‌های Jira»</strong> را کلیک بفرمایید.
-              </div>
-            )}
-
-            {/* Manual input field */}
-            <Field label="کلیدهای پروژه انتخاب‌شده جهت همگام‌سازی (Project Keys):" hint="می‌توانید به صورت دستی یا از لیست بالا انتخاب کنید (با ویرگول جدا می‌شوند)">
-              <Input value={cfg.connection?.projectKey} onChange={v => set('connection', 'projectKey', v)} placeholder="ORD, OPS, DEV" mono />
-            </Field>
-
-            {/* Selected Projects Summary Banner */}
-            {selectedProjectKeys.length > 0 && (
-              <div style={{ marginTop: '0.85rem', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: '10px', padding: '0.75rem 1.05rem', fontSize: '0.86rem', lineHeight: '1.6' }}>
-                <strong style={{ color: '#38BDF8' }}>📌 پروژه‌های انتخاب‌شده فعلی جهت همگام‌سازی:</strong>
-                <div style={{ marginTop: '0.35rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  {selectedProjectKeys.map(k => {
-                    const found = discoveredProjects.find(p => p.key === k);
-                    return (
-                      <span key={k} style={{ background: 'rgba(14, 165, 233, 0.25)', border: '1px solid #38BDF8', color: '#FFFFFF', padding: '0.2rem 0.65rem', borderRadius: '12px', fontSize: '0.82rem', fontWeight: 'bold' }}>
-                        {k} {found ? `(${found.name}${found.epicCount !== undefined ? ` - ${found.epicCount} اپیک` : ''})` : ''}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </Section>
-
-      {/* ── 1.5. API ENDPOINTS & VERSION ── */}
-      <Section icon={Cpu} title="نسخه و مسیرهای API جیرا (API Version & Custom Endpoints)" color="#6366F1">
-        <p className="jsp-section-desc">اگر جیرای سازمان شما نسخه Server / Data Center یا دارای آدرس‌های اختصاصی API است، می‌توانید نسخه و مسیرها را تعیین فرمایید.</p>
-        <div className="jsp-grid-2">
-          <Field label="نوع و نسخه Jira API" hint="تعیین نوع ساختار متدهای API">
-            <select
-              value={cfg.apiEndpoints?.apiVersion || 'auto'}
-              onChange={e => set('apiEndpoints', 'apiVersion', e.target.value)}
-              className="jsp-input"
-            >
-              <option value="auto">🔄 تشخیص خودکار (Auto-Detect Cloud v3 / Server v2)</option>
-              <option value="v3">🌐 Jira Cloud (REST API v3)</option>
-              <option value="v2">🖥️ Jira Server / Data Center (REST API v2)</option>
-            </select>
-          </Field>
-          <Field label="آدرس Endpoint جستجو (Search Endpoint)" hint="مسیر API جستجوی JQL">
-            <Input value={cfg.apiEndpoints?.searchEndpoint} onChange={v => set('apiEndpoints', 'searchEndpoint', v)} placeholder="/rest/api/3/search/jql" mono />
-          </Field>
-          <Field label="آدرس Endpoint پروژه (Project Endpoint)" hint="مسیر API دریافت اطلاعات پروژه">
-            <Input value={cfg.apiEndpoints?.projectEndpoint} onChange={v => set('apiEndpoints', 'projectEndpoint', v)} placeholder="/rest/api/3/project" mono />
-          </Field>
-        </div>
-      </Section>
-
-      {/* ── 1.8. SERVER & DATABASE MANAGEMENT ── */}
-      <Section icon={Server} title="تنظیمات سرور و دیتابیس (Server & Database Management)" color="#10B981" defaultOpen={true}>
+      {/* 📊 TAB 1: DATABASE & SYSTEM STATS */}
+      {activeTab === 'database' && (
+        <div className="jsp-tab-content">
+          <Section icon={Server} title="تنظیمات سرور و دیتابیس (Server & Database Management)" color="#10B981" defaultOpen={true}>
         <p className="jsp-section-desc">پایش زنده وضعیت دیتابیس SQLite، تعداد کل تسک‌های ثبت‌شده، حجم فایل و به‌روزرسانی سیستم.</p>
         
         {/* 📊 DATABASE STATS TILE CARD */}
@@ -1938,9 +1831,199 @@ const JiraSettingsPage = () => {
           </Field>
         </div>
       </Section>
+        </div>
+      )}
 
-      {/* ── 2. CONFLUENCE ── */}
-      <Section icon={GitBranch} title="اتصال به Confluence (مستندات)" color="#A78BFA" defaultOpen={false}>
+      {/* 🔌 TAB 2: JIRA & CONFLUENCE CONNECTIONS */}
+      {activeTab === 'connection' && (
+        <div className="jsp-tab-content" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* ── 1. CONNECTION ── */}
+      <Section icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
+        <div className="jsp-grid-2">
+          <Field label="آدرس پایه Jira (Base URL)" hint="مثال: https://10.100.71.140:8443 یا https://jira.company.com">
+            <Input value={cfg.connection?.baseUrl} onChange={v => set('connection', 'baseUrl', v)} placeholder="https://10.100.71.140:8443" />
+          </Field>
+          <Field label="نام کاربری / ایمیل حساب Jira" hint="نام کاربری یا ایمیل حساب جیرا">
+            <Input value={cfg.connection?.username} onChange={v => set('connection', 'username', v)} placeholder="m.ghafoory" />
+          </Field>
+          <Field label="API Token / کلمه عبور جیرا" hint="کلمه عبور یا توکن اختصاصی حساب جیرا">
+            <Input value={cfg.connection?.token} onChange={v => set('connection', 'token', v)} placeholder="NzIyMzUz..." password />
+          </Field>
+          <Field label="کلید پروژه اصلی (Project Key)" hint="مثال: ORD، OPS، DEV">
+            <Input value={cfg.connection?.projectKey} onChange={v => set('connection', 'projectKey', v)} placeholder="ORD" mono />
+          </Field>
+          <Field label="فاصله سینک خودکار (دقیقه)" hint="هر چند دقیقه داده‌های جیرا سینک شود">
+            <Input value={cfg.connection?.syncIntervalMinutes} onChange={v => set('connection', 'syncIntervalMinutes', v)} placeholder="60" mono />
+          </Field>
+
+          {/* 🌟 Multi-Select Jira Project Discovery Combo */}
+          <div style={{ gridColumn: 'span 2', marginTop: '0.5rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--glass-border)', borderRadius: '14px', padding: '1.1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <strong style={{ color: '#38BDF8', fontSize: '0.94rem' }}>🌐 انتخاب چندتایی پروژه‌های Jira (Project Selector Combo):</strong>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  با زدن دکمه روبرو، لیست کامل پروژه‌های موجود در سرور جیرا دریافت می‌شود و می‌توانید چند پروژه را تیک بزنید.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="jsp-run-diag-btn secondary"
+                onClick={handleFetchProjects}
+                disabled={fetchingProjects}
+                style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem' }}
+              >
+                <RefreshCw size={14} className={fetchingProjects ? 'spin' : ''} />
+                {fetchingProjects ? 'در حال دریافت لیست...' : '🔍 دریافت لیست پروژه‌های Jira'}
+              </button>
+            </div>
+
+            {/* List of Discovered Projects Pills */}
+            {discoveredProjects.length > 0 ? (
+              <div>
+                {/* 🔍 Mini Live Search Box, Active Projects Toggle & Counter */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.65rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      value={projectSearchTerm}
+                      onChange={e => setProjectSearchTerm(e.target.value)}
+                      placeholder="🔍 جستجوی سریع پروژه‌ها (نام یا کلید)..."
+                      style={{
+                        flex: 1,
+                        maxWidth: '280px',
+                        background: 'rgba(0, 0, 0, 0.4)',
+                        border: '1px solid rgba(56, 189, 248, 0.4)',
+                        color: '#FFFFFF',
+                        borderRadius: '8px',
+                        padding: '0.35rem 0.75rem',
+                        fontSize: '0.82rem',
+                        outline: 'none'
+                      }}
+                    />
+
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.82rem', color: '#E2E8F0', cursor: 'pointer', userSelect: 'none', background: 'rgba(255, 255, 255, 0.06)', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                      <input
+                        type="checkbox"
+                        checked={onlyActiveProjects}
+                        onChange={e => setOnlyActiveProjects(e.target.checked)}
+                        style={{ accentColor: '#38BDF8', width: '15px', height: '15px', cursor: 'pointer' }}
+                      />
+                      <span>🔥 فقط پروژه‌های دارای اپیک (اپیک &gt; ۰)</span>
+                    </label>
+                  </div>
+
+                  <span style={{ fontSize: '0.8rem', color: '#38BDF8', fontWeight: 'bold' }}>
+                    📊 {filteredDiscoveredProjects.length} از {discoveredProjects.length} پروژه
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '12px', border: '1px solid var(--glass-border)', maxHeight: '200px', overflowY: 'auto' }}>
+                  {filteredDiscoveredProjects.length === 0 ? (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.5rem' }}>
+                      نتیجه‌ای برای عبارات «{projectSearchTerm}» یافت نشد.
+                    </div>
+                  ) : (
+                    filteredDiscoveredProjects.map(p => {
+                      const isSel = selectedProjectKeys.includes(p.key);
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => toggleProjectKey(p.key)}
+                          style={{
+                            padding: '0.42rem 0.9rem',
+                            borderRadius: '20px',
+                            border: isSel ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.15)',
+                            background: isSel ? 'linear-gradient(135deg, rgba(14,165,233,0.35), rgba(59,130,246,0.35))' : 'rgba(255,255,255,0.05)',
+                            color: isSel ? '#FFFFFF' : 'var(--text-secondary)',
+                            fontWeight: isSel ? '800' : '500',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            fontSize: '0.84rem',
+                            boxShadow: isSel ? '0 0 12px rgba(56,189,248,0.3)' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          {isSel ? '✅' : '➕'} <strong>{p.key}</strong> <small style={{ opacity: 0.85 }}>({p.name})</small>
+                          {p.epicCount !== undefined && (
+                            <span style={{
+                              background: isSel ? 'rgba(255, 255, 255, 0.25)' : 'rgba(56, 189, 248, 0.2)',
+                              color: isSel ? '#FFFFFF' : '#38BDF8',
+                              padding: '0.1rem 0.5rem',
+                              borderRadius: '10px',
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              marginRight: '0.2rem'
+                            }}>
+                              {p.epicCount} اپیک
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.85rem', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.85rem', borderRadius: '8px' }}>
+                💡 برای دریافت لیست و کمبو باکس زنده تمام پروژه‌های سرور جیرا، دکمه <strong>«🔍 دریافت لیست پروژه‌های Jira»</strong> را کلیک بفرمایید.
+              </div>
+            )}
+
+            {/* Manual input field */}
+            <Field label="کلیدهای پروژه انتخاب‌شده جهت همگام‌سازی (Project Keys):" hint="می‌توانید به صورت دستی یا از لیست بالا انتخاب کنید (با ویرگول جدا می‌شوند)">
+              <Input value={cfg.connection?.projectKey} onChange={v => set('connection', 'projectKey', v)} placeholder="ORD, OPS, DEV" mono />
+            </Field>
+
+            {/* Selected Projects Summary Banner */}
+            {selectedProjectKeys.length > 0 && (
+              <div style={{ marginTop: '0.85rem', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: '10px', padding: '0.75rem 1.05rem', fontSize: '0.86rem', lineHeight: '1.6' }}>
+                <strong style={{ color: '#38BDF8' }}>📌 پروژه‌های انتخاب‌شده فعلی جهت همگام‌سازی:</strong>
+                <div style={{ marginTop: '0.35rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {selectedProjectKeys.map(k => {
+                    const found = discoveredProjects.find(p => p.key === k);
+                    return (
+                      <span key={k} style={{ background: 'rgba(14, 165, 233, 0.25)', border: '1px solid #38BDF8', color: '#FFFFFF', padding: '0.2rem 0.65rem', borderRadius: '12px', fontSize: '0.82rem', fontWeight: 'bold' }}>
+                        {k} {found ? `(${found.name}${found.epicCount !== undefined ? ` - ${found.epicCount} اپیک` : ''})` : ''}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </Section>
+
+      {/* ── 1.5. API ENDPOINTS & VERSION ── */}
+      <Section icon={Cpu} title="نسخه و مسیرهای API جیرا (API Version & Custom Endpoints)" color="#6366F1">
+        <p className="jsp-section-desc">اگر جیرای سازمان شما نسخه Server / Data Center یا دارای آدرس‌های اختصاصی API است، می‌توانید نسخه و مسیرها را تعیین فرمایید.</p>
+        <div className="jsp-grid-2">
+          <Field label="نوع و نسخه Jira API" hint="تعیین نوع ساختار متدهای API">
+            <select
+              value={cfg.apiEndpoints?.apiVersion || 'auto'}
+              onChange={e => set('apiEndpoints', 'apiVersion', e.target.value)}
+              className="jsp-input"
+            >
+              <option value="auto">🔄 تشخیص خودکار (Auto-Detect Cloud v3 / Server v2)</option>
+              <option value="v3">🌐 Jira Cloud (REST API v3)</option>
+              <option value="v2">🖥️ Jira Server / Data Center (REST API v2)</option>
+            </select>
+          </Field>
+          <Field label="آدرس Endpoint جستجو (Search Endpoint)" hint="مسیر API جستجوی JQL">
+            <Input value={cfg.apiEndpoints?.searchEndpoint} onChange={v => set('apiEndpoints', 'searchEndpoint', v)} placeholder="/rest/api/3/search/jql" mono />
+          </Field>
+          <Field label="آدرس Endpoint پروژه (Project Endpoint)" hint="مسیر API دریافت اطلاعات پروژه">
+            <Input value={cfg.apiEndpoints?.projectEndpoint} onChange={v => set('apiEndpoints', 'projectEndpoint', v)} placeholder="/rest/api/3/project" mono />
+          </Field>
+        </div>
+      </Section>
+
+      {/* ── 1.8. SERVER & DATABASE MANAGEMENT ── */}
+          {/* ── 2. CONFLUENCE ── */}
+      <Section icon={GitBranch} title="اتصال به Confluence (مستندات)" color="#A78BFA" defaultOpen={true}>
         <div className="jsp-grid-2">
           <Field label="آدرس Confluence Base URL">
             <Input value={cfg.confluence?.baseUrl} onChange={v => set('confluence', 'baseUrl', v)} placeholder="https://10.100.71.140:8443/wiki" />
@@ -1953,8 +2036,13 @@ const JiraSettingsPage = () => {
           </Field>
         </div>
       </Section>
+        </div>
+      )}
 
-      {/* ── 3. WAITING STATUSES ── */}
+      {/* 🛠️ TAB 3: CUSTOM FIELDS & STATUS MAPPING */}
+      {activeTab === 'mapping' && (
+        <div className="jsp-tab-content" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* ── 3. WAITING STATUSES ── */}
       <Section icon={AlertTriangle} title="وضعیت‌های «منتظر» (Waiting Status List)" color="#FBBF24">
         <p className="jsp-section-desc">وضعیت‌های جیرا که باید به‌عنوان «منتظر تیم‌های دیگر» شناسایی شوند. هر وضعیت را وارد کرده و Enter بزنید.</p>
         <TagList
@@ -2002,7 +2090,7 @@ const JiraSettingsPage = () => {
       </Section>
 
       {/* ── 6. DATE MAPPING ── */}
-      <Section icon={Calendar} title="نگاشت فیلدهای تاریخ (Date Field Mapping)" color="#06B6D4" defaultOpen={false}>
+      <Section icon={Calendar} title="نگاشت فیلدهای تاریخ (Date Field Mapping)" color="#06B6D4" defaultOpen={true}>
         <div className="jsp-grid-2">
           <Field label="فیلد تاریخ شروع اپیک" hint="معمولاً created یا customfield_XXXXX">
             <Input value={cfg.dateMapping?.epicStartDateField} onChange={v => set('dateMapping', 'epicStartDateField', v)} placeholder="created" mono />
@@ -2020,7 +2108,7 @@ const JiraSettingsPage = () => {
       </Section>
 
       {/* ── 7. LABEL PREFIXES ── */}
-      <Section icon={Tag} title="پیشوندهای لیبل‌های جیرا (Label Prefixes)" color="#F97316" defaultOpen={false}>
+      <Section icon={Tag} title="پیشوندهای لیبل‌های جیرا (Label Prefixes)" color="#F97316" defaultOpen={true}>
         <p className="jsp-section-desc">برچسب‌هایی که برای تشخیص تیم منتظر، دلیل انتظار و قابلیت‌ها از لیبل‌های Jira استفاده می‌شوند.</p>
         <div className="jsp-grid-2">
           <Field label="پیشوند تیم منتظر" hint="مثال: wait: → لیبل: wait:infra-team">
@@ -2036,7 +2124,7 @@ const JiraSettingsPage = () => {
       </Section>
 
       {/* ── 8. FEATURED COMPONENTS ── */}
-      <Section icon={Cpu} title="کامپوننت‌های برجسته داشبورد (Featured Components)" color="#8B5CF6" defaultOpen={false}>
+      <Section icon={Cpu} title="کامپوننت‌های برجسته داشبورد (Featured Components)" color="#8B5CF6" defaultOpen={true}>
         <p className="jsp-section-desc">کامپوننت‌هایی که به‌عنوان دکمه فیلتر سریع در صفحه داشبورد نمایش داده می‌شوند.</p>
         <TagList
           items={cfg.featuredComponents || []}
@@ -2044,10 +2132,11 @@ const JiraSettingsPage = () => {
           placeholder="learning، meeting، support..."
         />
       </Section>
+        </div>
+      )}
 
-    </motion.div>
+      </motion.div>
   );
 };
 
 export default JiraSettingsPage;
-
