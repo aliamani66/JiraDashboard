@@ -248,7 +248,7 @@ router.put('/config', (req, res) => {
   }
 });
 
-// GET: Single COUNT query to Jira — total tasks for configured projects, no date filter
+// GET: Single COUNT query to Jira — total tasks, with epic, without epic for configured projects
 router.get('/jira-count', async (req, res) => {
   try {
     const cfg = jiraService.getJiraConfig();
@@ -267,6 +267,7 @@ router.get('/jira-count', async (req, res) => {
       else if (projects.length === 1) projectClause = `project = ${projects[0]}`;
     }
 
+    // 1. Total Non-Epic Tasks Count JQL
     const countJql = projectClause
       ? `${projectClause} AND issuetype != Epic`
       : `issuetype != Epic`;
@@ -274,20 +275,54 @@ router.get('/jira-count', async (req, res) => {
     const countRes = await jiraService.jiraSearch(countJql, ['key'], { maxResults: 1, timeout: 15000, retries: 2, singlePage: true });
     const total = countRes.total !== undefined ? countRes.total : 0;
 
-    let withEpicCount = 0;
+    // 2. Direct Jira Query for Tasks Without Epic: "Epic Link" EMPTY
+    let withoutEpicCount = 0;
+    const withoutEpicJql = projectClause
+      ? `${projectClause} AND issuetype != Epic AND "Epic Link" EMPTY`
+      : `issuetype != Epic AND "Epic Link" EMPTY`;
+
     try {
-      const withEpicJql = projectClause
-        ? `${projectClause} AND issuetype != Epic AND ("Epic Link" IS NOT EMPTY OR parent IS NOT EMPTY)`
-        : `issuetype != Epic AND ("Epic Link" IS NOT EMPTY OR parent IS NOT EMPTY)`;
-      const withEpicRes = await jiraService.jiraSearch(withEpicJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
-      withEpicCount = withEpicRes.total !== undefined ? withEpicRes.total : 0;
-    } catch (_) {
-      withEpicCount = total;
+      const withoutRes = await jiraService.jiraSearch(withoutEpicJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
+      if (withoutRes && withoutRes.total !== undefined) {
+        withoutEpicCount = withoutRes.total;
+      }
+    } catch (e1) {
+      // Fallback 1: "Epic Link" IS EMPTY
+      try {
+        const altJql = projectClause
+          ? `${projectClause} AND issuetype != Epic AND "Epic Link" IS EMPTY`
+          : `issuetype != Epic AND "Epic Link" IS EMPTY`;
+        const altRes = await jiraService.jiraSearch(altJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
+        if (altRes && altRes.total !== undefined) {
+          withoutEpicCount = altRes.total;
+        }
+      } catch (e2) {
+        // Fallback 2: parent IS EMPTY
+        try {
+          const parentJql = projectClause
+            ? `${projectClause} AND issuetype != Epic AND parent IS EMPTY`
+            : `issuetype != Epic AND parent IS EMPTY`;
+          const parentRes = await jiraService.jiraSearch(parentJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
+          if (parentRes && parentRes.total !== undefined) {
+            withoutEpicCount = parentRes.total;
+          }
+        } catch (e3) {
+          withoutEpicCount = 0;
+        }
+      }
     }
 
-    const withoutEpicCount = Math.max(0, total - withEpicCount);
+    const withEpicCount = Math.max(0, total - withoutEpicCount);
 
-    res.json({ success: true, total, withEpicCount, withoutEpicCount, jql: countJql, projectKey: projKeyStr });
+    res.json({
+      success: true,
+      total,
+      withEpicCount,
+      withoutEpicCount,
+      jql: countJql,
+      withoutEpicJql,
+      projectKey: projKeyStr
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: 'خطا در دریافت تعداد از جیرا: ' + err.message });
   }
