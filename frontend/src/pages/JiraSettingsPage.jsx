@@ -1267,137 +1267,7 @@ const JiraSettingsPage = () => {
       </AnimatePresence>
 
 
-      {/* ── BATCH SYNC RESULTS REPORT ── */}
-      {monthlyResults && (
-        <motion.div className="glass-card jsp-diag-card" style={{ borderColor: 'rgba(139, 92, 246, 0.4)', background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.4), rgba(15, 23, 42, 0.85))' }} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="jsp-diag-header">
-            <div>
-              <h2 style={{ color: '#C084FC', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                <Calendar size={22} /> گزارش تفکیکی همگام‌سازی داده‌های Jira
-              </h2>
-              <p className="jsp-diag-sub" style={{ marginTop: '0.45rem' }}>
-                تعداد کل تسک‌های دریافت‌شده: <strong style={{ color: '#38BDF8', fontSize: '1.05rem' }}>{monthlyResults.totalTasksSynced || 0} تسک</strong> | تعداد بازه/ماه بررسی‌شده: <strong>{monthlyResults.monthlyResults?.length || 0} بازه</strong>
-              </p>
-            </div>
-            <button className="jsp-delete-row" style={{ color: '#A78BFA', cursor: 'pointer' }} onClick={() => { setMonthlyResults(null); setJiraTotalCount(null); }} title="بستن این گزارش">
-              <X size={20} />
-            </button>
-          </div>
 
-          {/* ── JIRA vs DB COMPARISON BAR ── */}
-          <div style={{
-            margin: '0.4rem 0 0.25rem',
-            background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,27,75,0.85))',
-            border: '1px solid rgba(139,92,246,0.35)',
-            borderRadius: '10px',
-            padding: '0.45rem 0.85rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '0.5rem'
-          }}>
-            {/* Synced from this run */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
-              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>📥 تسک‌های سینک‌شده (این عملیات)</span>
-              <strong style={{ fontSize: '1.2rem', color: '#38BDF8', fontWeight: 800, lineHeight: 1 }}>{(monthlyResults.totalTasksSynced || 0).toLocaleString()}</strong>
-              <span style={{ fontSize: '0.68rem', color: '#64748B' }}>تسک</span>
-            </div>
-
-            <div style={{ fontSize: '1.4rem', color: '#475569', fontWeight: 300 }}>vs</div>
-
-            {/* Jira total COUNT */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
-              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>🔢 کل جیرا ({cfg.rebuildMonths || 3} ماه گذشته)</span>
-              {jiraTotalCountLoading ? (
-                <span style={{ fontSize: '0.85rem', color: '#A78BFA' }}>⏳ در حال دریافت...</span>
-              ) : jiraTotalCount ? (
-                <strong style={{ fontSize: '1.2rem', color: '#C084FC', fontWeight: 800, lineHeight: 1 }}>{jiraTotalCount.total.toLocaleString()}</strong>
-              ) : (
-                <button onClick={async () => {
-                  try { setJiraTotalCountLoading(true); const r = await api.getJiraTotalCount(); if (r.success) setJiraTotalCount({ total: r.total, jql: r.jql }); } catch (_) {}
-                  finally { setJiraTotalCountLoading(false); }
-                }} style={{ background: 'rgba(192,132,252,0.15)', border: '1px solid rgba(192,132,252,0.4)', color: '#C084FC', borderRadius: '8px', padding: '0.3rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>
-                  کلیک کن تعداد جیرا بیاد
-                </button>
-              )}
-              <span style={{ fontSize: '0.68rem', color: '#64748B' }}>تسک</span>
-            </div>
-
-            <div style={{ fontSize: '1.4rem', color: '#475569', fontWeight: 300 }}>=</div>
-
-            {/* Difference */}
-            {jiraTotalCount && (() => {
-              const diff = jiraTotalCount.total - (monthlyResults.totalTasksSynced || 0);
-              const isOk = diff === 0;
-              const isNeg = diff < 0;
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
-                  <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>⚠️ اختلاف</span>
-                  <strong style={{ fontSize: '1.2rem', color: isOk ? '#10B981' : isNeg ? '#F59E0B' : '#EF4444', fontWeight: 800, lineHeight: 1 }}>
-                    {diff >= 0 ? '+' : ''}{diff.toLocaleString()}
-                  </strong>
-                  <span style={{ fontSize: '0.68rem', color: isOk ? '#6EE7B7' : '#94A3B8' }}>{isOk ? '✅ برابر' : isNeg ? 'بیشتر از جیرا سینک شده' : 'تسک سینک‌نشده'}</span>
-                </div>
-              );
-            })()}
-
-            {/* COUNT JQL label */}
-            {jiraTotalCount?.jql && (
-              <div style={{ width: '100%', marginTop: '0.15rem', paddingTop: '0.6rem', borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
-                <code style={{ fontSize: '0.67rem', color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace', display: 'block' }}>
-                  🔍 COUNT JQL: {jiraTotalCount.jql}
-                </code>
-              </div>
-            )}
-          </div>
-
-          <div ref={syncLogsWrapperRef} className="jsp-diag-table-wrapper" style={{ marginTop: '0.4rem', maxHeight: '115px', overflowY: 'auto', scrollBehavior: 'smooth', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
-            <table className="jsp-diag-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '70px' }}>ردیف</th>
-                  <th>دوره زمانی (ماه)</th>
-                  <th>بازه تاریخ میلادی</th>
-                  <th>وضعیت همگام‌سازی</th>
-                  <th>تعداد تسک دریافت‌شده</th>
-                  <th>کوئری JQL اجراشده</th>
-                </tr>
-              </thead>
-              <tbody>
-                {monthlyResults.monthlyResults?.map((m) => (
-                  <tr key={m.monthIndex}>
-                    <td><strong>ماه {m.monthIndex}</strong></td>
-                    <td>
-                      <strong style={{ color: '#F8FAFC' }}>{m.jalaliName}</strong>
-                      <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>{m.gregorianName}</div>
-                    </td>
-                    <td><code className="mono-code" style={{ fontSize: '0.8rem' }}>{m.dateRange}</code></td>
-                    <td>
-                      <span className={`diag-status-pill ${m.status === 'success' ? 'matched' : m.status === 'empty' ? 'warning' : 'missing'}`}>
-                        {m.status === 'success' ? '✅ موفق' : m.status === 'empty' ? '⚠️ ۰ تسک (بدون نتیجه)' : '❌ خطا'}
-                      </span>
-                    </td>
-                    <td>
-                      <strong style={{ color: m.taskCount > 0 ? '#38BDF8' : '#64748B', fontSize: '0.95rem' }}>
-                        {m.taskCount} تسک
-                      </strong>
-                    </td>
-                    <td>
-                      <code className="diag-val-code accent" style={{ fontSize: '0.78rem', color: m.status === 'error' ? '#FCA5A5' : '#38BDF8', wordBreak: 'break-all', display: 'inline-block', padding: '0.2rem 0.5rem', background: m.status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(56, 189, 248, 0.1)', border: m.status === 'error' ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '6px' }} title={m.jql || m.message}>
-                        {m.jql || 'مشخص نشده'}
-                      </code>
-                      {m.status === 'error' && m.message && (
-                        <div style={{ fontSize: '0.72rem', color: '#FCA5A5', marginTop: '0.25rem' }}>{m.message}</div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
-      )}
 
       {/* ── DIAGNOSTIC RESULTS (TOP OF PAGE) ── */}
       {diagResult && (
@@ -2069,6 +1939,135 @@ const JiraSettingsPage = () => {
             </div>
           )}
         </div>
+
+        {/* ── BATCH SYNC RESULTS REPORT (INSIDE TAB 1) ── */}
+        {monthlyResults && (
+          <motion.div className="glass-card jsp-diag-card" style={{ borderColor: 'rgba(139, 92, 246, 0.4)', background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.4), rgba(15, 23, 42, 0.85))', marginBottom: '1.5rem' }} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="jsp-diag-header">
+              <div>
+                <h2 style={{ color: '#C084FC', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                  <Calendar size={22} /> گزارش تفکیکی همگام‌سازی داده‌های Jira
+                </h2>
+                <p className="jsp-diag-sub" style={{ marginTop: '0.45rem' }}>
+                  تعداد کل تسک‌های دریافت‌شده: <strong style={{ color: '#38BDF8', fontSize: '1.05rem' }}>{monthlyResults.totalTasksSynced || 0} تسک</strong> | تعداد بازه/ماه بررسی‌شده: <strong>{monthlyResults.monthlyResults?.length || 0} بازه</strong>
+                </p>
+              </div>
+              <button className="jsp-delete-row" style={{ color: '#A78BFA', cursor: 'pointer' }} onClick={() => { setMonthlyResults(null); setJiraTotalCount(null); }} title="بستن این گزارش">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* ── JIRA vs DB COMPARISON BAR ── */}
+            <div style={{
+              margin: '0.4rem 0 0.25rem',
+              background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,27,75,0.85))',
+              border: '1px solid rgba(139,92,246,0.35)',
+              borderRadius: '10px',
+              padding: '0.45rem 0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.5rem'
+            }}>
+              {/* Synced from this run */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+                <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>📥 تسک‌های سینک‌شده (این عملیات)</span>
+                <strong style={{ fontSize: '1.2rem', color: '#38BDF8', fontWeight: 800, lineHeight: 1 }}>{(monthlyResults.totalTasksSynced || 0).toLocaleString()}</strong>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>تسک</span>
+              </div>
+
+              <div style={{ fontSize: '1.4rem', color: '#475569', fontWeight: 300 }}>vs</div>
+
+              {/* Jira total COUNT */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+                <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>🔢 کل جیرا ({cfg.rebuildMonths || 3} ماه گذشته)</span>
+                {jiraCountLoading ? (
+                  <span style={{ fontSize: '0.85rem', color: '#A78BFA' }}>⏳ در حال دریافت...</span>
+                ) : jiraCountData ? (
+                  <strong style={{ fontSize: '1.2rem', color: '#C084FC', fontWeight: 800, lineHeight: 1 }}>{jiraCountData.total.toLocaleString()}</strong>
+                ) : (
+                  <button onClick={() => fetchJiraCount(true)} style={{ background: 'rgba(192,132,252,0.15)', border: '1px solid rgba(192,132,252,0.4)', color: '#C084FC', borderRadius: '8px', padding: '0.3rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>
+                    🔄 دریافت آمار زنده جیرا
+                  </button>
+                )}
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>تسک</span>
+              </div>
+
+              <div style={{ fontSize: '1.4rem', color: '#475569', fontWeight: 300 }}>=</div>
+
+              {/* Difference */}
+              {jiraCountData && (() => {
+                const diff = jiraCountData.total - (monthlyResults.totalTasksSynced || 0);
+                const isOk = diff === 0;
+                const isNeg = diff < 0;
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>⚠️ اختلاف</span>
+                    <strong style={{ fontSize: '1.2rem', color: isOk ? '#10B981' : isNeg ? '#F59E0B' : '#EF4444', fontWeight: 800, lineHeight: 1 }}>
+                      {diff >= 0 ? '+' : ''}{diff.toLocaleString()}
+                    </strong>
+                    <span style={{ fontSize: '0.68rem', color: isOk ? '#6EE7B7' : '#94A3B8' }}>{isOk ? '✅ برابر' : isNeg ? 'بیشتر از جیرا سینک شده' : 'تسک سینک‌نشده'}</span>
+                  </div>
+                );
+              })()}
+
+              {/* COUNT JQL label */}
+              {jiraCountData?.jql && (
+                <div style={{ width: '100%', marginTop: '0.15rem', paddingTop: '0.6rem', borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
+                  <code style={{ fontSize: '0.67rem', color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace', display: 'block' }}>
+                    🔍 COUNT JQL: {jiraCountData.jql}
+                  </code>
+                </div>
+              )}
+            </div>
+
+            <div ref={syncLogsWrapperRef} className="jsp-diag-table-wrapper" style={{ marginTop: '0.4rem', maxHeight: '115px', overflowY: 'auto', scrollBehavior: 'smooth', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
+              <table className="jsp-diag-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '70px' }}>ردیف</th>
+                    <th>دوره زمانی (ماه)</th>
+                    <th>بازه تاریخ میلادی</th>
+                    <th>وضعیت همگام‌سازی</th>
+                    <th>تعداد تسک دریافت‌شده</th>
+                    <th>کوئری JQL اجراشده</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthlyResults.monthlyResults?.map((m) => (
+                    <tr key={m.monthIndex}>
+                      <td><strong>ماه {m.monthIndex}</strong></td>
+                      <td>
+                        <strong style={{ color: '#F8FAFC' }}>{m.jalaliName}</strong>
+                        <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>{m.gregorianName}</div>
+                      </td>
+                      <td><code className="mono-code" style={{ fontSize: '0.8rem' }}>{m.dateRange}</code></td>
+                      <td>
+                        <span className={`diag-status-pill ${m.status === 'success' ? 'matched' : m.status === 'empty' ? 'warning' : 'missing'}`}>
+                          {m.status === 'success' ? '✅ موفق' : m.status === 'empty' ? '⚠️ ۰ تسک (بدون نتیجه)' : '❌ خطا'}
+                        </span>
+                      </td>
+                      <td>
+                        <strong style={{ color: m.taskCount > 0 ? '#38BDF8' : '#64748B', fontSize: '0.95rem' }}>
+                          {m.taskCount} تسک
+                        </strong>
+                      </td>
+                      <td>
+                        <code className="diag-val-code accent" style={{ fontSize: '0.78rem', color: m.status === 'error' ? '#FCA5A5' : '#38BDF8', wordBreak: 'break-all', display: 'inline-block', padding: '0.2rem 0.5rem', background: m.status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(56, 189, 248, 0.1)', border: m.status === 'error' ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '6px' }} title={m.jql || m.message}>
+                          {m.jql || 'مشخص نشده'}
+                        </code>
+                        {m.status === 'error' && m.message && (
+                          <div style={{ fontSize: '0.72rem', color: '#FCA5A5', marginTop: '0.25rem' }}>{m.message}</div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
 
         <div className="jsp-grid-2">
           <Field label="پورت سرور بک‌اند (Port)" hint="پورت سرویس‌دهنده Node.js">
