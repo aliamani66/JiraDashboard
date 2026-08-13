@@ -1757,11 +1757,16 @@ const JiraSettingsPage = () => {
                       background: 'rgba(167,139,250,0.18)', padding: '0.2rem 0.7rem',
                       borderRadius: '8px', letterSpacing: '0.05em'
                     }}>{proj.id}</span>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
-                      <strong style={{ fontSize: '1.25rem', color: proj.taskCount > 0 ? '#818CF8' : '#475569', fontWeight: 800 }}>
-                        {proj.taskCount.toLocaleString()}
-                      </strong>
-                      <span style={{ fontSize: '0.75rem', color: '#64748B' }}>تسک</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#C084FC', fontWeight: 700, background: 'rgba(192,132,252,0.12)', padding: '0.2rem 0.6rem', borderRadius: '7px', border: '1px solid rgba(192,132,252,0.3)' }}>
+                        ⚡ {proj.epicCount || 0} اپیک
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
+                        <strong style={{ fontSize: '1.25rem', color: proj.taskCount > 0 ? '#818CF8' : '#475569', fontWeight: 800 }}>
+                          {proj.taskCount.toLocaleString()}
+                        </strong>
+                        <span style={{ fontSize: '0.75rem', color: '#64748B' }}>تسک</span>
+                      </div>
                     </div>
                   </div>
                 ))}

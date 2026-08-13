@@ -807,19 +807,52 @@ router.get('/db-stats', (req, res) => {
         });
     } catch (_) {}
 
-    // Task count per Jira project key (prefix before dash, e.g. ORD from ORD-123)
+    // Task count and Epic count per Jira project key (e.g. ORD, OPS)
     let projectTaskCounts = [];
     try {
+      const epicCountMap = new Map();
+      try {
+        const epicRows = db.prepare(`
+          SELECT
+            CASE
+              WHEN INSTR(id, '-') > 0 THEN UPPER(SUBSTR(id, 1, INSTR(id, '-') - 1))
+              ELSE UPPER(id)
+            END as projectKey,
+            COUNT(*) as epicCount
+          FROM projects
+          WHERE id IS NOT NULL AND id != ''
+          GROUP BY projectKey
+        `).all();
+        for (const r of epicRows) {
+          if (r.projectKey) epicCountMap.set(r.projectKey, r.epicCount || 0);
+        }
+      } catch (_) {}
+
       const projTaskRows = db.prepare(`
         SELECT
-          UPPER(SUBSTR(id, 1, INSTR(id, '-') - 1)) as projectKey,
+          CASE
+            WHEN INSTR(id, '-') > 0 THEN UPPER(SUBSTR(id, 1, INSTR(id, '-') - 1))
+            ELSE UPPER(id)
+          END as projectKey,
           COUNT(*) as taskCount
         FROM tasks
-        WHERE INSTR(id, '-') > 0
+        WHERE id IS NOT NULL AND id != ''
         GROUP BY projectKey
         ORDER BY taskCount DESC
       `).all();
-      projectTaskCounts = projTaskRows.map(r => ({ id: r.projectKey, title: r.projectKey, taskCount: r.taskCount || 0 }));
+
+      projectTaskCounts = projTaskRows.map(r => ({
+        id: r.projectKey,
+        title: r.projectKey,
+        taskCount: r.taskCount || 0,
+        epicCount: epicCountMap.get(r.projectKey) || 0
+      }));
+
+      for (const [pKey, eCount] of epicCountMap.entries()) {
+        if (!projectTaskCounts.some(p => p.id === pKey)) {
+          projectTaskCounts.push({ id: pKey, title: pKey, taskCount: 0, epicCount: eCount });
+        }
+      }
     } catch (_) {}
 
     res.json({
