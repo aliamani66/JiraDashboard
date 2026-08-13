@@ -43,7 +43,7 @@ async function syncFromJira() {
         confluence_link=excluded.confluence_link,
         start_date=COALESCE(excluded.start_date, projects.start_date),
         due_date=COALESCE(excluded.due_date, projects.due_date),
-        labels=COALESCE(excluded.labels, projects.labels),
+        labels=CASE WHEN excluded.labels IS NOT NULL AND excluded.labels != '' AND excluded.labels != '[]' THEN excluded.labels ELSE COALESCE(projects.labels, excluded.labels) END,
         assignee=COALESCE(excluded.assignee, projects.assignee),
         priority=COALESCE(excluded.priority, projects.priority),
         linked_tasks=COALESCE(excluded.linked_tasks, projects.linked_tasks),

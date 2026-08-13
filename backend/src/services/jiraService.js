@@ -290,6 +290,7 @@ async function fetchEpics() {
     }
     const jql = `issuetype=Epic ${projectFilter} ORDER BY created DESC`;
     const fields = [
+      '*navigable',
       'summary', 
       'description', 
       'status', 
@@ -305,7 +306,7 @@ async function fetchEpics() {
       customFields.confluenceLinkField,
       customFields.capabilitiesField,
       customFields.categoryField
-    ];
+    ].filter(Boolean);
     
     const data = await jiraSearch(jql, fields, { maxResults: 2000 });
     const allIssues = data.issues || [];
@@ -485,6 +486,7 @@ async function fetchTasksForEpic(epicKey) {
     ];
 
     const fields = [
+      '*navigable',
       'summary', 
       'description',
       'status', 
@@ -500,15 +502,13 @@ async function fetchTasksForEpic(epicKey) {
       'priority', 
       'labels', 
       'sprint', 
-      'customfield_10004',
-      'customfield_10020',
       'issuelinks',
       mapping.dateMapping.taskStartDateField,
       mapping.dateMapping.taskDueDateField,
       customFields.sprintField,
       customFields.waitingTeamField,
       customFields.waitingReasonField
-    ];
+    ].filter(Boolean);
 
     let allIssues = [];
     for (const jql of jqlCandidates) {
@@ -1006,7 +1006,42 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     sprint_start_date: sprintStartDate,
     sprint_end_date: sprintEndDate,
     priority: issue.fields?.priority ? issue.fields.priority.name : 'Medium',
-    labels: JSON.stringify(issue.fields?.labels || []),
+    labels: (() => {
+      const taskLabelSet = new Set();
+      if (Array.isArray(issue.fields?.labels)) {
+        for (const l of issue.fields.labels) {
+          if (typeof l === 'string' && l.trim()) taskLabelSet.add(l.trim());
+          else if (l && typeof l === 'object') {
+            const val = l.value || l.name || l.label;
+            if (val) taskLabelSet.add(String(val).trim());
+          }
+        }
+      }
+      if (issue.fields && typeof issue.fields === 'object') {
+        for (const [fKey, fVal] of Object.entries(issue.fields)) {
+          if (!fVal || fKey === 'summary' || fKey === 'description' || fKey === 'comment' || fKey === 'worklog') continue;
+          if (fKey.startsWith('customfield_')) {
+            if (Array.isArray(fVal)) {
+              for (const item of fVal) {
+                if (typeof item === 'string' && item.trim()) {
+                  taskLabelSet.add(item.trim());
+                } else if (item && typeof item === 'object') {
+                  const val = item.value || item.name || item.label;
+                  if (val && typeof val === 'string' && val.trim()) {
+                    taskLabelSet.add(val.trim());
+                  }
+                }
+              }
+            } else if (typeof fVal === 'string' && (/\b(13\d\d|14\d\d|20\d\d)\b/.test(fVal) || /Q[1-4]/i.test(fVal) || /فصل|بهار|تابستان|پاییز|زمستان/.test(fVal))) {
+              taskLabelSet.add(fVal.trim());
+            } else if (typeof fVal === 'object' && fVal.value && typeof fVal.value === 'string') {
+              taskLabelSet.add(String(fVal.value).trim());
+            }
+          }
+        }
+      }
+      return JSON.stringify(Array.from(taskLabelSet));
+    })(),
     component: component,
     sort_order: index,
     is_subtask: isSubtask,
