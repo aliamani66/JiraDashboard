@@ -258,6 +258,7 @@ const JiraSettingsPage = () => {
 
   const [liveMappingData, setLiveMappingData] = useState(null);
   const [liveMappingLoading, setLiveMappingLoading] = useState(false);
+  const [liveMappingSubTab, setLiveMappingSubTab] = useState('errors');
 
   const fetchLiveMappingInspector = async () => {
     try {
@@ -2856,40 +2857,163 @@ const JiraSettingsPage = () => {
                       </div>
                     ) : (
                       <>
-                        {liveMappingData && (
-                          <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.12)', borderBottom: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', fontSize: '0.8rem', color: '#6EE7B7' }}>
-                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                              <span><strong>📊 خلاصه نگاشت:</strong> {liveMappingData.totalJiraIssues} آیتم از جیرا خوانده شد</span>
-                              <span>| 🔗 <strong>تسک‌های دارای اپیک:</strong> {liveMappingData.withEpicCount}</span>
-                              <span>| ⚪ <strong>تسک‌های بدون اپیک:</strong> {liveMappingData.withoutEpicCount}</span>
-                              <span>| 🔹 <strong>زیرتسک‌ها (Sub-tasks):</strong> {liveMappingData.subtaskCount || 0}</span>
-                              <span>| 📌 <strong>اپیک‌های اصلی:</strong> {liveMappingData.epicsCount}</span>
-                              <span>| 💾 <strong>کل تسک‌های موجود در DB:</strong> {liveMappingData.dbTotalCount}</span>
+                        {liveMappingData && (() => {
+                          const allLiveMappings = liveMappingData.mappings || [];
+                          const errorMappings = allLiveMappings.filter(m => !m.inDb || m.classification === 'INVALID_KEY' || (m.recordStatus && (m.recordStatus.includes('🔴') || m.recordStatus.includes('⚠️'))));
+                          const matchedMappings = allLiveMappings.filter(m => m.inDb && m.classification !== 'INVALID_KEY' && (!m.recordStatus || (!m.recordStatus.includes('🔴') && !m.recordStatus.includes('⚠️'))));
+
+                          return (
+                            <div>
+                              <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.12)', borderBottom: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', fontSize: '0.8rem', color: '#6EE7B7' }}>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                  <span><strong>📊 خلاصه نگاشت:</strong> {liveMappingData.totalJiraIssues} آیتم از جیرا خوانده شد</span>
+                                  <span>| 🔗 <strong>تسک‌های دارای اپیک:</strong> {liveMappingData.withEpicCount}</span>
+                                  <span>| ⚪ <strong>تسک‌های بدون اپیک:</strong> {liveMappingData.withoutEpicCount}</span>
+                                  <span>| 🔹 <strong>زیرتسک‌ها:</strong> {liveMappingData.subtaskCount || 0}</span>
+                                  <span>| 📌 <strong>اپیک‌ها:</strong> {liveMappingData.epicsCount}</span>
+                                  <span>| 💾 <strong>کل در DB:</strong> {liveMappingData.dbTotalCount}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={handleSyncMissingTasks}
+                                  disabled={syncingMissing}
+                                  style={{
+                                    background: 'linear-gradient(135deg, #10B981, #059669)',
+                                    border: 'none',
+                                    color: '#FFFFFF',
+                                    padding: '0.35rem 0.85rem',
+                                    borderRadius: '8px',
+                                    fontSize: '0.78rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)'
+                                  }}
+                                >
+                                  <RefreshCw size={13} className={syncingMissing ? 'spin' : ''} />
+                                  <span>{syncingMissing ? 'در حال ذخیره‌سازی...' : '⚡ ذخیره و سینک فوری تمام تسک‌ها در دیتابیس'}</span>
+                                </button>
+                              </div>
+
+                              {/* Sub-tabs inside Live Mapping: Errors vs All vs Matched */}
+                              <div style={{ display: 'flex', gap: '0.6rem', padding: '0.6rem 1rem', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(255,255,255,0.06)', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setLiveMappingSubTab('errors')}
+                                  style={{
+                                    padding: '0.35rem 0.9rem',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: liveMappingSubTab === 'errors' ? 'linear-gradient(135deg, #EF4444, #DC2626)' : 'rgba(239, 68, 68, 0.15)',
+                                    color: liveMappingSubTab === 'errors' ? '#FFFFFF' : '#FCA5A5',
+                                    fontWeight: 800,
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem'
+                                  }}
+                                >
+                                  <span>🔴 فقط خطادارها و سینک‌نشده‌ها</span>
+                                  <span style={{ background: 'rgba(0,0,0,0.35)', padding: '0.1rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem' }}>{errorMappings.length}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setLiveMappingSubTab('all')}
+                                  style={{
+                                    padding: '0.35rem 0.9rem',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: liveMappingSubTab === 'all' ? 'linear-gradient(135deg, #8B5CF6, #6D28D9)' : 'rgba(139, 92, 246, 0.15)',
+                                    color: liveMappingSubTab === 'all' ? '#FFFFFF' : '#DDD6FE',
+                                    fontWeight: 800,
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem'
+                                  }}
+                                >
+                                  <span>📋 همه تسک‌های نگاشت</span>
+                                  <span style={{ background: 'rgba(0,0,0,0.35)', padding: '0.1rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem' }}>{allLiveMappings.length}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setLiveMappingSubTab('matched')}
+                                  style={{
+                                    padding: '0.35rem 0.9rem',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: liveMappingSubTab === 'matched' ? 'linear-gradient(135deg, #10B981, #059669)' : 'rgba(16, 185, 129, 0.15)',
+                                    color: liveMappingSubTab === 'matched' ? '#FFFFFF' : '#6EE7B7',
+                                    fontWeight: 800,
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem'
+                                  }}
+                                >
+                                  <span>✅ سالم و تطابق‌یافته</span>
+                                  <span style={{ background: 'rgba(0,0,0,0.35)', padding: '0.1rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem' }}>{matchedMappings.length}</span>
+                                </button>
+                              </div>
+
+                              {/* Action Banner when in Errors tab */}
+                              {liveMappingSubTab === 'errors' && errorMappings.length > 0 && (
+                                <div style={{
+                                  margin: '0.75rem 1rem',
+                                  padding: '0.85rem 1.25rem',
+                                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(185, 28, 28, 0.12))',
+                                  border: '1px solid rgba(239, 68, 68, 0.45)',
+                                  borderRadius: '12px',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  flexWrap: 'wrap',
+                                  gap: '1rem'
+                                }}>
+                                  <div>
+                                    <div style={{ fontWeight: 800, color: '#FCA5A5', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                      <span>⚠️</span>
+                                      <span>تعداد {errorMappings.length} تسک در جیرا شناسایی شد که در دیتابیس ثبت نشده یا نیاز به تصحیح دارند.</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: '#F87171', marginTop: '0.2rem' }}>
+                                      با کلیک روی دکمه مقابل، کل این تسک‌ها مستقیماً از جیرا استخراج و در دیتابیس ذخیره می‌شوند.
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={handleSyncMissingTasks}
+                                    disabled={syncingMissing}
+                                    style={{
+                                      background: 'linear-gradient(135deg, #EF4444, #B91C1C)',
+                                      border: 'none',
+                                      color: '#FFFFFF',
+                                      padding: '0.55rem 1.25rem',
+                                      borderRadius: '10px',
+                                      fontSize: '0.84rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.5rem',
+                                      boxShadow: '0 4px 14px rgba(239, 68, 68, 0.45)'
+                                    }}
+                                  >
+                                    <RefreshCw size={15} className={syncingMissing ? 'spin' : ''} />
+                                    <span>{syncingMissing ? 'در حال همگام‌سازی...' : `⚡ ذخیره و سینک کل ${errorMappings.length} تسک خطادار در دیتابیس`}</span>
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                            <button
-                              type="button"
-                              onClick={handleSyncMissingTasks}
-                              disabled={syncingMissing}
-                              style={{
-                                background: 'linear-gradient(135deg, #10B981, #059669)',
-                                border: 'none',
-                                color: '#FFFFFF',
-                                padding: '0.35rem 0.85rem',
-                                borderRadius: '8px',
-                                fontSize: '0.78rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.4rem',
-                                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)'
-                              }}
-                            >
-                              <RefreshCw size={13} className={syncingMissing ? 'spin' : ''} />
-                              <span>{syncingMissing ? 'در حال ذخیره‌سازی...' : '⚡ ذخیره و سینک فوری تمام این تسک‌ها در دیتابیس'}</span>
-                            </button>
-                          </div>
-                        )}
+                          );
+                        })()}
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'right' }}>
                           <thead>
                             <tr style={{ background: '#1E293B', color: '#F1F5F9', borderBottom: '2px solid #10B981', position: 'sticky', top: 0, zIndex: 10 }}>
@@ -2904,6 +3028,14 @@ const JiraSettingsPage = () => {
                           <tbody>
                             {(() => {
                               const mappings = (liveMappingData?.mappings || []).filter(m => {
+                                if (liveMappingSubTab === 'errors') {
+                                  const isErr = !m.inDb || m.classification === 'INVALID_KEY' || (m.recordStatus && (m.recordStatus.includes('🔴') || m.recordStatus.includes('⚠️')));
+                                  if (!isErr) return false;
+                                } else if (liveMappingSubTab === 'matched') {
+                                  const isMatched = m.inDb && m.classification !== 'INVALID_KEY' && (!m.recordStatus || (!m.recordStatus.includes('🔴') && !m.recordStatus.includes('⚠️')));
+                                  if (!isMatched) return false;
+                                }
+
                                 if (mismatchSearch.trim()) {
                                   const q = mismatchSearch.trim().toLowerCase();
                                   const matchKey = (m.jiraKey || '').toLowerCase().includes(q);
