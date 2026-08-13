@@ -104,13 +104,92 @@ const DatabaseManagerPage = () => {
   };
 
   const presets = [
+    { 
+      label: '📊 تعداد تسک‌های هر اپیک (تفکیک وضعیت و پیشرفت)', 
+      sql: `SELECT 
+  p.id AS epic_id,
+  p.title AS epic_title,
+  p.status AS epic_status,
+  COUNT(t.id) AS total_tasks,
+  SUM(CASE WHEN t.status = 'Done' OR t.status = 'Completed' THEN 1 ELSE 0 END) AS done_tasks,
+  SUM(CASE WHEN t.status = 'In Progress' THEN 1 ELSE 0 END) AS in_progress_tasks,
+  SUM(CASE WHEN t.status = 'Waiting' OR t.status = 'OnHolding' OR t.is_waiting = 1 THEN 1 ELSE 0 END) AS waiting_tasks,
+  SUM(CASE WHEN t.status = 'To Do' THEN 1 ELSE 0 END) AS todo_tasks,
+  ROUND(CAST(SUM(CASE WHEN t.status = 'Done' OR t.status = 'Completed' THEN 1 ELSE 0 END) AS FLOAT) * 100.0 / MAX(COUNT(t.id), 1), 1) || '%' AS progress_pct
+FROM projects p
+LEFT JOIN tasks t ON (
+  UPPER(t.parent_task_id) = UPPER(p.id) 
+  OR UPPER(t.epic_id) = UPPER(p.id) 
+  OR UPPER(t.project_id) = UPPER(p.id)
+)
+WHERE p.id LIKE '%-%'
+GROUP BY p.id, p.title, p.status
+ORDER BY total_tasks DESC, p.id ASC` 
+    },
+    { 
+      label: '📑 لیست تسک‌های هر اپیک (با نام اپیک، مسئول و وضعیت)', 
+      sql: `SELECT 
+  COALESCE(p.id, t.parent_task_id, t.epic_id, 'بدون اپیک') AS epic_id,
+  COALESCE(p.title, '—') AS epic_title,
+  t.id AS task_id,
+  t.title AS task_title,
+  t.status AS task_status,
+  t.assignee AS task_assignee,
+  t.component AS task_component,
+  t.is_subtask AS is_subtask,
+  t.start_date,
+  t.due_date
+FROM tasks t
+LEFT JOIN projects p ON (
+  UPPER(t.parent_task_id) = UPPER(p.id) 
+  OR UPPER(t.epic_id) = UPPER(p.id) 
+  OR UPPER(t.project_id) = UPPER(p.id)
+)
+ORDER BY epic_id ASC, t.id ASC` 
+    },
+    { 
+      label: '⚡ خلاصه کارکرد و تخمین بر اساس اپیک', 
+      sql: `SELECT 
+  p.id AS epic_id,
+  p.title AS epic_title,
+  COUNT(t.id) AS task_count,
+  ROUND(SUM(t.estimate_hours), 1) AS total_est_hours,
+  ROUND(SUM(t.spent_hours), 1) AS total_spent_hours
+FROM projects p
+LEFT JOIN tasks t ON (
+  UPPER(t.parent_task_id) = UPPER(p.id) 
+  OR UPPER(t.epic_id) = UPPER(p.id) 
+  OR UPPER(t.project_id) = UPPER(p.id)
+)
+WHERE p.id LIKE '%-%'
+GROUP BY p.id, p.title
+ORDER BY task_count DESC` 
+    },
+    { 
+      label: '📁 اپیک‌های بدون تسک (۰ تسک)', 
+      sql: `SELECT 
+  p.id AS epic_id,
+  p.title AS epic_title,
+  p.status AS epic_status,
+  p.start_date,
+  p.due_date
+FROM projects p
+WHERE p.id LIKE '%-%'
+  AND p.id NOT IN (
+    SELECT DISTINCT parent_task_id FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != ''
+    UNION
+    SELECT DISTINCT epic_id FROM tasks WHERE epic_id IS NOT NULL AND epic_id != ''
+    UNION
+    SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''
+  )
+ORDER BY p.id ASC` 
+    },
     { label: '📋 کل تسک‌ها', sql: 'SELECT id, project_id, epic_id, parent_task_id, parent_key, title, status FROM tasks LIMIT 100' },
     { label: '⚡ تسک‌های دارای اپیک', sql: "SELECT id, title, epic_id, status FROM tasks WHERE epic_id IS NOT NULL AND epic_id != '' AND INSTR(epic_id, '-') > 0 LIMIT 100" },
     { label: '⚠️ تسک‌های بدون اپیک', sql: "SELECT id, title, epic_id, status FROM tasks WHERE (epic_id IS NULL OR epic_id = '' OR INSTR(epic_id, '-') = 0) LIMIT 100" },
     { label: '🔹 زیرتسک‌ها (Sub-tasks)', sql: 'SELECT id, title, parent_key, status FROM tasks WHERE is_subtask = 1 LIMIT 100' },
-    { label: '🔗 کل روابط و تسک‌های مرتبط', sql: 'SELECT task_id, linked_task_id, relationship, title, status, assignee, start_date, due_date FROM task_relations LIMIT 100' },
-    { label: '⛔ تسک‌های دارای وابستگی (Blocked/Depends)', sql: "SELECT task_id, linked_task_id, relationship, title, status, assignee FROM task_relations WHERE relationship LIKE '%block%' OR relationship LIKE '%depend%' OR relationship LIKE '%wait%' LIMIT 100" },
-    { label: '📌 پروژه‌ها و اپیک‌ها', sql: 'SELECT * FROM projects' },
+    { label: '🔗 کل روابط و وابستگی‌ها', sql: 'SELECT task_id, linked_task_id, relationship, title, status, assignee, start_date, due_date FROM task_relations LIMIT 100' },
+    { label: '📌 تمام پروژه‌ها و اپیک‌ها', sql: 'SELECT * FROM projects' },
     { label: '⚙️ تنظیمات سیستم', sql: 'SELECT * FROM system_settings' }
   ];
 
