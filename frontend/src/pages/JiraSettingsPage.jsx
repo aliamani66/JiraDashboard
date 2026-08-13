@@ -332,14 +332,15 @@ const JiraSettingsPage = () => {
   const [jiraCountLoading, setJiraCountLoading] = useState(false);
   const [jiraCountError, setJiraCountError] = useState(null);
 
-  const fetchJiraCount = useCallback(async (isManualTrigger = false) => {
+  const fetchJiraCount = useCallback(async (isManualTrigger = false, customMonths = null) => {
     try {
       setJiraCountLoading(true);
       setJiraCountError(null);
       if (isManualTrigger) {
         showToast('🔄 در حال استخراج و مقایسه آمار زنده از سرور جیرا...', 'info');
       }
-      const countRes = await api.getJiraTotalCount();
+      const targetMonths = customMonths || cfg.rebuildMonths || 3;
+      const countRes = await api.getJiraTotalCount(targetMonths);
       if (countRes && countRes.success) {
         setJiraCountData(countRes);
         if (isManualTrigger) {
@@ -361,7 +362,7 @@ const JiraSettingsPage = () => {
     } finally {
       setJiraCountLoading(false);
     }
-  }, []);
+  }, [cfg.rebuildMonths]);
 
   const fetchDbStats = useCallback(async () => {
     try {

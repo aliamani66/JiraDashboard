@@ -270,8 +270,8 @@ router.get('/jira-count', async (req, res) => {
       else if (projects.length === 1) projectClause = `project = ${projects[0]}`;
     }
 
-    // Calculate configured rebuild date boundary (e.g. 1 month, 3 months, 60 months) starting from 1st of starting month
-    const rebuildMonths = parseInt(cfg.rebuildMonths, 10) || 3;
+    // Calculate configured rebuild date boundary (e.g. 1 month, 3 months, 6 months, 60 months) starting from 1st of starting month
+    const rebuildMonths = parseInt(req.query.months, 10) || parseInt(cfg.rebuildMonths, 10) || 3;
     const now = new Date();
     const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
     const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
@@ -921,21 +921,23 @@ router.get('/db-stats', (req, res) => {
       }
     } catch (_) {}
 
-    // Unlinked tasks: tasks whose project_id is NOT an Epic key (or null/empty/standing project container)
+    // Unlinked tasks: tasks that do NOT have an Epic link or parent task in projects table
     let unlinkedTasksCount = 0;
     let unlinkedTasksList = [];
     try {
       unlinkedTasksCount = db.prepare(`
         SELECT COUNT(*) as c
         FROM tasks
-        WHERE project_id NOT IN (SELECT id FROM projects WHERE id LIKE '%-%') OR project_id IS NULL OR project_id = ''
+        WHERE (project_id IS NULL OR project_id = '' OR project_id NOT IN (SELECT id FROM projects WHERE id LIKE '%-%'))
+          AND (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects WHERE id LIKE '%-%'))
       `).get().c || 0;
 
       if (unlinkedTasksCount > 0) {
         unlinkedTasksList = db.prepare(`
-          SELECT id, title, project_id, status, assignee
+          SELECT id, title, project_id, parent_task_id as epic_id, status, assignee
           FROM tasks
-          WHERE project_id NOT IN (SELECT id FROM projects WHERE id LIKE '%-%') OR project_id IS NULL OR project_id = ''
+          WHERE (project_id IS NULL OR project_id = '' OR project_id NOT IN (SELECT id FROM projects WHERE id LIKE '%-%'))
+            AND (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects WHERE id LIKE '%-%'))
           ORDER BY id DESC
           LIMIT 100
         `).all() || [];
