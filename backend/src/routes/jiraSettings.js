@@ -370,7 +370,7 @@ router.get('/jira-count', async (req, res) => {
       jiraEpicsCount = epicRes.total !== undefined ? epicRes.total : 0;
     } catch (_) {}
 
-    const jiraEpicsWithoutTasksCount = db.prepare(`SELECT COUNT(*) as c FROM projects WHERE ${epicWhere2} NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''${dbDateClause2})`).get()?.c || 0;
+    const jiraEpicsWithoutTasksCount = db.prepare(`SELECT COUNT(*) as c FROM projects WHERE ${epicWhere2} AND id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''${dbDateClause2})`).get()?.c || 0;
 
     res.json({
       success: true,
