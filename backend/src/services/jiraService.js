@@ -238,7 +238,7 @@ async function fetchEpics() {
       customFields.categoryField
     ];
     
-    const data = await jiraSearch(jql, fields);
+    const data = await jiraSearch(jql, fields, { maxResults: 2000 });
     const allIssues = data.issues || [];
 
     const configuredProjKeys = new Set(

@@ -19,8 +19,9 @@ async function syncFromJira() {
   const syncTime = new Date().toISOString();
 
   try {
-    // Clear previous tasks before full rebuild (ensures DB count = Jira fetch count)
+    // Clear previous tasks and projects before full rebuild (ensures DB count = Jira fetch count)
     db.prepare('DELETE FROM tasks').run();
+    db.prepare('DELETE FROM projects').run();
     db.prepare('DELETE FROM task_estimate_history').run();
     try { db.exec('VACUUM'); } catch (_) {}
 
@@ -830,6 +831,9 @@ function autoLinkTasksToEpics() {
   try {
     const db = getDb();
     const now = new Date().toISOString();
+
+    // Clean task IDs accidentally inserted into projects table
+    db.prepare('DELETE FROM projects WHERE id IN (SELECT id FROM tasks)').run();
 
     // 1. Auto-insert any missing parent_task_id Epics into projects table so tasks are 100% linked
     db.prepare(`

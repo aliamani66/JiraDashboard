@@ -814,7 +814,19 @@ router.get('/db-stats', (req, res) => {
     let componentsList = [];
 
     try { totalTasks = db.prepare('SELECT COUNT(*) as count FROM tasks').get()?.count || 0; } catch (_) {}
-    try { totalProjects = db.prepare('SELECT COUNT(*) as count FROM projects').get()?.count || 0; } catch (_) {}
+    try {
+      const cfg = jiraService.getJiraConfig();
+      const pKeyStr = (cfg.projectKey || '').trim().toUpperCase();
+      let epicWhere = "id LIKE '%-%'";
+      if (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') {
+        const pKeys = pKeyStr.split(',').map(k => k.trim()).filter(Boolean);
+        if (pKeys.length > 0) {
+          const likeClauses = pKeys.map(k => `id LIKE '${k}-%'`).join(' OR ');
+          epicWhere = `(${likeClauses})`;
+        }
+      }
+      totalProjects = db.prepare(`SELECT COUNT(*) as count FROM projects WHERE ${epicWhere}`).get()?.count || 0;
+    } catch (_) {}
     try { doneTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('done', 'completed')").get()?.count || 0; } catch (_) {}
     try { waitingTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked')").get()?.count || 0; } catch (_) {}
     try { inProgressTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('in progress', 'in_progress')").get()?.count || 0; } catch (_) {}
