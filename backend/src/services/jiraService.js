@@ -742,11 +742,13 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
   const estSec = issue.fields?.aggregatetimeoriginalestimate || issue.fields?.timeoriginalestimate || 0;
   const spentSec = issue.fields?.aggregatetimespent || issue.fields?.timespent || 0;
   const isSubtask = issue.fields?.issuetype?.subtask ? 1 : 0;
-  const parentTaskId = issue.fields?.parent?.key || null;
+  const actualProjectKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
+  const isRealEpicKey = epicKey && epicKey.includes('-') && (knownEpicKeysSet ? knownEpicKeysSet.has(epicKey.toUpperCase()) : true);
+  const parentTaskId = isRealEpicKey ? epicKey : (issue.fields?.parent?.key || null);
 
   return {
     id: issue.key,
-    project_id: epicKey,
+    project_id: actualProjectKey,
     title: issue.fields?.summary || issue.key,
     description: parseJiraDescription(issue.fields?.description),
     status: finalStatus,
