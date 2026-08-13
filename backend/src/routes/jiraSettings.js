@@ -1458,7 +1458,7 @@ router.get('/live-mapping-inspector', async (req, res) => {
         dbSavedParentEpic: isWithEpic ? `🔗 ${parentTaskId}${isSubtask && subtaskParentKey ? ` (پدر: ${subtaskParentKey})` : ''}` : (isSubtask ? `⚪ بدون اپیک (پدر: ${subtaskParentKey || 'نامشخص'})` : '⚪ بدون اپیک'),
         classification: isSubtask ? 'SUB_TASK' : (isWithEpic ? 'WITH_EPIC' : 'WITHOUT_EPIC'),
         recordStatus: inDbTask
-          ? (isSubtask ? (isWithEpic ? `✅ ذخیره‌شده به‌عنوان زیرتسک دارای اپیک (اپیک: ${parentTaskId} | پدر: ${subtaskParentKey})` : `⚠️ ذخیره‌شده به‌عنوان زیرتسک بدون اپیک (پدر: ${subtaskParentKey || 'نامشخص'})`) : (isWithEpic ? '✅ ذخیره‌شده به‌عنوان تسک دارای اپیک' : '⚠️ ذخیره‌شده به‌عنوان تسک بدون اپیک'))
+          ? (isSubtask ? (isWithEpic ? `✅ ذخیره‌شده به‌عنوان زیرتسک دارای اپیک (اپیک: ${parentTaskId} | پدر: ${subtaskParentKey})` : `✅ ذخیره‌شده به‌عنوان زیرتسک بدون اپیک (پدر: ${subtaskParentKey || 'نامشخص'})`) : (isWithEpic ? '✅ ذخیره‌شده به‌عنوان تسک دارای اپیک' : '✅ ذخیره‌شده به‌عنوان تسک مستقل (بدون اپیک)'))
           : '🔴 هنوز در دیتابیس سینک نشده است',
         inDb: !!inDbTask
       });
@@ -1539,13 +1539,13 @@ router.post('/sync-missing-tasks', async (req, res) => {
     const insertTaskStmt = db.prepare(`
       INSERT INTO tasks (
         id, project_id, epic_id, parent_task_id, parent_key, linked_tasks,
-        title, description, status, is_waiting, waiting_team, waiting_reason,
-        assignee, time_estimate, time_spent, created_at, start_date, due_date,
+        title, description, status, is_waiting, waiting_for_team, waiting_reason,
+        assignee, estimate_hours, spent_hours, created_at, start_date, due_date,
         is_subtask, sprint_name, sprint_start_date, sprint_end_date, component, last_synced
       ) VALUES (
         @id, @project_id, @epic_id, @parent_task_id, @parent_key, @linked_tasks,
-        @title, @description, @status, @is_waiting, @waiting_team, @waiting_reason,
-        @assignee, @time_estimate, @time_spent, @created_at, @start_date, @due_date,
+        @title, @description, @status, @is_waiting, @waiting_for_team, @waiting_reason,
+        @assignee, @estimate_hours, @spent_hours, @created_at, @start_date, @due_date,
         @is_subtask, @sprint_name, @sprint_start_date, @sprint_end_date, @component, @last_synced
       )
       ON CONFLICT(id) DO UPDATE SET
@@ -1603,11 +1603,11 @@ router.post('/sync-missing-tasks', async (req, res) => {
             description: parsed.description || '',
             status: parsed.status || 'To Do',
             is_waiting: parsed.is_waiting || 0,
-            waiting_team: parsed.waiting_team || null,
+            waiting_for_team: parsed.waiting_team || parsed.waiting_for_team || null,
             waiting_reason: parsed.waiting_reason || null,
             assignee: parsed.assignee || null,
-            time_estimate: parsed.time_estimate || 0,
-            time_spent: parsed.time_spent || 0,
+            estimate_hours: parsed.estimate_hours || parsed.time_estimate || 0,
+            spent_hours: parsed.spent_hours || parsed.time_spent || 0,
             created_at: parsed.created_at || nowIso,
             start_date: parsed.start_date || null,
             due_date: parsed.due_date || null,

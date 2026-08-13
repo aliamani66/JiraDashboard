@@ -2859,8 +2859,9 @@ const JiraSettingsPage = () => {
                       <>
                         {liveMappingData && (() => {
                           const allLiveMappings = liveMappingData.mappings || [];
-                          const errorMappings = allLiveMappings.filter(m => !m.inDb || m.classification === 'INVALID_KEY' || (m.recordStatus && (m.recordStatus.includes('🔴') || m.recordStatus.includes('⚠️'))));
-                          const matchedMappings = allLiveMappings.filter(m => m.inDb && m.classification !== 'INVALID_KEY' && (!m.recordStatus || (!m.recordStatus.includes('🔴') && !m.recordStatus.includes('⚠️'))));
+                          const isErrorItem = (m) => !m.inDb || m.classification === 'INVALID_KEY' || (m.recordStatus && m.recordStatus.includes('🔴'));
+                          const errorMappings = allLiveMappings.filter(isErrorItem);
+                          const matchedMappings = allLiveMappings.filter(m => !isErrorItem(m));
 
                           return (
                             <div>
@@ -2980,10 +2981,10 @@ const JiraSettingsPage = () => {
                                   <div>
                                     <div style={{ fontWeight: 800, color: '#FCA5A5', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                       <span>⚠️</span>
-                                      <span>تعداد {errorMappings.length} تسک در جیرا شناسایی شد که در دیتابیس ثبت نشده یا نیاز به تصحیح دارند.</span>
+                                      <span>تعداد {errorMappings.length} تسک خطادار / سینک‌نشده شناسایی شد</span>
                                     </div>
                                     <div style={{ fontSize: '0.75rem', color: '#F87171', marginTop: '0.2rem' }}>
-                                      با کلیک روی دکمه مقابل، کل این تسک‌ها مستقیماً از جیرا استخراج و در دیتابیس ذخیره می‌شوند.
+                                      با کلیک روی دکمه مقابل، این تسک‌ها مستقیماً از جیرا استخراج و در دیتابیس ذخیره می‌شوند.
                                     </div>
                                   </div>
 
@@ -3027,13 +3028,12 @@ const JiraSettingsPage = () => {
                           </thead>
                           <tbody>
                             {(() => {
+                              const isErrorItem = (m) => !m.inDb || m.classification === 'INVALID_KEY' || (m.recordStatus && m.recordStatus.includes('🔴'));
                               const mappings = (liveMappingData?.mappings || []).filter(m => {
                                 if (liveMappingSubTab === 'errors') {
-                                  const isErr = !m.inDb || m.classification === 'INVALID_KEY' || (m.recordStatus && (m.recordStatus.includes('🔴') || m.recordStatus.includes('⚠️')));
-                                  if (!isErr) return false;
+                                  if (!isErrorItem(m)) return false;
                                 } else if (liveMappingSubTab === 'matched') {
-                                  const isMatched = m.inDb && m.classification !== 'INVALID_KEY' && (!m.recordStatus || (!m.recordStatus.includes('🔴') && !m.recordStatus.includes('⚠️')));
-                                  if (!isMatched) return false;
+                                  if (isErrorItem(m)) return false;
                                 }
 
                                 if (mismatchSearch.trim()) {
@@ -3051,43 +3051,49 @@ const JiraSettingsPage = () => {
                                 return (
                                   <tr>
                                     <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8' }}>
-                                      هیچ داده‌ای مطابق فیلتر یافت نشد.
+                                      {liveMappingSubTab === 'errors' ? '🎉 عالی است! هیچ تسک خطاداری یافت نشد و تمام داده‌ها همگام هستند.' : 'هیچ داده‌ای مطابق فیلتر یافت نشد.'}
                                     </td>
                                   </tr>
                                 );
                               }
 
-                              return mappings.map((m, idx) => (
-                                <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: m.classification === 'WITH_EPIC' ? 'rgba(16, 185, 129, 0.05)' : 'transparent' }}>
-                                  <td style={{ padding: '0.65rem 0.85rem', fontFamily: 'monospace', fontWeight: 800, color: '#38BDF8' }}>
-                                    {m.jiraKey}
-                                  </td>
-                                  <td style={{ padding: '0.65rem 0.85rem', fontWeight: 700, color: '#C084FC' }}>
-                                    {m.jiraIssueType}
-                                  </td>
-                                  <td style={{ padding: '0.65rem 0.85rem', color: '#E2E8F0' }}>
-                                    {m.jiraRawStatus}
-                                  </td>
-                                  <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.76rem', color: '#FBBF24', fontFamily: 'monospace' }}>
-                                    {m.jiraEpicFieldVal}
-                                  </td>
-                                  <td style={{
-                                    padding: '0.65rem 0.85rem',
-                                    fontWeight: 800,
-                                    color: m.classification === 'WITH_EPIC' ? '#6EE7B7' : m.classification === 'SUB_TASK' ? '#60A5FA' : m.classification === 'EPIC_PROJECT' ? '#C084FC' : '#FBBF24'
+                              return mappings.map((m, idx) => {
+                                const isErr = isErrorItem(m);
+                                return (
+                                  <tr key={idx} style={{
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                    background: isErr ? 'rgba(239, 68, 68, 0.12)' : (m.classification === 'WITH_EPIC' ? 'rgba(16, 185, 129, 0.05)' : 'transparent')
                                   }}>
-                                    {m.dbSavedParentEpic}
-                                  </td>
-                                  <td style={{
-                                    padding: '0.65rem 0.85rem',
-                                    fontSize: '0.78rem',
-                                    fontWeight: 700,
-                                    color: !m.inDb ? '#F87171' : (m.classification === 'WITH_EPIC' ? '#6EE7B7' : m.classification === 'SUB_TASK' ? '#60A5FA' : m.classification === 'EPIC_PROJECT' ? '#C084FC' : '#FBBF24')
-                                  }}>
-                                    {m.recordStatus}
-                                  </td>
-                                </tr>
-                              ));
+                                    <td style={{ padding: '0.65rem 0.85rem', fontFamily: 'monospace', fontWeight: 800, color: isErr ? '#F87171' : '#38BDF8' }}>
+                                      {m.jiraKey}
+                                    </td>
+                                    <td style={{ padding: '0.65rem 0.85rem', fontWeight: 700, color: '#C084FC' }}>
+                                      {m.jiraIssueType}
+                                    </td>
+                                    <td style={{ padding: '0.65rem 0.85rem', color: '#E2E8F0' }}>
+                                      {m.jiraRawStatus}
+                                    </td>
+                                    <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.76rem', color: '#FBBF24', fontFamily: 'monospace' }}>
+                                      {m.jiraEpicFieldVal}
+                                    </td>
+                                    <td style={{
+                                      padding: '0.65rem 0.85rem',
+                                      fontWeight: 800,
+                                      color: m.classification === 'WITH_EPIC' ? '#6EE7B7' : m.classification === 'SUB_TASK' ? '#60A5FA' : m.classification === 'EPIC_PROJECT' ? '#C084FC' : '#FBBF24'
+                                    }}>
+                                      {m.dbSavedParentEpic}
+                                    </td>
+                                    <td style={{
+                                      padding: '0.65rem 0.85rem',
+                                      fontSize: '0.78rem',
+                                      fontWeight: 700,
+                                      color: isErr ? '#F87171' : '#6EE7B7'
+                                    }}>
+                                      {m.recordStatus}
+                                    </td>
+                                  </tr>
+                                );
+                              });
                             })()}
                           </tbody>
                         </table>
