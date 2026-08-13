@@ -85,7 +85,7 @@ router.get('/data/:tableName', (req, res) => {
     let stats = null;
     if (tableName === 'tasks') {
       const fullDbTasks = db.prepare(`SELECT project_id, parent_task_id, epic_id, is_subtask FROM tasks`).all() || [];
-      const fullProjects = db.prepare(`SELECT id, key, title FROM projects`).all() || [];
+      const fullProjects = db.prepare(`SELECT id, title FROM projects`).all() || [];
       
       let withEpicCount = 0;
       let withoutEpicCount = 0;
@@ -106,7 +106,7 @@ router.get('/data/:tableName', (req, res) => {
 
       const projectBreakdown = {};
       for (const p of fullProjects) {
-        const pKey = (p.key || p.id.split('-')[0] || p.id).toUpperCase();
+        const pKey = (p.id ? p.id.split('-')[0] : p.id).toUpperCase();
         if (!projectBreakdown[pKey]) {
           projectBreakdown[pKey] = { projectKey: pKey, epicCount: 0, taskCount: 0 };
         }
