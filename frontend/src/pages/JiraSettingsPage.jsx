@@ -250,6 +250,7 @@ const JiraSettingsPage = () => {
   const [jiraTotalCount, setJiraTotalCount] = useState(null);
   const [jiraTotalCountLoading, setJiraTotalCountLoading] = useState(false);
   const [showUnlinkedModal, setShowUnlinkedModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const [rangeStartJalali, setRangeStartJalali] = useState(() => {
     const now = new Date();
@@ -627,11 +628,8 @@ const JiraSettingsPage = () => {
     }
   }, [monthlyResults?.monthlyResults?.length]);
 
-  const handleFullSiteRebuild = async () => {
-    const rebuildMonths = parseInt(cfg.rebuildMonths, 10) || 3;
-    if (!window.confirm(`🚨 آیا از بازسازی کامل دیتابیس مطمئن هستید؟\n\nاین عملیات دیتابیس را کاملاً پاکسازی و فشرده کرده، سپس تمام اطلاعات ${rebuildMonths} ماه گذشته را ماه به ماه به صورت زنده استخراج می‌نماید.`)) {
-      return;
-    }
+  const executeFullSiteRebuild = async () => {
+    const rebuildMonths = parseInt(cfg?.rebuildMonths, 10) || 3;
     try {
       showToast(`🗑️ در حال پاکسازی دیتابیس و شروع استخراج گام به گام ${rebuildMonths} ماه گذشته...`);
       await api.clearDatabase();
@@ -672,9 +670,24 @@ const JiraSettingsPage = () => {
 
       await executeStepByStepSync(monthRanges, `🔥 بازسازی کامل دیتابیس (${rebuildMonths} ماه گذشته)`);
       fetchDbStats();
+      fetchJiraCount(false, rebuildMonths);
     } catch (e) {
       showToast('خطا در بازسازی کامل سایت: ' + e.message, 'error');
     }
+  };
+
+  const handleFullSiteRebuild = () => {
+    const rebuildMonths = parseInt(cfg?.rebuildMonths, 10) || 3;
+    setConfirmModal({
+      title: '🚨 تأیید نهایی بازسازی کامل دیتابیس و سایت',
+      icon: '🔥',
+      badge: `${rebuildMonths} ماه گذشته`,
+      type: 'warning',
+      description: `آیا از اجرا و بازسازی کامل دیتابیس اطمینان دارید؟ دیتابیس فعلی پاکسازی شده و تمام اطلاعات ${rebuildMonths} ماه گذشته به صورت گام به گام و زنده از سرور جیرا استخراج خواهد شد.`,
+      confirmText: '🚀 بله، بازسازی کامل انجام شود',
+      cancelText: 'انصراف',
+      onConfirm: () => executeFullSiteRebuild()
+    });
   };
 
   const handleMonthlySync = async () => {
@@ -2098,17 +2111,26 @@ const JiraSettingsPage = () => {
                 type="button"
                 className="jsp-add-mapping-btn" 
                 style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.45)', color: '#FCA5A5' }}
-                onClick={async () => {
-                  if (window.confirm('⚠️ آیا مطمئن هستید که می‌خواهید دیتابیس را کاملاً خالی کنید؟ (تمام تسک‌ها و داده‌ها حذف خواهند شد تا بتوانید دوباره دیتای تازه سینک کنید)')) {
-                    try {
-                      showToast('در حال پاکسازی و خالی کردن دیتابیس...');
-                      const res = await api.clearDatabase();
-                      showToast(res.message || 'دیتابیس کاملاً خالی شد.', 'success');
-                      fetchDbStats();
-                    } catch (e) {
-                      showToast('خطا در پاکسازی دیتابیس', 'error');
+                onClick={() => {
+                  setConfirmModal({
+                    title: '🗑️ پاکسازی کامل دیتابیس',
+                    icon: '⚠️',
+                    type: 'danger',
+                    description: 'آیا مطمئن هستید که می‌خواهید دیتابیس را کاملاً خالی کنید؟ تمامی تسک‌ها و داده‌های قبلی حذف خواهند شد تا امکان سینک مجدد فراهم شود.',
+                    confirmText: '🗑️ بله، دیتابیس خالی شود',
+                    cancelText: 'انصراف',
+                    onConfirm: async () => {
+                      try {
+                        showToast('در حال پاکسازی دیتابیس...');
+                        const res = await api.clearDatabase();
+                        showToast(res.message || 'دیتابیس کاملاً خالی شد.', 'success');
+                        fetchDbStats();
+                        fetchJiraCount(false);
+                      } catch (e) {
+                        showToast('خطا در پاکسازی دیتابیس', 'error');
+                      }
                     }
-                  }
+                  });
                 }}
               >
                 🗑️ خالی کردن کامل دیتابیس (حذف تمام تسک‌ها)
@@ -2117,17 +2139,26 @@ const JiraSettingsPage = () => {
                 type="button"
                 className="jsp-add-mapping-btn" 
                 style={{ background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#38BDF8' }}
-                onClick={async () => {
-                  if (window.confirm('آیا مایلید تمام داده‌های دیتابیس بر اساس داده‌های ۱۰۰٪ زنده Jira Cloud بازنشانی شوند؟')) {
-                    try {
-                      showToast('در حال همگام‌سازی و بازسازی دیتابیس از Jira...');
-                      const res = await api.resetDatabase();
-                      showToast(res.message || 'دیتابیس با داده‌های زنده جیرا همگام شد.');
-                      setTimeout(() => window.location.reload(), 1500);
-                    } catch (e) {
-                      showToast('خطا در بازسازی دیتابیس', 'error');
+                onClick={() => {
+                  setConfirmModal({
+                    title: '🔄 همگام‌سازی و بازسازی دیتابیس از Jira',
+                    icon: '🌐',
+                    type: 'info',
+                    description: 'آیا مایلید تمام داده‌های دیتابیس بر اساس داده‌های ۱۰۰٪ زنده سرور Jira بازنشانی شوند؟',
+                    confirmText: '⚡ بله، همگام‌سازی انجام شود',
+                    cancelText: 'انصراف',
+                    onConfirm: async () => {
+                      try {
+                        showToast('در حال همگام‌سازی و بازسازی دیتابیس از Jira...');
+                        const res = await api.resetDatabase();
+                        showToast(res.message || 'دیتابیس با داده‌های زنده جیرا همگام شد.', 'success');
+                        fetchDbStats();
+                        fetchJiraCount(false);
+                      } catch (e) {
+                        showToast('خطا در بازسازی دیتابیس', 'error');
+                      }
                     }
-                  }
+                  });
                 }}
               >
                 🔄 همگام‌سازی و بازسازی دیتابیس از Jira
@@ -2428,6 +2459,134 @@ const JiraSettingsPage = () => {
               </motion.div>
             )}
           </AnimatePresence>
+      {/* 🔮 CUSTOM MODERN CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {confirmModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(11, 15, 25, 0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '1.5rem',
+            direction: 'rtl'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              style={{
+                background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.98))',
+                border: confirmModal.type === 'danger' ? '1px solid rgba(239, 68, 68, 0.45)' : '1px solid rgba(245, 158, 11, 0.45)',
+                boxShadow: confirmModal.type === 'danger'
+                  ? '0 25px 60px -15px rgba(239, 68, 68, 0.3), 0 0 40px rgba(0, 0, 0, 0.7)'
+                  : '0 25px 60px -15px rgba(245, 158, 11, 0.3), 0 0 40px rgba(0, 0, 0, 0.7)',
+                borderRadius: '24px',
+                padding: '2rem',
+                maxWidth: '540px',
+                width: '100%',
+                color: '#F8FAFC',
+                direction: 'rtl'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.25rem' }}>
+                <div style={{
+                  width: '52px',
+                  height: '52px',
+                  borderRadius: '16px',
+                  background: confirmModal.type === 'danger' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                  border: confirmModal.type === 'danger' ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(245, 158, 11, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.6rem'
+                }}>
+                  {confirmModal.icon || '⚠️'}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#F8FAFC' }}>
+                    {confirmModal.title}
+                  </h3>
+                  {confirmModal.badge && (
+                    <span style={{ fontSize: '0.78rem', color: '#FBBF24', fontWeight: 700, marginTop: '0.2rem', display: 'inline-block' }}>
+                      📌 بازه زمانی: {confirmModal.badge}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.6)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '16px',
+                padding: '1.1rem 1.25rem',
+                fontSize: '0.86rem',
+                lineHeight: '1.7',
+                color: '#CBD5E1',
+                marginBottom: '1.75rem'
+              }}>
+                {confirmModal.description}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.85rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setConfirmModal(null)}
+                  style={{
+                    padding: '0.65rem 1.4rem',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    color: '#94A3B8',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {confirmModal.cancelText || 'انصراف'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const action = confirmModal.onConfirm;
+                    setConfirmModal(null);
+                    if (action) action();
+                  }}
+                  style={{
+                    padding: '0.65rem 1.6rem',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: confirmModal.type === 'danger'
+                      ? 'linear-gradient(135deg, #EF4444, #DC2626)'
+                      : 'linear-gradient(135deg, #F59E0B, #D97706)',
+                    boxShadow: confirmModal.type === 'danger'
+                      ? '0 8px 20px -4px rgba(239, 68, 68, 0.4)'
+                      : '0 8px 20px -4px rgba(245, 158, 11, 0.4)',
+                    color: '#FFFFFF',
+                    fontSize: '0.88rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {confirmModal.confirmText || 'تأیید و ادامه'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
         </div>
       </div>
     </motion.div>
