@@ -11,7 +11,7 @@ import { g2j, j2g, formatJalali, formatGregorian } from '../utils/jalali';
 import './JiraSettingsPage.css';
 
 // ─────────────────────────── HELPERS ────────────────────────────
-const Section = ({ icon: Icon, title, color, children, defaultOpen = true }) => {
+const Section = ({ icon: Icon, title, color, children, defaultOpen = false }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="glass-card jsp-section">
