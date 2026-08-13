@@ -239,6 +239,7 @@ const JiraSettingsPage = () => {
   const [activeModal, setActiveModal] = useState(null);
 
   const [monthlySyncing, setMonthlySyncing] = useState(false);
+  const syncLogsWrapperRef = useRef(null);
   const [monthlyResults, setMonthlyResults] = useState(null);
   const [syncProgress, setSyncProgress] = useState(null);
   const [showRangeModal, setShowRangeModal] = useState(false);
@@ -580,6 +581,13 @@ const JiraSettingsPage = () => {
     } catch (_) {}
     finally { setJiraTotalCountLoading(false); }
   };
+
+  
+  useEffect(() => {
+    if (syncLogsWrapperRef.current && monthlyResults?.monthlyResults?.length) {
+      syncLogsWrapperRef.current.scrollTop = syncLogsWrapperRef.current.scrollHeight;
+    }
+  }, [monthlyResults?.monthlyResults?.length]);
 
   const handleFullSiteRebuild = async () => {
     const rebuildMonths = parseInt(cfg.rebuildMonths, 10) || 3;
@@ -1250,21 +1258,21 @@ const JiraSettingsPage = () => {
 
           {/* ── JIRA vs DB COMPARISON BAR ── */}
           <div style={{
-            margin: '1rem 0 0.5rem',
-            background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,27,75,0.8))',
+            margin: '0.4rem 0 0.25rem',
+            background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,27,75,0.85))',
             border: '1px solid rgba(139,92,246,0.35)',
-            borderRadius: '14px',
-            padding: '0.9rem 1.2rem',
+            borderRadius: '10px',
+            padding: '0.45rem 0.85rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: '0.75rem'
+            gap: '0.5rem'
           }}>
             {/* Synced from this run */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
               <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>📥 تسک‌های سینک‌شده (این عملیات)</span>
-              <strong style={{ fontSize: '1.45rem', color: '#38BDF8', fontWeight: 800, lineHeight: 1 }}>{(monthlyResults.totalTasksSynced || 0).toLocaleString()}</strong>
+              <strong style={{ fontSize: '1.2rem', color: '#38BDF8', fontWeight: 800, lineHeight: 1 }}>{(monthlyResults.totalTasksSynced || 0).toLocaleString()}</strong>
               <span style={{ fontSize: '0.68rem', color: '#64748B' }}>تسک</span>
             </div>
 
@@ -1276,7 +1284,7 @@ const JiraSettingsPage = () => {
               {jiraTotalCountLoading ? (
                 <span style={{ fontSize: '0.85rem', color: '#A78BFA' }}>⏳ در حال دریافت...</span>
               ) : jiraTotalCount ? (
-                <strong style={{ fontSize: '1.45rem', color: '#C084FC', fontWeight: 800, lineHeight: 1 }}>{jiraTotalCount.total.toLocaleString()}</strong>
+                <strong style={{ fontSize: '1.2rem', color: '#C084FC', fontWeight: 800, lineHeight: 1 }}>{jiraTotalCount.total.toLocaleString()}</strong>
               ) : (
                 <button onClick={async () => {
                   try { setJiraTotalCountLoading(true); const r = await api.getJiraTotalCount(); if (r.success) setJiraTotalCount({ total: r.total, jql: r.jql }); } catch (_) {}
@@ -1298,7 +1306,7 @@ const JiraSettingsPage = () => {
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
                   <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>⚠️ اختلاف</span>
-                  <strong style={{ fontSize: '1.45rem', color: isOk ? '#10B981' : isNeg ? '#F59E0B' : '#EF4444', fontWeight: 800, lineHeight: 1 }}>
+                  <strong style={{ fontSize: '1.2rem', color: isOk ? '#10B981' : isNeg ? '#F59E0B' : '#EF4444', fontWeight: 800, lineHeight: 1 }}>
                     {diff >= 0 ? '+' : ''}{diff.toLocaleString()}
                   </strong>
                   <span style={{ fontSize: '0.68rem', color: isOk ? '#6EE7B7' : '#94A3B8' }}>{isOk ? '✅ برابر' : isNeg ? 'بیشتر از جیرا سینک شده' : 'تسک سینک‌نشده'}</span>
@@ -1316,7 +1324,7 @@ const JiraSettingsPage = () => {
             )}
           </div>
 
-          <div className="jsp-diag-table-wrapper" style={{ marginTop: '1rem', maxHeight: '420px', overflowY: 'auto' }}>
+          <div ref={syncLogsWrapperRef} className="jsp-diag-table-wrapper" style={{ marginTop: '0.4rem', maxHeight: '115px', overflowY: 'auto', scrollBehavior: 'smooth', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
             <table className="jsp-diag-table">
               <thead>
                 <tr>
