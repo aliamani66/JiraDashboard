@@ -362,7 +362,7 @@ const JiraSettingsPage = () => {
     } finally {
       setJiraCountLoading(false);
     }
-  }, [cfg?.rebuildMonths]);
+  }, []);
 
   const fetchDbStats = useCallback(async () => {
     try {
@@ -392,7 +392,13 @@ const JiraSettingsPage = () => {
     }
   }, [fetchDbStats]);
 
-  useEffect(() => { fetchConfig(); }, [fetchConfig]);
+  useEffect(() => { fetchConfig(); }, []);
+
+  const handleSelectRebuildMonths = (months) => {
+    const validMonths = Math.max(1, parseInt(months, 10) || 3);
+    setCfg(prev => ({ ...prev, rebuildMonths: validMonths }));
+    fetchJiraCount(false, validMonths);
+  };
 
   const handleFetchProjects = async () => {
     try {
@@ -1531,7 +1537,7 @@ const JiraSettingsPage = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
             <button
               type="button"
-              onClick={() => setCfg(prev => ({ ...prev, rebuildMonths: 1 }))}
+              onClick={() => handleSelectRebuildMonths(1)}
               style={{
                 padding: '0.3rem 0.65rem',
                 borderRadius: '8px',
@@ -1549,7 +1555,7 @@ const JiraSettingsPage = () => {
 
             <button
               type="button"
-              onClick={() => setCfg(prev => ({ ...prev, rebuildMonths: 3 }))}
+              onClick={() => handleSelectRebuildMonths(3)}
               style={{
                 padding: '0.3rem 0.65rem',
                 borderRadius: '8px',
@@ -1567,7 +1573,7 @@ const JiraSettingsPage = () => {
 
             <button
               type="button"
-              onClick={() => setCfg(prev => ({ ...prev, rebuildMonths: 6 }))}
+              onClick={() => handleSelectRebuildMonths(6)}
               style={{
                 padding: '0.3rem 0.65rem',
                 borderRadius: '8px',
@@ -1585,7 +1591,7 @@ const JiraSettingsPage = () => {
 
             <button
               type="button"
-              onClick={() => setCfg(prev => ({ ...prev, rebuildMonths: 12 }))}
+              onClick={() => handleSelectRebuildMonths(12)}
               style={{
                 padding: '0.3rem 0.65rem',
                 borderRadius: '8px',
@@ -1603,7 +1609,7 @@ const JiraSettingsPage = () => {
 
             <button
               type="button"
-              onClick={() => setCfg(prev => ({ ...prev, rebuildMonths: 60 }))}
+              onClick={() => handleSelectRebuildMonths(60)}
               style={{
                 padding: '0.3rem 0.65rem',
                 borderRadius: '8px',
@@ -1625,7 +1631,7 @@ const JiraSettingsPage = () => {
               <Input
                 type="number"
                 value={cfg?.rebuildMonths || 3}
-                onChange={v => setCfg(prev => ({ ...prev, rebuildMonths: Math.max(1, parseInt(v, 10) || 3) }))}
+                onChange={v => handleSelectRebuildMonths(v)}
                 placeholder="3"
                 style={{ width: '65px', padding: '0.2rem 0.4rem', fontSize: '0.78rem' }}
                 mono
