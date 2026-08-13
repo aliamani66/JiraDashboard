@@ -269,11 +269,11 @@ router.get('/jira-count', async (req, res) => {
       else if (projects.length === 1) projectClause = `project = ${projects[0]}`;
     }
 
-    // Calculate configured rebuild date boundary (e.g. 1 month, 3 months, 60 months)
+    // Calculate configured rebuild date boundary (e.g. 1 month, 3 months, 60 months) starting from 1st of starting month
     const rebuildMonths = parseInt(cfg.rebuildMonths, 10) || 3;
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - rebuildMonths);
-    const startDateStr = startDate.toISOString().split('T')[0];
+    const now = new Date();
+    const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
+    const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
     const dateClause = `created >= "${startDateStr}"`;
     const fullClause = projectClause ? `${projectClause} AND ${dateClause}` : dateClause;
 

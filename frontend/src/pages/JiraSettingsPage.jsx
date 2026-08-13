@@ -1185,7 +1185,7 @@ const JiraSettingsPage = () => {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span style={{ background: 'rgba(56,189,248,0.18)', border: '1px solid rgba(56,189,248,0.45)', color: '#38BDF8', fontSize: '0.68rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '20px' }}>🔢 کوئری COUNT کل</span>
-                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>تعداد کل تسک‌های پروژه در جیرا (بدون فیلتر تاریخ):</span>
+                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>تعداد تسک‌های پروژه در جیرا ({cfg.rebuildMonths || 3} ماه گذشته):</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
                         <strong style={{ fontSize: '1.35rem', color: '#38BDF8', fontWeight: 800 }}>{jqlTestResults.totalCountInJira.toLocaleString()}</strong>
@@ -1272,7 +1272,7 @@ const JiraSettingsPage = () => {
 
             {/* Jira total COUNT */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
-              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>🔢 COUNT کل جیرا (بدون فیلتر تاریخ)</span>
+              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>🔢 کل جیرا ({cfg.rebuildMonths || 3} ماه گذشته)</span>
               {jiraTotalCountLoading ? (
                 <span style={{ fontSize: '0.85rem', color: '#A78BFA' }}>⏳ در حال دریافت...</span>
               ) : jiraTotalCount ? (
