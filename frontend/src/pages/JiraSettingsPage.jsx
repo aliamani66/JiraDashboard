@@ -353,6 +353,8 @@ const JiraSettingsPage = () => {
   const [jiraCountError, setJiraCountError] = useState(null);
 
   const [syncReportData, setSyncReportData] = useState(null);
+  const [matchEvaluated, setMatchEvaluated] = useState(false);
+  const [evaluatingMatch, setEvaluatingMatch] = useState(false);
 
   const fetchSyncReport = useCallback(async () => {
     try {
