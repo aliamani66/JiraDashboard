@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const jiraService = require('./jiraService');
-const { getDb } = require('../db/database');
+const { getDb, saveDb } = require('../db/database');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -737,7 +737,9 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       if (configuredProjKeys.size > 0 && issueProjKey && !configuredProjKeys.has(issueProjKey)) return false;
       if (issue.fields?.created) {
         const cDate = new Date(issue.fields.created);
-        if (cDate < startDt || cDate > endDt) return false;
+        const fullEndDt = new Date(endDt);
+        fullEndDt.setHours(23, 59, 59, 999);
+        if (cDate < startDt || cDate > fullEndDt) return false;
       }
       return true;
     });
@@ -793,6 +795,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
         waiting_tasks = (SELECT COUNT(*) FROM tasks WHERE project_id = projects.id AND (is_subtask IS NULL OR is_subtask = 0) AND (is_waiting = 1 OR status = 'OnHolding' OR status = 'Waiting'))
       `).run();
     } catch (_) {}
+
+    saveDb();
 
     return {
       success: true, monthIndex, monthLabel,
