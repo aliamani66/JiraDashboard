@@ -1031,6 +1031,11 @@ router.get('/mismatch-details', async (req, res) => {
     const dateClause = `created >= "${startDateStr}"`;
     const fullClause = projectFilter ? `${projectFilter.replace(/^AND\s+/i, '')} AND ${dateClause}` : dateClause;
 
+    // Filter DB tasks by the same timeframe when rebuildMonths < 60
+    const dbDateClause = (rebuildMonths < 60)
+      ? ` AND (start_date >= '${startDateStr}' OR start_date IS NULL OR start_date = '')`
+      : '';
+
     let items = [];
 
     if (category === 'epics') {
@@ -1106,7 +1111,7 @@ router.get('/mismatch-details', async (req, res) => {
         });
       }
     } else if (category === 'unlinkedTasks') {
-      const dbUnlinked = db.prepare("SELECT id, project_id, title, status FROM tasks WHERE (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects)) AND (is_subtask IS NULL OR is_subtask = 0) ORDER BY id ASC").all();
+      const dbUnlinked = db.prepare(`SELECT id, project_id, title, status FROM tasks WHERE (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects)) AND (is_subtask IS NULL OR is_subtask = 0)${dbDateClause} ORDER BY id ASC`).all();
       const dbUnlinkedMap = new Map();
       for (const t of dbUnlinked) dbUnlinkedMap.set(t.id.toUpperCase(), t);
 
@@ -1136,7 +1141,7 @@ router.get('/mismatch-details', async (req, res) => {
 
         if (inDb && !inJira) {
           mismatchType = 'DB_ONLY';
-          reason = `⚠️ تسک بدون اپیک «${key}» در دیتابیس لوکال هست، اما در سرور جیرا نیامد.`;
+          reason = `⚠️ تسک بدون اپیک «${key}» در دیتابیس لوکال هست، اما در بازه ${rebuildMonths} ماهه جیرا نیامد.`;
         } else if (!inDb && inJira) {
           mismatchType = 'JIRA_ONLY';
           reason = `🌐 تسک بدون اپیک «${key}» در سرور جیرا هست، ولی در دیتابیس سینک نشده است.`;
@@ -1154,7 +1159,7 @@ router.get('/mismatch-details', async (req, res) => {
         });
       }
     } else if (category === 'withEpicTasks') {
-      const dbWithEpic = db.prepare("SELECT id, project_id, title, status FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND parent_task_id IN (SELECT id FROM projects) AND (is_subtask IS NULL OR is_subtask = 0) ORDER BY id ASC").all();
+      const dbWithEpic = db.prepare(`SELECT id, project_id, title, status FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND parent_task_id IN (SELECT id FROM projects) AND (is_subtask IS NULL OR is_subtask = 0)${dbDateClause} ORDER BY id ASC`).all();
       const dbWithEpicMap = new Map();
       for (const t of dbWithEpic) dbWithEpicMap.set(t.id.toUpperCase(), t);
 
@@ -1184,7 +1189,7 @@ router.get('/mismatch-details', async (req, res) => {
 
         if (inDb && !inJira) {
           mismatchType = 'DB_ONLY';
-          reason = `⚠️ تسک دارای اپیک «${key}» در دیتابیس موجود است، اما در سرور جیرا نیست.`;
+          reason = `⚠️ تسک دارای اپیک «${key}» در دیتابیس موجود است، اما در بازه ${rebuildMonths} ماهه جیرا نیست.`;
         } else if (!inDb && inJira) {
           mismatchType = 'JIRA_ONLY';
           reason = `🌐 تسک دارای اپیک «${key}» در سرور جیرا موجود است، ولی هنوز در دیتابیس سینک نشده است.`;
@@ -1202,7 +1207,7 @@ router.get('/mismatch-details', async (req, res) => {
         });
       }
     } else {
-      const dbTasks = db.prepare("SELECT id, project_id, title, status FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0) ORDER BY id ASC").all();
+      const dbTasks = db.prepare(`SELECT id, project_id, title, status FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0)${dbDateClause} ORDER BY id ASC`).all();
       const dbTaskMap = new Map();
       for (const t of dbTasks) dbTaskMap.set(t.id.toUpperCase(), t);
 
