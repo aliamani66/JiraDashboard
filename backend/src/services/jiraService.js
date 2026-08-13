@@ -591,8 +591,6 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
 
   let epicKey = epicKeyOverride;
   if (!epicKey) {
-    const issueProjPrefix = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
-
     // 1. Direct Jira epic field (check customfield_10006 first!)
     if (issue.fields?.customfield_10006) {
       const v = issue.fields.customfield_10006;
@@ -602,23 +600,20 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     } else if (customFields.epicLinkField && issue.fields?.[customFields.epicLinkField]) {
       const val = issue.fields[customFields.epicLinkField];
       epicKey = String(typeof val === 'object' ? (val.key || val.value) : val).toUpperCase();
-    } else if (issue.fields?.customfield_10006) {
-      const v = issue.fields.customfield_10006;
-      epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
     } else if (issue.fields?.customfield_10014) {
       const v = issue.fields.customfield_10014;
       epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
     } else if (issue.fields?.customfield_10008) {
       const v = issue.fields.customfield_10008;
       epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
-    } else if (issue.fields?.parent?.key) {
+    } else if (issue.fields?.parent?.key && (issue.fields.parent?.fields?.issuetype?.name === 'Epic' || issue.fields.parent?.type === 'Epic')) {
       epicKey = String(issue.fields.parent.key).toUpperCase();
     }
 
-    // 2. Scan ALL fields for any known Epic key (MUST start with a letter, e.g. ORD-101, NOT dates like 2026-08!)
+    // 2. Scan fields for any known Epic key (MUST match KEY-NUMBER pattern, excluding parent object)
     if (!epicKey && issue.fields) {
       for (const [k, val] of Object.entries(issue.fields)) {
-        if (!val) continue;
+        if (!val || k === 'parent') continue;
         const strVal = typeof val === 'object' ? (val.key || val.value || JSON.stringify(val)) : String(val);
         const matches = strVal.matchAll(/([A-Z][A-Z0-9_]*-\d+)/gi);
         for (const match of matches) {
@@ -630,11 +625,6 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
         }
         if (epicKey) break;
       }
-    }
-
-    // 3. Fallback to project key if no epic found
-    if (!epicKey) {
-      epicKey = issueProjPrefix || (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
     }
   }
 
@@ -781,11 +771,18 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
   const isSubtask = (issue.fields?.issuetype?.subtask || issueTypeName.includes('sub-task') || issueTypeName.includes('subtask')) ? 1 : 0;
   const actualProjectKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
   const parentIssueKey = (issue.fields?.parent?.key && /^[A-Z][A-Z0-9_]*-\d+$/i.test(issue.fields.parent.key)) ? issue.fields.parent.key.toUpperCase() : null;
-  const isRealEpicKey = epicKey && /^[A-Z][A-Z0-9_]*-\d+$/i.test(epicKey) && (knownEpicKeysSet ? knownEpicKeysSet.has(epicKey.toUpperCase()) : true);
-  
-  // parent_key stores the parent task issue key for subtasks (e.g. ORD-1480)
+
+  // 1. parent_key: STRICTLY for Sub-tasks! Stores parent task issue key (e.g. ORD-1480).
   const parentKey = isSubtask ? parentIssueKey : null;
-  // parent_task_id stores strictly the EPIC key (e.g. ORD-101), NEVER a task key!
+
+  // 2. If item is NOT a subtask and has parent.key, in Jira Software parent.key IS the Epic key!
+  if (!epicKey && !isSubtask && parentIssueKey) {
+    epicKey = parentIssueKey;
+  }
+
+  const isRealEpicKey = epicKey && /^[A-Z][A-Z0-9_]*-\d+$/i.test(epicKey) && epicKey.toUpperCase() !== (issue.key || '').toUpperCase();
+  
+  // 3. parent_task_id: STRICTLY for Epics! Stores the EPIC key (e.g. ORD-101), NEVER a task key!
   const parentTaskId = isRealEpicKey ? epicKey.toUpperCase() : null;
 
   return {
