@@ -637,6 +637,9 @@ const JiraSettingsPage = () => {
           monthlyResults: [...results]
         });
 
+        // Live update DB stats column as each month is saved to DB
+        fetchDbStats(cfgRef.current?.rebuildMonths || 3);
+
       } catch (err) {
         results.push({
           monthIndex: stepNum,
@@ -681,9 +684,20 @@ const JiraSettingsPage = () => {
   const executeFullSiteRebuild = async () => {
     const rebuildMonths = parseInt(cfg?.rebuildMonths, 10) || 3;
     try {
-      showToast(`🗑️ در حال پاکسازی دیتابیس و شروع استخراج گام به گام ${rebuildMonths} ماه گذشته...`);
+      showToast(`🗑️ در حال پاکسازی دیتابیس و شروع استخراج گام به گام ${rebuildMonths} ماه گذشته...`, 'info');
+      setMatchEvaluated(false);
+      setDbStats({
+        totalTasks: 0,
+        totalProjects: 0,
+        withEpicCount: 0,
+        withoutEpicCount: 0,
+        epicsWithoutTasksCount: 0,
+        totalSprints: 0,
+        totalComponents: 0,
+        projectTaskCounts: []
+      });
       await api.clearDatabase();
-      fetchDbStats();
+      await fetchDbStats(rebuildMonths);
 
       const now = new Date();
       const currentYear = now.getFullYear();
