@@ -1354,7 +1354,7 @@ router.get('/live-mapping-inspector', async (req, res) => {
     const dbDateClause = (rebuildMonths < 60)
       ? ` AND (created_at >= '${startDateStr}' OR start_date >= '${startDateStr}')`
       : '';
-    const dbTasks = db.prepare(`SELECT id, project_id, parent_task_id, title, status FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0)${dbDateClause}`).all();
+    const dbTasks = db.prepare(`SELECT id, project_id, parent_task_id, is_subtask, title, status FROM tasks WHERE 1=1${dbDateClause}`).all();
     const dbTaskMap = new Map();
     for (const dt of dbTasks) dbTaskMap.set(dt.id.toUpperCase(), dt);
 
@@ -1368,6 +1368,7 @@ router.get('/live-mapping-inspector', async (req, res) => {
     let withEpicCount = 0;
     let withoutEpicCount = 0;
     let epicsCount = 0;
+    let subtaskCount = 0;
     let invalidKeyCount = 0;
 
     for (let idx = 0; idx < rawIssues.length; idx++) {
@@ -1415,28 +1416,40 @@ router.get('/live-mapping-inspector', async (req, res) => {
       const parsed = jiraService.parseTaskIssue(issue, null, idx, knownEpicsSet);
       const inDbTask = dbTaskMap.get(issueKey);
 
+      const isSubtask = parsed?.is_subtask === 1 || issue.fields?.issuetype?.subtask || issueTypeName.toLowerCase().includes('sub-task') || issueTypeName.toLowerCase().includes('subtask');
+      
       let epicSourceText = '— بدون لینک اپیک';
-      if (issue.fields?.customfield_10006) epicSourceText = `customfield_10006: ${typeof issue.fields.customfield_10006 === 'object' ? (issue.fields.customfield_10006.key || issue.fields.customfield_10006.value) : issue.fields.customfield_10006}`;
-      else if (issue.fields?.parent?.key) epicSourceText = `parent.key: ${issue.fields.parent.key}`;
-      else if (issue.fields?.epic?.key) epicSourceText = `epic.key: ${issue.fields.epic.key}`;
+      if (isSubtask) {
+        subtaskCount++;
+        const parentKey = issue.fields?.parent?.key || parsed?.parent_task_id || '—';
+        epicSourceText = `parent.key: ${parentKey}`;
+      } else if (issue.fields?.customfield_10006) {
+        epicSourceText = `customfield_10006: ${typeof issue.fields.customfield_10006 === 'object' ? (issue.fields.customfield_10006.key || issue.fields.customfield_10006.value) : issue.fields.customfield_10006}`;
+      } else if (issue.fields?.parent?.key) {
+        epicSourceText = `parent.key: ${issue.fields.parent.key}`;
+      } else if (issue.fields?.epic?.key) {
+        epicSourceText = `epic.key: ${issue.fields.epic.key}`;
+      }
 
       const parentTaskId = parsed?.parent_task_id || inDbTask?.parent_task_id || null;
-      const isWithEpic = !!parentTaskId;
+      const isWithEpic = !isSubtask && !!parentTaskId;
 
-      if (isWithEpic) withEpicCount++;
-      else withoutEpicCount++;
+      if (!isSubtask) {
+        if (isWithEpic) withEpicCount++;
+        else withoutEpicCount++;
+      }
 
       mappings.push({
         jiraKey: issueKey,
-        jiraIssueType: issueTypeName,
+        jiraIssueType: isSubtask ? `Sub-task (زیرتسک)` : issueTypeName,
         jiraRawStatus: rawStatus,
         jiraEpicFieldVal: epicSourceText,
         dbSavedKey: inDbTask ? inDbTask.id : parsed?.id || issueKey,
         dbMappedStatus: inDbTask ? inDbTask.status : parsed?.status || rawStatus,
         dbSavedParentEpic: parentTaskId ? `🔗 ${parentTaskId}` : '⚪ بدون اپیک',
-        classification: isWithEpic ? 'WITH_EPIC' : 'WITHOUT_EPIC',
+        classification: isSubtask ? 'SUB_TASK' : (isWithEpic ? 'WITH_EPIC' : 'WITHOUT_EPIC'),
         recordStatus: inDbTask
-          ? (isWithEpic ? '✅ ذخیره‌شده به‌عنوان تسک دارای اپیک' : '✅ ذخیره‌شده به‌عنوان تسک بدون اپیک')
+          ? (isSubtask ? `✅ ذخیره‌شده به‌عنوان زیرتسک (پدر: ${parentTaskId || 'نامشخص'})` : (isWithEpic ? '✅ ذخیره‌شده به‌عنوان تسک دارای اپیک' : '✅ ذخیره‌شده به‌عنوان تسک بدون اپیک'))
           : '🔴 هنوز در دیتابیس سینک نشده است',
         inDb: !!inDbTask
       });
@@ -1448,6 +1461,7 @@ router.get('/live-mapping-inspector', async (req, res) => {
       totalJiraIssues: rawIssues.length,
       withEpicCount,
       withoutEpicCount,
+      subtaskCount,
       epicsCount,
       invalidKeyCount,
       dbTotalCount: dbTasks.length,

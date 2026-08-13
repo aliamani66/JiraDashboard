@@ -778,10 +778,11 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
 
   const estSec = issue.fields?.aggregatetimeoriginalestimate || issue.fields?.timeoriginalestimate || 0;
   const spentSec = issue.fields?.aggregatetimespent || issue.fields?.timespent || 0;
-  const isSubtask = issue.fields?.issuetype?.subtask ? 1 : 0;
+  const isSubtask = (issue.fields?.issuetype?.subtask || issueTypeName.includes('sub-task') || issueTypeName.includes('subtask')) ? 1 : 0;
   const actualProjectKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
+  const parentKey = (issue.fields?.parent?.key && /^[A-Z0-9_]+-\d+$/i.test(issue.fields.parent.key)) ? issue.fields.parent.key.toUpperCase() : null;
   const isRealEpicKey = epicKey && /^[A-Z0-9_]+-\d+$/i.test(epicKey);
-  const parentTaskId = isRealEpicKey ? epicKey.toUpperCase() : ((issue.fields?.parent?.key && /^[A-Z0-9_]+-\d+$/i.test(issue.fields.parent.key)) ? issue.fields.parent.key.toUpperCase() : null);
+  const parentTaskId = isSubtask ? parentKey : (isRealEpicKey ? epicKey.toUpperCase() : (parentKey || null));
 
   return {
     id: issue.key,

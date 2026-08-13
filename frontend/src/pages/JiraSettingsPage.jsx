@@ -2802,6 +2802,7 @@ const JiraSettingsPage = () => {
                             <span><strong>📊 خلاصه نگاشت:</strong> {liveMappingData.totalJiraIssues} آیتم از جیرا خوانده شد</span>
                             <span>| 🔗 <strong>تسک‌های دارای اپیک:</strong> {liveMappingData.withEpicCount}</span>
                             <span>| ⚪ <strong>تسک‌های بدون اپیک:</strong> {liveMappingData.withoutEpicCount}</span>
+                            <span>| 🔹 <strong>زیرتسک‌ها (Sub-tasks):</strong> {liveMappingData.subtaskCount || 0}</span>
                             <span>| 📌 <strong>اپیک‌های اصلی:</strong> {liveMappingData.epicsCount}</span>
                             <span>| 💾 <strong>کل تسک‌های موجود در DB:</strong> {liveMappingData.dbTotalCount}</span>
                           </div>
