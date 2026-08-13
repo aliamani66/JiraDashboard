@@ -1115,12 +1115,18 @@ router.get('/mismatch-details', async (req, res) => {
       const dbUnlinkedMap = new Map();
       for (const t of dbUnlinked) dbUnlinkedMap.set(t.id.toUpperCase(), t);
 
-      const jql = `${fullClause} AND issuetype != Epic AND ("Epic Link" is EMPTY OR parent is EMPTY) ORDER BY created ASC`;
+      const jql = `${fullClause} AND issuetype != Epic AND "Epic Link" EMPTY ORDER BY created ASC`;
       let jiraUnlinked = [];
       try {
         const jiraRes = await jiraService.jiraSearch(jql, ['summary', 'status', 'project'], { maxResults: 2000, timeout: 15000 });
         if (jiraRes && jiraRes.issues) jiraUnlinked = jiraRes.issues;
-      } catch (err) {}
+      } catch (err) {
+        try {
+          const altJql = `${fullClause} AND issuetype != Epic AND "Epic Link" IS EMPTY ORDER BY created ASC`;
+          const altRes = await jiraService.jiraSearch(altJql, ['summary', 'status', 'project'], { maxResults: 2000, timeout: 15000 });
+          if (altRes && altRes.issues) jiraUnlinked = altRes.issues;
+        } catch (_) {}
+      }
 
       const jiraUnlinkedMap = new Map();
       for (const ju of jiraUnlinked) {
@@ -1163,12 +1169,18 @@ router.get('/mismatch-details', async (req, res) => {
       const dbWithEpicMap = new Map();
       for (const t of dbWithEpic) dbWithEpicMap.set(t.id.toUpperCase(), t);
 
-      const jql = `${fullClause} AND issuetype != Epic AND ("Epic Link" is NOT EMPTY OR parent is NOT EMPTY) ORDER BY created ASC`;
+      const jql = `${fullClause} AND issuetype != Epic AND "Epic Link" NOT EMPTY ORDER BY created ASC`;
       let jiraWithEpic = [];
       try {
         const jiraRes = await jiraService.jiraSearch(jql, ['summary', 'status', 'project'], { maxResults: 2000, timeout: 15000 });
         if (jiraRes && jiraRes.issues) jiraWithEpic = jiraRes.issues;
-      } catch (err) {}
+      } catch (err) {
+        try {
+          const altJql = `${fullClause} AND issuetype != Epic AND "Epic Link" IS NOT EMPTY ORDER BY created ASC`;
+          const altRes = await jiraService.jiraSearch(altJql, ['summary', 'status', 'project'], { maxResults: 2000, timeout: 15000 });
+          if (altRes && altRes.issues) jiraWithEpic = altRes.issues;
+        } catch (_) {}
+      }
 
       const jiraWithEpicMap = new Map();
       for (const jw of jiraWithEpic) {
