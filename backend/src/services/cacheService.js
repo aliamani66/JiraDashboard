@@ -591,9 +591,9 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   const db = getDb();
   const syncTime = new Date().toISOString();
 
-  // Ensure projects table has Epics (fetch if empty or monthIndex === 1)
-  const projCountInDb = db.prepare('SELECT COUNT(*) as c FROM projects').get()?.c || 0;
-  if (Number(monthIndex) === 1 || projCountInDb === 0) {
+  // Ensure projects table has Epics (fetch if missing Epics or monthIndex === 1)
+  const epicCountInDb = db.prepare("SELECT COUNT(*) as c FROM projects WHERE id LIKE '%-%'").get()?.c || 0;
+  if (Number(monthIndex) === 1 || epicCountInDb === 0) {
     try {
       const epics = await jiraService.fetchEpics();
       db.transaction(() => {
