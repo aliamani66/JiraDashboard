@@ -340,9 +340,9 @@ async function syncMonthlyLastYearFromJira() {
           if (task && task.id) {
             task.last_synced = syncTime;
             // Only insert tasks from configured project keys (check by key prefix, not exact epic ID)
-            if (task.project_id && configuredProjKeySet.size > 0) {
-              const taskProjPrefix = (task.project_id || '').split('-')[0].toUpperCase();
-              if (!configuredProjKeySet.has(taskProjPrefix)) continue;
+            if (task.id && configuredProjKeySet.size > 0) {
+              const issueKeyPrefix = (task.id || '').split('-')[0].toUpperCase();
+              if (!configuredProjKeySet.has(issueKeyPrefix)) continue;
             }
             insertTask.run(task);
           }
@@ -761,9 +761,9 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
         if (task && task.id) {
           task.last_synced = syncTime;
           // Only insert tasks from configured project keys (check by key prefix, not exact epic ID)
-          if (task.project_id && configuredProjKeys.size > 0) {
-            const taskProjPrefix = (task.project_id || '').split('-')[0].toUpperCase();
-            if (!configuredProjKeys.has(taskProjPrefix)) {
+          if (task.id && configuredProjKeys.size > 0) {
+            const issueKeyPrefix = (task.id || '').split('-')[0].toUpperCase();
+            if (!configuredProjKeys.has(issueKeyPrefix)) {
               skippedCount++;
               continue;
             }
