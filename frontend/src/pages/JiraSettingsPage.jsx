@@ -352,6 +352,9 @@ const JiraSettingsPage = () => {
   const [jiraCountLoading, setJiraCountLoading] = useState(false);
   const [jiraCountError, setJiraCountError] = useState(null);
 
+  const [matchEvaluated, setMatchEvaluated] = useState(false);
+  const [evaluatingMatch, setEvaluatingMatch] = useState(false);
+
   const cfgRef = useRef(cfg);
   useEffect(() => { cfgRef.current = cfg; }, [cfg]);
 
@@ -411,19 +414,34 @@ const JiraSettingsPage = () => {
     ]);
   }, [fetchDbStats, fetchJiraCount]);
 
+  const handleEvaluateAndMatch = async () => {
+    try {
+      setEvaluatingMatch(true);
+      showToast('🔄 در حال استخراج همزمان داده‌های سرور جیرا و دیتابیس لوکال برای محاسبه وضعیت تطابق...', 'info');
+      const targetMonths = cfgRef.current?.rebuildMonths || 3;
+      await fetchBothStatsSync(targetMonths, true);
+      setMatchEvaluated(true);
+      showToast('✅ محاسبه و ارزیابی وضعیت تطابق با موفقیت انجام گردید.', 'success');
+    } catch (e) {
+      showToast('⚠️ خطا در ارزیابی وضعیت تطابق: ' + (e.message || ''), 'error');
+    } finally {
+      setEvaluatingMatch(false);
+    }
+  };
+
   const fetchConfig = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getJiraConfig();
       setCfg(data);
       const m = data?.rebuildMonths || 3;
-      fetchBothStatsSync(m, false);
+      fetchDbStats(m);
     } catch (e) {
       showToast('خطا در دریافت تنظیمات جیرا: ' + (e.message || ''), 'error');
     } finally {
       setLoading(false);
     }
-  }, [fetchBothStatsSync]);
+  }, [fetchDbStats]);
 
   useEffect(() => { fetchConfig(); }, []);
 
@@ -1684,7 +1702,7 @@ const JiraSettingsPage = () => {
             </div>
           </div>
         </div>
-        
+
         {/* 📊 DATABASE STATS TILE CARD */}
         <div style={{
           background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
@@ -1729,28 +1747,54 @@ const JiraSettingsPage = () => {
               <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 ⚖️ جدول جامع مقایسه زنده آمار و شاخص‌ها (سرور جیرا vs دیتابیس SQLite)
               </span>
-              <button
-                type="button"
-                onClick={() => fetchJiraCount(true)}
-                disabled={jiraCountLoading}
-                style={{
-                  background: 'rgba(56, 189, 248, 0.15)',
-                  border: '1px solid rgba(56, 189, 248, 0.4)',
-                  color: '#38BDF8',
-                  padding: '0.35rem 0.85rem',
-                  borderRadius: '9px',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <RefreshCw size={13} className={jiraCountLoading ? 'spin' : ''} />
-                {jiraCountLoading ? 'در حال دریافت از جیرا...' : '🌐 استخراج و به‌روزرسانی آمار زنده Jira'}
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handleEvaluateAndMatch}
+                  disabled={evaluatingMatch || jiraCountLoading || dbStatsLoading}
+                  style={{
+                    background: 'linear-gradient(135deg, #10B981, #059669)',
+                    border: 'none',
+                    color: '#FFFFFF',
+                    padding: '0.38rem 0.95rem',
+                    borderRadius: '9px',
+                    fontSize: '0.79rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    boxShadow: '0 3px 10px rgba(16, 185, 129, 0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="کلیک کنید تا ابتدا آمار هر دو ستون استخراج شده و سپس ستون وضعیت تطابق محاسبه گردد"
+                >
+                  <RefreshCw size={14} className={evaluatingMatch ? 'spin' : ''} />
+                  <span>{evaluatingMatch ? 'در حال دریافت و ارزیابی...' : '⚖️ محاسبه و به‌روزرسانی وضعیت تطابق'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fetchJiraCount(true)}
+                  disabled={jiraCountLoading}
+                  style={{
+                    background: 'rgba(56, 189, 248, 0.15)',
+                    border: '1px solid rgba(56, 189, 248, 0.4)',
+                    color: '#38BDF8',
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: '9px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <RefreshCw size={13} className={jiraCountLoading ? 'spin' : ''} />
+                  {jiraCountLoading ? 'در حال دریافت از جیرا...' : '🌐 استخراج آمار زنده Jira'}
+                </button>
+              </div>
             </div>
 
             {jiraCountError && (
@@ -1809,10 +1853,12 @@ const JiraSettingsPage = () => {
                       {dbStatsLoading || monthlySyncing || syncing ? '⏳...' : dbStats?.withEpicTasksCount !== undefined ? `${(dbStats.withEpicTasksCount || 0).toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {jiraCountLoading || dbStatsLoading || monthlySyncing || syncing || !jiraCountData || !dbStats ? (
-                        <span style={{ color: '#94A3B8', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> 🔄 در حال تحلیل...</span>
-                      ) : jiraCountData?.withEpicMismatchCount !== undefined ? (
-                        jiraCountData.withEpicMismatchCount === 0 ? (
+                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
+                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                        </span>
+                      ) : (
+                        (jiraCountData?.withEpicCount === dbStats?.withEpicTasksCount) ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
                           <button
@@ -1822,10 +1868,10 @@ const JiraSettingsPage = () => {
                             title="برای مشاهده گرید تحلیل اختلافات تسک‌های دارای اپیک کلیک فرمایید"
                           >
                             <Search size={13} color="#FBBF24" />
-                            <span>⚠️ اختلاف {jiraCountData.withEpicMismatchCount}</span>
+                            <span>⚠️ اختلاف {Math.abs((jiraCountData?.withEpicCount || 0) - (dbStats?.withEpicTasksCount || 0))}</span>
                           </button>
                         )
-                      ) : '—'}
+                      )}
                     </td>
                   </tr>
 
@@ -1843,10 +1889,12 @@ const JiraSettingsPage = () => {
                       {dbStatsLoading || monthlySyncing || syncing ? '⏳...' : dbStats?.unlinkedTasksCount !== undefined ? `${(dbStats.unlinkedTasksCount || 0).toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {jiraCountLoading || dbStatsLoading || monthlySyncing || syncing || !jiraCountData || !dbStats ? (
-                        <span style={{ color: '#94A3B8', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> 🔄 در حال تحلیل...</span>
-                      ) : jiraCountData?.unlinkedMismatchCount !== undefined ? (
-                        jiraCountData.unlinkedMismatchCount === 0 ? (
+                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
+                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                        </span>
+                      ) : (
+                        (jiraCountData?.withoutEpicCount === dbStats?.unlinkedTasksCount) ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
                           <button
@@ -1856,10 +1904,10 @@ const JiraSettingsPage = () => {
                             title="برای مشاهده گرید تحلیل اختلافات تسک‌های بدون اپیک کلیک فرمایید"
                           >
                             <Search size={13} color="#FBBF24" />
-                            <span>⚠️ اختلاف {jiraCountData.unlinkedMismatchCount}</span>
+                            <span>⚠️ اختلاف {Math.abs((jiraCountData?.withoutEpicCount || 0) - (dbStats?.unlinkedTasksCount || 0))}</span>
                           </button>
                         )
-                      ) : '—'}
+                      )}
                     </td>
                   </tr>
 
@@ -1877,10 +1925,12 @@ const JiraSettingsPage = () => {
                       {dbStatsLoading || monthlySyncing || syncing ? '⏳...' : dbStats?.totalTasks !== undefined ? `${dbStats.totalTasks.toLocaleString()} تسک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {jiraCountLoading || dbStatsLoading || monthlySyncing || syncing || !jiraCountData || !dbStats ? (
-                        <span style={{ color: '#94A3B8', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> 🔄 در حال تحلیل...</span>
-                      ) : jiraCountData?.totalMismatchCount !== undefined ? (
-                        jiraCountData.totalMismatchCount === 0 ? (
+                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
+                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                        </span>
+                      ) : (
+                        (jiraCountData?.total === dbStats?.totalTasks) ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#6EE7B7', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800 }}>✅ همگام کامل</span>
                         ) : (
                           <button
@@ -1890,10 +1940,10 @@ const JiraSettingsPage = () => {
                             title="برای مشاهده گرید تحلیل اختلافات کلیک فرمایید"
                           >
                             <Search size={13} color="#FCA5A5" />
-                            <span>⚠️ اختلاف {jiraCountData.totalMismatchCount} تسک</span>
+                            <span>⚠️ اختلاف {Math.abs((jiraCountData?.total || 0) - (dbStats?.totalTasks || 0))} تسک</span>
                           </button>
                         )
-                      ) : '—'}
+                      )}
                     </td>
                   </tr>
 
@@ -1912,17 +1962,19 @@ const JiraSettingsPage = () => {
                       {dbStatsLoading ? '⏳...' : dbStats?.totalProjects !== undefined ? `${(dbStats.totalProjects || 0).toLocaleString()} اپیک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {jiraCountLoading || dbStatsLoading ? (
-                        <span style={{ color: '#94A3B8', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> 🔄 در حال تحلیل...</span>
-                      ) : jiraCountData?.jiraEpicsCount !== undefined && dbStats?.totalProjects !== undefined ? (
-                        jiraCountData.jiraEpicsCount === dbStats.totalProjects ? (
+                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
+                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                        </span>
+                      ) : (
+                        (jiraCountData?.jiraEpicsCount === dbStats?.totalProjects) ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
                           <span style={{ background: 'rgba(245, 158, 11, 0.25)', color: '#FBBF24', padding: '0.15rem 0.55rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800, boxShadow: '0 0 10px rgba(245, 158, 11, 0.3)' }}>
-                            ⚠️ اختلاف {Math.abs(jiraCountData.jiraEpicsCount - dbStats.totalProjects)} (مشاهده)
+                            ⚠️ اختلاف {Math.abs((jiraCountData?.jiraEpicsCount || 0) - (dbStats?.totalProjects || 0))} (مشاهده)
                           </span>
                         )
-                      ) : '—'}
+                      )}
                     </td>
                   </tr>
 
@@ -1938,8 +1990,12 @@ const JiraSettingsPage = () => {
                       {dbStats?.epicsWithoutTasksCount !== undefined ? `${(dbStats.epicsWithoutTasksCount || 0).toLocaleString()} اپیک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {jiraCountData?.jiraEpicsWithoutTasksCount !== undefined && dbStats?.epicsWithoutTasksCount !== undefined ? (
-                        jiraCountData.jiraEpicsWithoutTasksCount === dbStats.epicsWithoutTasksCount ? (
+                      {!matchEvaluated || evaluatingMatch || jiraCountLoading || dbStatsLoading || !jiraCountData || !dbStats ? (
+                        <span style={{ background: 'rgba(148, 163, 184, 0.12)', border: '1px solid rgba(148, 163, 184, 0.25)', color: '#94A3B8', padding: '0.2rem 0.55rem', borderRadius: '7px', fontSize: '0.73rem', fontWeight: 600 }}>
+                          ⚪ نیازمند کلیک دکمه «محاسبه وضعیت تطابق»
+                        </span>
+                      ) : (
+                        (jiraCountData?.jiraEpicsWithoutTasksCount === dbStats?.epicsWithoutTasksCount) ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
                           <button
@@ -1949,10 +2005,10 @@ const JiraSettingsPage = () => {
                             title="برای مشاهده گرید تحلیل اختلافات اپیک‌های بدون تسک کلیک فرمایید"
                           >
                             <Search size={13} color="#FBBF24" />
-                            <span>⚠️ اختلاف {Math.abs(jiraCountData.jiraEpicsWithoutTasksCount - dbStats.epicsWithoutTasksCount)}</span>
+                            <span>⚠️ اختلاف {Math.abs((jiraCountData?.jiraEpicsWithoutTasksCount || 0) - (dbStats?.epicsWithoutTasksCount || 0))}</span>
                           </button>
                         )
-                      ) : '—'}
+                      )}
                     </td>
                   </tr>
 
