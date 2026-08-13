@@ -22,6 +22,7 @@ try {
 }
 
 function getJiraConfig() {
+  try { require('dotenv').config({ path: require('path').join(__dirname, '../../.env') }); } catch (_) {}
   let dbSettingMap = {};
   try {
     const { getDb } = require('../db/database');
@@ -38,13 +39,17 @@ function getJiraConfig() {
   const username = (dbSettingMap['JIRA_USERNAME'] || process.env.JIRA_USERNAME || (config && config.jira && config.jira.username) || '').trim();
   const token = (dbSettingMap['JIRA_TOKEN'] || process.env.JIRA_TOKEN || (config && config.jira && config.jira.token) || '').trim();
   const projectKey = (dbSettingMap['JIRA_PROJECT_KEY'] || process.env.JIRA_PROJECT_KEY || (config && config.jira && config.jira.projectKey) || 'ORD').trim();
-  const isConfigured = !!(baseUrl && token);
+  
+  const mockMode = process.env.ENABLE_LOCAL_MOCK === 'true' || dbSettingMap['JIRA_MOCK_MODE'] === 'true';
+  const isConfigured = mockMode || !!(baseUrl && token);
   const currentMapping = (config && config.jira && config.jira.mapping) || jiraMapping;
+
   return {
-    baseUrl,
+    baseUrl: mockMode ? 'https://mock.jira.local (حالت داده تستی / ماک)' : baseUrl,
     username,
     token,
     projectKey,
+    mockMode,
     isConfigured,
     mapping: currentMapping
   };
@@ -91,6 +96,10 @@ function extractDateField(issue, fieldName) {
 // Perform JQL Search with retry & automatic pagination logic to fetch ALL matching issues
 async function jiraSearch(jql, fields = [], options = {}) {
   const cfg = getJiraConfig();
+  if (cfg.mockMode) {
+    const mockJiraService = require('./mockJiraService');
+    return mockJiraService.mockJiraSearch(jql, fields, options);
+  }
   const authVariants = getAuthHeaderVariants(cfg.username, cfg.token);
   const standardFields = ['*all'];
   if (cfg.mapping?.customFields?.sprintField) {
@@ -766,7 +775,12 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
 }
 
 async function fetchAllJiraProjects() {
-  const { baseUrl, username, token } = getJiraConfig();
+  const cfg = getJiraConfig();
+  if (cfg.mockMode) {
+    const mockJiraService = require('./mockJiraService');
+    return mockJiraService.getMockProjects();
+  }
+  const { baseUrl, username, token } = cfg;
   if (!baseUrl || !token) throw new Error('تنظیمات آدرس یا توکن جیرا وارد نشده است.');
 
   // Get epic counts per project key — try live from Jira first, fall back to DB

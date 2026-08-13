@@ -67,7 +67,7 @@ function writeEnv(updates) {
   fs.writeFileSync(envPath, newLines.join('\n'), 'utf8');
 }
 
-const { getDb, saveDb } = require('../db/database');
+
 
 // Helper: read all settings stored in SQLite system_settings table
 function getDbSettings() {

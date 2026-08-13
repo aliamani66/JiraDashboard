@@ -14,6 +14,7 @@ docker-compose.local.yml
 docker-compose.prod.yml
 *.local.json
 *.local.js
+backend/src/services/mockJiraService.js
 *.local.yml
 *.local.yaml
 config.local.*
