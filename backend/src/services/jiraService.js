@@ -623,39 +623,75 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
   const issueLinks = issue.fields?.issuelinks || [];
   let linkedWaitingTeam = null;
   let linkedWaitingReason = null;
+  const linkedTasks = [];
 
   for (const link of issueLinks) {
     const linkType = link.type || {};
+    const typeName = linkType.name || 'Relates';
     const inwardDesc = (linkType.inward || '').toLowerCase();
     const outwardDesc = (linkType.outward || '').toLowerCase();
     const blockingKeywords = ['is blocked by', 'depends on', 'is waited on by'];
 
     const linkedIssue = link.inwardIssue || null;
-    if (linkedIssue && blockingKeywords.some(kw => inwardDesc.includes(kw))) {
-      isWaiting = 1;
-      if (linkedIssue.fields) {
-        if (linkedIssue.fields.assignee) {
-          linkedWaitingTeam = linkedWaitingTeam || linkedIssue.fields.assignee.displayName;
+    if (linkedIssue) {
+      linkedTasks.push({
+        key: linkedIssue.key,
+        title: linkedIssue.fields?.summary || linkedIssue.key,
+        linkType: typeName,
+        relationship: linkType.inward || 'is related to',
+        status: linkedIssue.fields?.status?.name || null
+      });
+
+      if (blockingKeywords.some(kw => inwardDesc.includes(kw))) {
+        isWaiting = 1;
+        if (linkedIssue.fields) {
+          if (linkedIssue.fields.assignee) {
+            linkedWaitingTeam = linkedWaitingTeam || linkedIssue.fields.assignee.displayName;
+          }
+          if (linkedIssue.fields.project) {
+            linkedWaitingTeam = linkedWaitingTeam || linkedIssue.fields.project.name;
+          }
         }
-        if (linkedIssue.fields.project) {
-          linkedWaitingTeam = linkedWaitingTeam || linkedIssue.fields.project.name;
-        }
+        linkedWaitingReason = `بلاک شده توسط ${linkedIssue.key}: ${linkedIssue.fields?.summary || ''}`;
       }
-      linkedWaitingReason = `بلاک شده توسط ${linkedIssue.key}: ${linkedIssue.fields?.summary || ''}`;
     }
 
     const outLinkedIssue = link.outwardIssue || null;
-    if (outLinkedIssue && blockingKeywords.some(kw => outwardDesc.includes(kw))) {
-      isWaiting = 1;
-      if (outLinkedIssue.fields) {
-        if (outLinkedIssue.fields.assignee) {
-          linkedWaitingTeam = linkedWaitingTeam || outLinkedIssue.fields.assignee.displayName;
+    if (outLinkedIssue) {
+      linkedTasks.push({
+        key: outLinkedIssue.key,
+        title: outLinkedIssue.fields?.summary || outLinkedIssue.key,
+        linkType: typeName,
+        relationship: linkType.outward || 'relates to',
+        status: outLinkedIssue.fields?.status?.name || null
+      });
+
+      if (blockingKeywords.some(kw => outwardDesc.includes(kw))) {
+        isWaiting = 1;
+        if (outLinkedIssue.fields) {
+          if (outLinkedIssue.fields.assignee) {
+            linkedWaitingTeam = linkedWaitingTeam || outLinkedIssue.fields.assignee.displayName;
+          }
+          if (outLinkedIssue.fields.project) {
+            linkedWaitingTeam = linkedWaitingTeam || outLinkedIssue.fields.project.name;
+          }
         }
-        if (outLinkedIssue.fields.project) {
-          linkedWaitingTeam = linkedWaitingTeam || outLinkedIssue.fields.project.name;
-        }
+        linkedWaitingReason = `وابسته به ${outLinkedIssue.key}: ${outLinkedIssue.fields?.summary || ''}`;
       }
-      linkedWaitingReason = `وابسته به ${outLinkedIssue.key}: ${outLinkedIssue.fields?.summary || ''}`;
+    }
+  }
+
+  // Include parent issue if present as a linked relation
+  if (issue.fields?.parent?.key) {
+    const pKey = issue.fields.parent.key;
+    if (!linkedTasks.some(lt => lt.key === pKey)) {
+      linkedTasks.push({
+        key: pKey,
+        title: issue.fields.parent.fields?.summary || pKey,
+        linkType: 'Parent',
+        relationship: 'parent task',
+        status: issue.fields.parent.fields?.status?.name || null
+      });
     }
   }
 
@@ -795,7 +831,8 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     is_subtask: isSubtask,
     parent_task_id: parentTaskId,
     epic_id: parentTaskId,
-    parent_key: parentKey
+    parent_key: parentKey,
+    linked_tasks: JSON.stringify(linkedTasks)
   };
 }
 

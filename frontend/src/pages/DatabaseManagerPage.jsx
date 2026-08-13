@@ -361,6 +361,21 @@ const DatabaseManagerPage = () => {
                                   <span style={{ background: 'rgba(96, 165, 250, 0.18)', border: '1px solid rgba(96, 165, 250, 0.35)', color: '#60A5FA', padding: '0.15rem 0.45rem', borderRadius: '5px', fontWeight: 700, fontSize: '0.74rem' }}>
                                     🔹 تسک پدر: {val}
                                   </span>
+                                ) : col.name === 'linked_tasks' && val ? (
+                                  (() => {
+                                    let links = [];
+                                    try { links = typeof val === 'string' ? JSON.parse(val) : val; } catch (_) {}
+                                    if (!Array.isArray(links) || links.length === 0) return <span style={{ color: '#64748B' }}>—</span>;
+                                    return (
+                                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                                        {links.map((item, i) => (
+                                          <span key={i} title={`${item.relationship || ''}: ${item.title || ''}`} style={{ background: 'rgba(192, 132, 252, 0.15)', border: '1px solid rgba(192, 132, 252, 0.3)', color: '#C084FC', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 600 }}>
+                                            🔗 {item.key} ({item.relationship || item.linkType})
+                                          </span>
+                                        ))}
+                                      </div>
+                                    );
+                                  })()
                                 ) : col.name === 'id' ? (
                                   <strong style={{ color: '#38BDF8', fontFamily: 'monospace' }}>{val}</strong>
                                 ) : val !== null && val !== undefined ? String(val) : <span style={{ color: '#64748B', italic: true }}>null</span>}

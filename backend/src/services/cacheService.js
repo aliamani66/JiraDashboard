@@ -81,8 +81,8 @@ async function syncFromJira() {
 
     // Step 2: Fetch tasks per epic (correct project_id guaranteed)
     const insertTask = db.prepare(`
-      INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, created_at, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, epic_id, parent_key, last_synced)
-      VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @created_at, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @epic_id, @parent_key, @last_synced)
+      INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, created_at, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, epic_id, parent_key, linked_tasks, last_synced)
+      VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @created_at, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @epic_id, @parent_key, @linked_tasks, @last_synced)
       ON CONFLICT(id) DO UPDATE SET
         project_id=excluded.project_id,
         title=excluded.title,
@@ -108,6 +108,7 @@ async function syncFromJira() {
         parent_task_id=excluded.parent_task_id,
         epic_id=excluded.epic_id,
         parent_key=excluded.parent_key,
+        linked_tasks=excluded.linked_tasks,
         last_synced=excluded.last_synced
     `);
 
@@ -936,16 +937,22 @@ function autoLinkTasksToEpics() {
       pKeyFilter = `AND (${pLike})`;
     }
 
-    // 1. Auto-insert any missing parent_task_id Epics into projects table so tasks are 100% linked
+    // 0. Ensure epic_id is synced with parent_task_id for all tasks
+    try {
+      db.prepare(`UPDATE tasks SET epic_id = parent_task_id WHERE (epic_id IS NULL OR epic_id = '') AND parent_task_id IS NOT NULL AND parent_task_id LIKE '%-%'`).run();
+      db.prepare(`UPDATE tasks SET parent_task_id = epic_id WHERE (parent_task_id IS NULL OR parent_task_id = '') AND epic_id IS NOT NULL AND epic_id LIKE '%-%'`).run();
+    } catch (_) {}
+
+    // 1. Auto-insert missing Epics into projects table if referenced by tasks.epic_id / parent_task_id
     db.prepare(`
       INSERT INTO projects (id, title, status, last_synced)
-      SELECT DISTINCT parent_task_id, 'اپیک ' || parent_task_id, 'In Progress', ?
+      SELECT DISTINCT COALESCE(epic_id, parent_task_id), 'اپیک ' || COALESCE(epic_id, parent_task_id), 'In Progress', ?
       FROM tasks
-      WHERE parent_task_id IS NOT NULL 
-        AND parent_task_id != '' 
-        AND parent_task_id LIKE '%-%'
+      WHERE COALESCE(epic_id, parent_task_id) IS NOT NULL 
+        AND COALESCE(epic_id, parent_task_id) != '' 
+        AND COALESCE(epic_id, parent_task_id) LIKE '%-%'
         ${pKeyFilter}
-        AND parent_task_id NOT IN (SELECT id FROM projects)
+        AND COALESCE(epic_id, parent_task_id) NOT IN (SELECT id FROM projects)
     `).run(now);
 
     // 2. Propagate epic project_id from parent task to sub-tasks

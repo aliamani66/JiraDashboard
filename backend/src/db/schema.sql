@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     parent_task_id TEXT,
     epic_id TEXT,
     parent_key TEXT,
+    linked_tasks TEXT DEFAULT '[]',
     created_at TEXT,
     last_synced TEXT,
     FOREIGN KEY (project_id) REFERENCES projects(id)

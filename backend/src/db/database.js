@@ -188,6 +188,7 @@ async function initDb() {
   try { db.run("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN epic_id TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN parent_key TEXT"); } catch (_) {}
+  try { db.run("ALTER TABLE tasks ADD COLUMN linked_tasks TEXT DEFAULT '[]'"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN description TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN created_at TEXT"); } catch (_) {}
   try { db.run("UPDATE tasks SET epic_id = parent_task_id WHERE (epic_id IS NULL OR epic_id = '') AND parent_task_id IS NOT NULL AND INSTR(parent_task_id, '-') > 0"); } catch (_) {}
