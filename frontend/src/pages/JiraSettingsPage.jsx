@@ -572,48 +572,45 @@ const JiraSettingsPage = () => {
   };
 
   const handleFullSiteRebuild = async () => {
-    if (!window.confirm('🚨 آیا از بازسازی کامل دیتابیس و سایت مطمئن هستید؟\n\nاین عملیات ابتدا تمام دیتابیس را پاک می‌کند، سپس اپیک‌ها را استخراج کرده و اطلاعات ۱۲ ماه گذشته را ماه به ماه با کوئری‌های دقیق لود و مپ خواهد کرد.')) {
+    if (!window.confirm('🚨 آیا از بازسازی کامل دیتابیس و سایت مطمئن هستید؟\n\nاین عملیات ابتدا تمام دیتابیس را پاک می‌کند، سپس تمامی اپیک‌ها و کل تسک‌های پروژه‌های جیرا را بدون محدودیت تاریخی استخراج و ثبت خواهد کرد.')) {
       return;
     }
     try {
-      showToast('🗑️ در حال پاکسازی و خالی کردن دیتابیس...');
-      await api.clearDatabase();
+      setMonthlySyncing(true);
+      setSyncProgress({
+        isSyncing: true,
+        titlePrefix: '🔥 در حال بازسازی کامل سایت و استخراج کلیه تسک‌های جیرا',
+        stepNum: 1,
+        totalSteps: 1,
+        monthLabel: 'کلیه تسک‌های پروژه‌ها',
+        dateRange: 'بدون محدودیت تاریخ (شامل تمامی داده‌ها)',
+        totalTasksSoFar: 0,
+        progressPercent: 50
+      });
+      showToast('🗑️ در حال پاکسازی دیتابیس و استخراج کامل تمام تسک‌های جیرا (بدون فیلتر تاریخ)...');
+
+      const res = await api.resetDatabase();
+
+      setSyncProgress(null);
+      setMonthlySyncing(false);
       fetchDbStats();
 
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth();
-
-      const monthRanges = [];
-      for (let i = 11; i >= 0; i--) {
-        const d = new Date(currentYear, currentMonth - i, 1);
-        const y = d.getFullYear();
-        const m = d.getMonth();
-        const lastDay = new Date(y, m + 1, 0);
-
-        const startStr = `${y}-${String(m + 1).padStart(2, '0')}-01 00:00`;
-        const endStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')} 23:59`;
-        const monthInfo = getJalaliMonthLabel(y, m);
-        const jStart = g2j(y, m + 1, 1);
-        const jEnd = g2j(y, m + 1, lastDay.getDate());
-        const jalaliStartStr = `${jStart.jy}/${String(jStart.jm).padStart(2,'0')}/${String(jStart.jd).padStart(2,'0')} 00:00`;
-        const jalaliEndStr = `${jEnd.jy}/${String(jEnd.jm).padStart(2,'0')}/${String(jEnd.jd).padStart(2,'0')} 23:59`;
-
-        monthRanges.push({
-          monthIndex: 12 - i,
-          year: y,
-          month: m + 1,
-          jalaliName: monthInfo.jalali,
-          gregorianName: monthInfo.gregorian,
-          startStr,
-          endStr,
-          jalaliStartStr,
-          jalaliEndStr
-        });
+      if (res.success) {
+        showToast(`✅ بازسازی کامل انجام شد. ${res.message || ''}`, 'success');
+        try {
+          setJiraTotalCountLoading(true);
+          const countRes = await api.getJiraTotalCount();
+          if (countRes.success && countRes.total !== null) {
+            setJiraTotalCount({ total: countRes.total, jql: countRes.jql, projectKey: countRes.projectKey });
+          }
+        } catch (_) {}
+        finally { setJiraTotalCountLoading(false); }
+      } else {
+        showToast('❌ خطا در بازسازی دیتابیس: ' + res.message, 'error');
       }
-
-      await executeStepByStepSync(monthRanges, '🔥 در حال بازسازی کامل سایت و استخراج ۱۲ ماه گذشته');
     } catch (e) {
+      setSyncProgress(null);
+      setMonthlySyncing(false);
       showToast('خطا در بازسازی کامل سایت: ' + e.message, 'error');
     }
   };

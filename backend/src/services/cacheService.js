@@ -106,25 +106,49 @@ async function syncFromJira() {
         last_synced=excluded.last_synced
     `);
 
-    for (const epic of epics) {
-      try {
-        console.log(`Fetching tasks for epic: ${epic.id}...`);
-        const tasks = await jiraService.fetchTasksForEpic(epic.id);
-        console.log(`  → ${tasks.length} tasks found for ${epic.id}`);
-        db.transaction(() => {
-          for (const task of tasks) {
-            if (task && task.id) {
-              task.last_synced = syncTime;
-              if (!task.parent_task_id) task.parent_task_id = null;
-              insertTask.run(task);
-              tasksSynced++;
-            }
-          }
-        })();
-      } catch (epicErr) {
-        console.error(`Failed to fetch tasks for epic ${epic.id}:`, epicErr.message);
+    // Step 2: Fetch ALL tasks directly from Jira for configured projects (no date filter)
+    try {
+      const projKeyStr = cfg.projectKey || '';
+      let projectFilter = '';
+      if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
+        const projects = projKeyStr.split(',').map(p => p.trim().toUpperCase()).filter(Boolean);
+        if (projects.length > 1) {
+          projectFilter = `project IN (${projects.join(',')})`;
+        } else if (projects.length === 1) {
+          projectFilter = `project = ${projects[0]}`;
+        }
       }
+      const searchJql = projectFilter ? `${projectFilter} AND issuetype != Epic ORDER BY created ASC` : `issuetype != Epic ORDER BY created ASC`;
+      console.log(`[FULL SYNC] Fetching ALL tasks from Jira (no date filter): JQL = "${searchJql}"`);
+
+      const searchRes = await jiraService.jiraSearch(searchJql, null, { timeout: 60000, retries: 2 });
+      const rawIssues = (searchRes && searchRes.issues) ? searchRes.issues : [];
+      console.log(`[FULL SYNC] Raw issues returned from Jira: ${rawIssues.length}`);
+
+      const parsedTasks = rawIssues.map((issue, idx) => {
+        const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue;
+        if (parsed && !parsed.project_id) {
+          const projKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
+          parsed.project_id = projKey;
+        }
+        return parsed;
+      });
+
+      db.transaction(() => {
+        for (const task of parsedTasks) {
+          if (task && task.id) {
+            task.last_synced = syncTime;
+            if (!task.parent_task_id) task.parent_task_id = null;
+            insertTask.run(task);
+            tasksSynced++;
+          }
+        }
+      })();
+    } catch (taskErr) {
+      console.error(`[FULL SYNC] Failed to fetch all tasks from Jira:`, taskErr.message);
     }
+
+    autoLinkTasksToEpics();
 
     // Update task counts per project
     try {
