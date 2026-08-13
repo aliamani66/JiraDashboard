@@ -2878,28 +2878,6 @@ const JiraSettingsPage = () => {
                                   <span>| 📌 <strong>اپیک‌ها:</strong> {liveMappingData.epicsCount}</span>
                                   <span>| 💾 <strong>کل در DB:</strong> {liveMappingData.dbTotalCount}</span>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={handleSyncMissingTasks}
-                                  disabled={syncingMissing}
-                                  style={{
-                                    background: 'linear-gradient(135deg, #10B981, #059669)',
-                                    border: 'none',
-                                    color: '#FFFFFF',
-                                    padding: '0.35rem 0.85rem',
-                                    borderRadius: '8px',
-                                    fontSize: '0.78rem',
-                                    fontWeight: 800,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.4rem',
-                                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)'
-                                  }}
-                                >
-                                  <RefreshCw size={13} className={syncingMissing ? 'spin' : ''} />
-                                  <span>{syncingMissing ? 'در حال ذخیره‌سازی...' : '⚡ ذخیره و سینک فوری تمام تسک‌ها در دیتابیس'}</span>
-                                </button>
                               </div>
 
                               {/* Sub-tabs inside Live Mapping: Errors vs All vs Matched */}
