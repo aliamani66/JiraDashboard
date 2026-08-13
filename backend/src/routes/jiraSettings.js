@@ -1099,18 +1099,64 @@ router.get('/mismatch-details', async (req, res) => {
           inJira: !!inJira
         });
       }
+    } else if (category === 'unlinkedTasks') {
+      const dbUnlinked = db.prepare("SELECT id, project_id, title, status FROM tasks WHERE parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects) ORDER BY id ASC").all();
+      const dbUnlinkedMap = new Map();
+      for (const t of dbUnlinked) dbUnlinkedMap.set(t.id.toUpperCase(), t);
+
+      const jql = `issuetype != Epic ${projectFilter} AND "Epic Link" is EMPTY AND parent is EMPTY ORDER BY created ASC`;
+      let jiraUnlinked = [];
+      try {
+        const jiraRes = await jiraService.jiraSearch(jql, ['summary', 'status', 'project'], { maxResults: 2000, timeout: 15000 });
+        if (jiraRes && jiraRes.issues) jiraUnlinked = jiraRes.issues;
+      } catch (err) {}
+
+      const jiraUnlinkedMap = new Map();
+      for (const ju of jiraUnlinked) {
+        jiraUnlinkedMap.set(ju.key.toUpperCase(), {
+          id: ju.key,
+          title: ju.fields?.summary || ju.key,
+          status: ju.fields?.status?.name || 'To Do'
+        });
+      }
+
+      const allKeys = new Set([...dbUnlinkedMap.keys(), ...jiraUnlinkedMap.keys()]);
+      for (const key of allKeys) {
+        const inDb = dbUnlinkedMap.get(key);
+        const inJira = jiraUnlinkedMap.get(key);
+
+        let mismatchType = 'MATCHED';
+        let reason = '✅ تطابق کامل';
+
+        if (inDb && !inJira) {
+          mismatchType = 'DB_ONLY';
+          reason = `⚠️ تسک بدون اپیک «${key}» در دیتابیس لوکال هست، اما در سرور جیرا نیست.`;
+        } else if (!inDb && inJira) {
+          mismatchType = 'JIRA_ONLY';
+          reason = `🌐 تسک بدون اپیک «${key}» در سرور جیرا هست، ولی در دیتابیس سینک نشده است.`;
+        }
+
+        items.push({
+          id: key,
+          title: inJira?.title || inDb?.title || `تسک ${key}`,
+          dbStatus: inDb ? (inDb.status || 'موجود') : '🔴 ناموجود در دیتابیس',
+          jiraStatus: inJira ? (inJira.status || 'موجود') : '🔴 ناموجود در جیرا',
+          mismatchType,
+          reason,
+          inDb: !!inDb,
+          inJira: !!inJira
+        });
+      }
     } else {
       const dbTasks = db.prepare("SELECT id, project_id, title, status FROM tasks ORDER BY id ASC").all();
       const dbTaskMap = new Map();
       for (const t of dbTasks) dbTaskMap.set(t.id.toUpperCase(), t);
 
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth();
-      const startDate = new Date(currentYear, currentMonth - rebuildMonths + 1, 1);
-      const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01 00:00`;
+      const projCleanFilter = projectFilter ? projectFilter.replace(/^AND\s+/i, '') : '';
+      const jql = projCleanFilter
+        ? `${projCleanFilter} AND issuetype != Epic ORDER BY created ASC`
+        : `issuetype != Epic ORDER BY created ASC`;
 
-      const jql = `created >= "${startStr.split(' ')[0]}" ${projectFilter} AND issuetype != Epic ORDER BY created ASC`;
       let jiraTasks = [];
       try {
         const jiraRes = await jiraService.jiraSearch(jql, ['summary', 'status', 'project'], { maxResults: 2000, timeout: 15000 });
@@ -1140,18 +1186,14 @@ router.get('/mismatch-details', async (req, res) => {
 
         if (inDb && !inJira) {
           mismatchType = 'DB_ONLY';
-          reason = `⚠️ تسک «${key}» در دیتابیس موجود است اما در بازه ${rebuildMonths} ماهه جیرا بازنمی‌گردد.`;
+          reason = `⚠️ تسک «${key}» در دیتابیس لوکال موجود است اما در سرور جیرا یافت نشد (احتمالاً پاک‌شده یا منتقل شده است).`;
         } else if (!inDb && inJira) {
           mismatchType = 'JIRA_ONLY';
-          reason = `🌐 تسک «${key}» در جیرا موجود است ولی هنوز به دیتابیس افزوده نشده است.`;
+          reason = `🌐 تسک «${key}» در سرور جیرا موجود است اما هنوز در دیتابیس لوکال همگام‌سازی نشده است.`;
         } else if (inDb && inJira && inDb.status !== inJira.status) {
           mismatchType = 'STATUS_MISMATCH';
           reason = `🔄 تفاوت وضعیت: دیتابیس «${inDb.status}»، جیرا «${inJira.status}»`;
         }
-
-        if (category === 'doneTasks' && inDb && !['done', 'completed'].includes((inDb.status || '').toLowerCase())) continue;
-        if (category === 'inProgressTasks' && inDb && !['in progress', 'in_progress'].includes((inDb.status || '').toLowerCase())) continue;
-        if (category === 'waitingTasks' && inDb && !['waiting', 'onholding', 'blocked'].includes((inDb.status || '').toLowerCase())) continue;
 
         items.push({
           id: key,
@@ -1166,7 +1208,7 @@ router.get('/mismatch-details', async (req, res) => {
       }
     }
 
-    const mismatchedItems = items.filter(i => i.mismatchType !== 'MATCHED');
+    const mismatchedItems = items.filter(i => i.mismatchType !== 'MATCHED' && i.mismatchType !== 'CONTAINER_PROJECT');
 
     res.json({
       success: true,
