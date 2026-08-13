@@ -876,6 +876,26 @@ router.get('/db-stats', (req, res) => {
       }
     } catch (_) {}
 
+    // Epics without tasks: epics in projects table that have 0 tasks attached
+    let epicsWithoutTasksCount = 0;
+    let epicsWithoutTasksList = [];
+    try {
+      epicsWithoutTasksCount = db.prepare(`
+        SELECT COUNT(*) as c
+        FROM projects
+        WHERE id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != '')
+      `).get().c || 0;
+
+      if (epicsWithoutTasksCount > 0) {
+        epicsWithoutTasksList = db.prepare(`
+          SELECT id, title, status
+          FROM projects
+          WHERE id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != '')
+          LIMIT 50
+        `).all() || [];
+      }
+    } catch (_) {}
+
     res.json({
       success: true,
       totalTasks,
@@ -892,7 +912,9 @@ router.get('/db-stats', (req, res) => {
       sprintsList,
       projectTaskCounts,
       unlinkedTasksCount,
-      unlinkedTasksList
+      unlinkedTasksList,
+      epicsWithoutTasksCount,
+      epicsWithoutTasksList
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'خطا در دریافت آمار دیتابیس: ' + err.message });

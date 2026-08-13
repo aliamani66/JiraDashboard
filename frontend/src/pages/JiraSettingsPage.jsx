@@ -1649,92 +1649,41 @@ const JiraSettingsPage = () => {
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
-            <div style={{ background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '14px', padding: '0.85rem 1rem' }}>
-              <span style={{ fontSize: '0.76rem', color: '#94A3B8', display: 'block', marginBottom: '0.25rem' }}>📝 کل تسک‌های دیتابیس:</span>
-              <strong style={{ fontSize: '1.35rem', color: '#38BDF8', fontWeight: 800 }}>{dbStats?.totalTasks ?? '—'} <small style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>تسک</small></strong>
+          {/* 🧩 COMPACT SUMMARY CARDS GRID */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+            <div style={{ background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '12px', padding: '0.75rem 0.85rem' }}>
+              <span style={{ fontSize: '0.72rem', color: '#94A3B8', display: 'block', marginBottom: '0.2rem' }}>📝 کل تسک‌ها:</span>
+              <strong style={{ fontSize: '1.25rem', color: '#38BDF8', fontWeight: 800 }}>{(dbStats?.totalTasks ?? 0).toLocaleString()} <small style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>تسک</small></strong>
             </div>
 
-            <div style={{ background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.25)', borderRadius: '14px', padding: '0.85rem 1rem' }}>
-              <span style={{ fontSize: '0.76rem', color: '#94A3B8', display: 'block', marginBottom: '0.25rem' }}>📂 پروژه‌های ثبت‌شده:</span>
-              <strong style={{ fontSize: '1.35rem', color: '#C084FC', fontWeight: 800 }}>{dbStats?.totalProjects ?? '—'} <small style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>پروژه</small></strong>
+            <div style={{ background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.25)', borderRadius: '12px', padding: '0.75rem 0.85rem' }}>
+              <span style={{ fontSize: '0.72rem', color: '#94A3B8', display: 'block', marginBottom: '0.2rem' }}>📂 اپیک‌های دیتابیس:</span>
+              <strong style={{ fontSize: '1.25rem', color: '#C084FC', fontWeight: 800 }}>{(dbStats?.totalProjects ?? 0).toLocaleString()} <small style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>اپیک</small></strong>
             </div>
 
-            <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '14px', padding: '0.85rem 1rem' }}>
-              <span style={{ fontSize: '0.76rem', color: '#94A3B8', display: 'block', marginBottom: '0.25rem' }}>✅ تسک‌های انجام‌شده (Done):</span>
-              <strong style={{ fontSize: '1.35rem', color: '#6EE7B7', fontWeight: 800 }}>{dbStats?.doneTasks ?? '—'} <small style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>تسک</small></strong>
+            <div style={{ background: (dbStats?.unlinkedTasksCount || 0) > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.08)', border: (dbStats?.unlinkedTasksCount || 0) > 0 ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '12px', padding: '0.75rem 0.85rem' }}>
+              <span style={{ fontSize: '0.72rem', color: '#94A3B8', display: 'block', marginBottom: '0.2rem' }}>⚠️ تسک‌های بدون اپیک:</span>
+              <strong style={{ fontSize: '1.25rem', color: (dbStats?.unlinkedTasksCount || 0) > 0 ? '#FCA5A5' : '#6EE7B7', fontWeight: 800 }}>{(dbStats?.unlinkedTasksCount ?? 0).toLocaleString()} <small style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>تسک</small></strong>
             </div>
 
-            <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '14px', padding: '0.85rem 1rem' }}>
-              <span style={{ fontSize: '0.76rem', color: '#94A3B8', display: 'block', marginBottom: '0.25rem' }}>⏳ تسک‌های منتظر (Waiting):</span>
-              <strong style={{ fontSize: '1.35rem', color: '#FBBF24', fontWeight: 800 }}>{dbStats?.waitingTasks ?? '—'} <small style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>تسک</small></strong>
+            <div style={{ background: (dbStats?.epicsWithoutTasksCount || 0) > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.08)', border: (dbStats?.epicsWithoutTasksCount || 0) > 0 ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '12px', padding: '0.75rem 0.85rem' }}>
+              <span style={{ fontSize: '0.72rem', color: '#94A3B8', display: 'block', marginBottom: '0.2rem' }}>📁 اپیک‌های بدون تسک:</span>
+              <strong style={{ fontSize: '1.25rem', color: (dbStats?.epicsWithoutTasksCount || 0) > 0 ? '#FBBF24' : '#6EE7B7', fontWeight: 800 }}>{(dbStats?.epicsWithoutTasksCount ?? 0).toLocaleString()} <small style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>اپیک</small></strong>
             </div>
 
-            <div style={{ background: 'rgba(14, 165, 233, 0.08)', border: '1px solid rgba(14, 165, 233, 0.25)', borderRadius: '14px', padding: '0.85rem 1rem' }}>
-              <span style={{ fontSize: '0.76rem', color: '#94A3B8', display: 'block', marginBottom: '0.25rem' }}>💾 حجم فایل دیتابیس:</span>
-              <strong style={{ fontSize: '1.35rem', color: '#38BDF8', fontWeight: 800 }}>{dbStats?.dbSizeMb ?? '0.00'} <small style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>MB</small></strong>
+            <div style={{ background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '12px', padding: '0.75rem 0.85rem' }}>
+              <span style={{ fontSize: '0.72rem', color: '#94A3B8', display: 'block', marginBottom: '0.2rem' }}>🏃 اسپرینت‌ها:</span>
+              <strong style={{ fontSize: '1.25rem', color: '#38BDF8', fontWeight: 800 }}>{(dbStats?.totalSprints ?? 0).toLocaleString()} <small style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>اسپرینت</small></strong>
             </div>
-          </div>
 
-          {/* 🏷️ COMPONENTS BREAKDOWN */}
-          <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px dashed rgba(255, 255, 255, 0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                🏷️ کامپوننت‌های شناسایی‌شده در تسک‌های دیتابیس ({dbStats?.totalComponents || 0} نوع):
-              </span>
+            <div style={{ background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.25)', borderRadius: '12px', padding: '0.75rem 0.85rem' }}>
+              <span style={{ fontSize: '0.72rem', color: '#94A3B8', display: 'block', marginBottom: '0.2rem' }}>🏷️ کامپوننت‌ها:</span>
+              <strong style={{ fontSize: '1.25rem', color: '#F472B6', fontWeight: 800 }}>{(dbStats?.totalComponents ?? 0).toLocaleString()} <small style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>نوع</small></strong>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-              {dbStats?.componentsList && dbStats.componentsList.length > 0 ? (
-                dbStats.componentsList.map(comp => (
-                  <span key={comp.name} style={{
-                    background: 'rgba(236, 72, 153, 0.12)',
-                    border: '1px solid rgba(236, 72, 153, 0.35)',
-                    color: '#F472B6',
-                    padding: '0.25rem 0.65rem',
-                    borderRadius: '8px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem'
-                  }}>
-                    {comp.name} <span style={{ background: 'rgba(236, 72, 153, 0.25)', padding: '0.1rem 0.4rem', borderRadius: '6px', fontSize: '0.7rem', color: '#FFFFFF' }}>{comp.count} تسک</span>
-                  </span>
-                ))
-              ) : (
-                <span style={{ fontSize: '0.78rem', color: '#64748B' }}>کامپوننتی یافت نشد.</span>
-              )}
-            </div>
-          </div>
 
-          {/* 🏃 SPRINTS BREAKDOWN */}
-          <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px dashed rgba(255, 255, 255, 0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                🏃 اسپرینت‌های استخراج‌شده و موجود در دیتابیس ({dbStats?.totalSprints || 0} اسپرینت):
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-              {dbStats?.sprintsList && dbStats.sprintsList.length > 0 ? (
-                dbStats.sprintsList.map(sp => (
-                  <span key={sp.name} style={{
-                    background: 'rgba(56, 189, 248, 0.12)',
-                    border: '1px solid rgba(56, 189, 248, 0.35)',
-                    color: '#38BDF8',
-                    padding: '0.25rem 0.65rem',
-                    borderRadius: '8px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem'
-                  }}>
-                    ⚡ {sp.name} <span style={{ background: 'rgba(56, 189, 248, 0.25)', padding: '0.1rem 0.4rem', borderRadius: '6px', fontSize: '0.7rem', color: '#FFFFFF' }}>{sp.count} تسک</span>
-                  </span>
-                ))
-              ) : (
-                <span style={{ fontSize: '0.78rem', color: '#64748B' }}>اسپرینتی در دیتابیس یافت نشد. با زدن دکمه استخراج دیتای جیرا، اسپرینت‌ها پر خواهند شد.</span>
-              )}
+            <div style={{ background: 'rgba(14, 165, 233, 0.08)', border: '1px solid rgba(14, 165, 233, 0.25)', borderRadius: '12px', padding: '0.75rem 0.85rem' }}>
+              <span style={{ fontSize: '0.72rem', color: '#94A3B8', display: 'block', marginBottom: '0.2rem' }}>💾 حجم دیتابیس:</span>
+              <strong style={{ fontSize: '1.25rem', color: '#38BDF8', fontWeight: 800 }}>{dbStats?.dbSizeMb ?? '0.00'} <small style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>MB</small></strong>
             </div>
           </div>
 
