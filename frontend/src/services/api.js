@@ -63,4 +63,5 @@ export const api = {
   getJiraTotalCount: (months) => fetchWithAuth('/jira/jira-count' + (months ? `?months=${months}` : '')),
   getMismatchDetails: (category, months) => fetchWithAuth(`/jira/mismatch-details?category=${category || 'epics'}&months=${months || 3}`),
   getDbStats: (months) => fetchWithAuth('/jira/db-stats' + (months ? `?months=${months}` : '')),
+  getLastSyncReport: () => fetchWithAuth('/jira/last-sync-report'),
 };

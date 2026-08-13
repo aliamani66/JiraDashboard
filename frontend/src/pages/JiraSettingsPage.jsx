@@ -352,8 +352,20 @@ const JiraSettingsPage = () => {
   const [jiraCountLoading, setJiraCountLoading] = useState(false);
   const [jiraCountError, setJiraCountError] = useState(null);
 
-  const [matchEvaluated, setMatchEvaluated] = useState(false);
-  const [evaluatingMatch, setEvaluatingMatch] = useState(false);
+  const [syncReportData, setSyncReportData] = useState(null);
+
+  const fetchSyncReport = useCallback(async () => {
+    try {
+      const res = await api.getLastSyncReport();
+      if (res && res.success && res.report) {
+        setSyncReportData(res.report);
+      }
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    fetchSyncReport();
+  }, [fetchSyncReport]);
 
   const cfgRef = useRef(cfg);
   useEffect(() => { cfgRef.current = cfg; }, [cfg]);
@@ -2669,6 +2681,21 @@ const JiraSettingsPage = () => {
                   >
                     📋 همه موارد ({mismatchModalData.totalCount || 0})
                   </button>
+                  <button
+                    onClick={() => setMismatchTab('syncReport')}
+                    style={{
+                      padding: '0.35rem 0.85rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: mismatchTab === 'syncReport' ? 'linear-gradient(135deg, #3B82F6, #1D4ED8)' : 'transparent',
+                      color: mismatchTab === 'syncReport' ? '#FFFFFF' : '#94A3B8',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🛠️ گزارش خطاهای همگام‌سازی ({syncReportData?.skippedOrFailedCount || 0})
+                  </button>
                 </div>
 
                 <input
@@ -2691,80 +2718,130 @@ const JiraSettingsPage = () => {
 
               {/* Grid Table */}
               <div style={{ flex: 1, overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', background: 'rgba(15, 23, 42, 0.5)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'right' }}>
-                  <thead>
-                    <tr style={{ background: '#1E293B', color: '#F1F5F9', borderBottom: '2px solid rgba(139, 92, 246, 0.4)', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 4px 15px rgba(0, 0, 0, 0.5)' }}>
-                      <th style={{ padding: '0.8rem 1rem', width: '110px', background: '#1E293B', color: '#38BDF8', fontWeight: 800 }}>شناسه کلید</th>
-                      <th style={{ padding: '0.8rem 1rem', background: '#1E293B', color: '#F1F5F9', fontWeight: 800 }}>عنوان / نام اصلی</th>
-                      <th style={{ padding: '0.8rem 1rem', width: '130px', background: '#1E293B', color: '#C084FC', fontWeight: 800 }}>وضعیت در دیتابیس</th>
-                      <th style={{ padding: '0.8rem 1rem', width: '140px', background: '#1E293B', color: '#38BDF8', fontWeight: 800 }}>وضعیت زنده در Jira</th>
-                      <th style={{ padding: '0.8rem 1rem', background: '#1E293B', color: '#F1F5F9', fontWeight: 800 }}>علت و توضیحات تحلیل</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const list = (mismatchModalData.allItems || []).filter(item => {
-                        if (mismatchTab === 'mismatched' && item.mismatchType === 'MATCHED') return false;
-                        if (mismatchSearch.trim()) {
-                          const q = mismatchSearch.trim().toLowerCase();
-                          const matchId = (item.id || '').toLowerCase().includes(q);
-                          const matchTitle = (item.title || '').toLowerCase().includes(q);
-                          const matchReason = (item.reason || '').toLowerCase().includes(q);
-                          if (!matchId && !matchTitle && !matchReason) return false;
-                        }
-                        return true;
-                      });
+                {mismatchTab === 'syncReport' ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'right' }}>
+                    <thead>
+                      <tr style={{ background: '#1E293B', color: '#F1F5F9', borderBottom: '2px solid #3B82F6', position: 'sticky', top: 0, zIndex: 10 }}>
+                        <th style={{ padding: '0.8rem 1rem', width: '120px', color: '#38BDF8', fontWeight: 800 }}>شناسه کلید</th>
+                        <th style={{ padding: '0.8rem 1rem', color: '#F1F5F9', fontWeight: 800 }}>عنوان تسک در جیرا</th>
+                        <th style={{ padding: '0.8rem 1rem', color: '#FBBF24', fontWeight: 800 }}>علت عدم ذخیره‌سازی / خطای سیستم</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const details = (syncReportData?.skippedDetails || []).filter(item => {
+                          if (mismatchSearch.trim()) {
+                            const q = mismatchSearch.trim().toLowerCase();
+                            const matchId = (item.key || '').toLowerCase().includes(q);
+                            const matchTitle = (item.title || '').toLowerCase().includes(q);
+                            const matchReason = (item.reason || '').toLowerCase().includes(q);
+                            if (!matchId && !matchTitle && !matchReason) return false;
+                          }
+                          return true;
+                        });
 
-                      if (list.length === 0) {
-                        return (
-                          <tr>
-                            <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8' }}>
-                              هیچ موردی مطابق فیلتر انتخابی یافت نشد.
+                        if (details.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={3} style={{ padding: '2rem', textAlign: 'center', color: '#6EE7B7', fontWeight: 700 }}>
+                                ✅ تمام تسک‌های خوانده‌شده از جیرا بدون هیچ خطایی به صورت ۱۰۰٪ در دیتابیس ذخیره گردیده‌اند.
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return details.map((item, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: 'rgba(239, 68, 68, 0.05)' }}>
+                            <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 800, color: '#F87171' }}>
+                              {item.key}
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#E2E8F0' }}>
+                              {item.title}
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: '#FBBF24', lineHeight: '1.5' }}>
+                              {item.reason}
                             </td>
                           </tr>
-                        );
-                      }
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'right' }}>
+                    <thead>
+                      <tr style={{ background: '#1E293B', color: '#F1F5F9', borderBottom: '2px solid rgba(139, 92, 246, 0.4)', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 4px 15px rgba(0, 0, 0, 0.5)' }}>
+                        <th style={{ padding: '0.8rem 1rem', width: '110px', background: '#1E293B', color: '#38BDF8', fontWeight: 800 }}>شناسه کلید</th>
+                        <th style={{ padding: '0.8rem 1rem', background: '#1E293B', color: '#F1F5F9', fontWeight: 800 }}>عنوان / نام اصلی</th>
+                        <th style={{ padding: '0.8rem 1rem', width: '130px', background: '#1E293B', color: '#C084FC', fontWeight: 800 }}>وضعیت در دیتابیس</th>
+                        <th style={{ padding: '0.8rem 1rem', width: '140px', background: '#1E293B', color: '#38BDF8', fontWeight: 800 }}>وضعیت زنده در Jira</th>
+                        <th style={{ padding: '0.8rem 1rem', background: '#1E293B', color: '#F1F5F9', fontWeight: 800 }}>علت و توضیحات تحلیل</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const list = (mismatchModalData.allItems || []).filter(item => {
+                          if (mismatchTab === 'mismatched' && item.mismatchType === 'MATCHED') return false;
+                          if (mismatchSearch.trim()) {
+                            const q = mismatchSearch.trim().toLowerCase();
+                            const matchId = (item.id || '').toLowerCase().includes(q);
+                            const matchTitle = (item.title || '').toLowerCase().includes(q);
+                            const matchReason = (item.reason || '').toLowerCase().includes(q);
+                            if (!matchId && !matchTitle && !matchReason) return false;
+                          }
+                          return true;
+                        });
 
-                      return list.map((item, idx) => (
-                        <tr key={item.id || idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: item.mismatchType !== 'MATCHED' ? 'rgba(245, 158, 11, 0.04)' : 'transparent' }}>
-                          <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 800, color: '#38BDF8' }}>
-                            {item.id}
-                          </td>
-                          <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#E2E8F0' }}>
-                            {item.title}
-                          </td>
-                          <td style={{ padding: '0.75rem 1rem' }}>
-                            <span style={{
-                              padding: '0.2rem 0.55rem',
-                              borderRadius: '6px',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              background: item.inDb ? 'rgba(192, 132, 252, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                              color: item.inDb ? '#C084FC' : '#FCA5A5'
-                            }}>
-                              {item.dbStatus}
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.75rem 1rem' }}>
-                            <span style={{
-                              padding: '0.2rem 0.55rem',
-                              borderRadius: '6px',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              background: item.inJira ? 'rgba(56, 189, 248, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                              color: item.inJira ? '#38BDF8' : '#FCA5A5'
-                            }}>
-                              {item.jiraStatus}
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: item.mismatchType === 'MATCHED' ? '#6EE7B7' : '#FBBF24', lineHeight: '1.5' }}>
-                            {item.reason}
-                          </td>
-                        </tr>
-                      ));
-                    })()}
-                  </tbody>
-                </table>
+                        if (list.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8' }}>
+                                هیچ موردی مطابق فیلتر انتخابی یافت نشد.
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return list.map((item, idx) => (
+                          <tr key={item.id || idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: item.mismatchType !== 'MATCHED' ? 'rgba(245, 158, 11, 0.04)' : 'transparent' }}>
+                            <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 800, color: '#38BDF8' }}>
+                              {item.id}
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#E2E8F0' }}>
+                              {item.title}
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem' }}>
+                              <span style={{
+                                padding: '0.2rem 0.55rem',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                background: item.inDb ? 'rgba(192, 132, 252, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                color: item.inDb ? '#C084FC' : '#FCA5A5'
+                              }}>
+                                {item.dbStatus}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem' }}>
+                              <span style={{
+                                padding: '0.2rem 0.55rem',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                background: item.inJira ? 'rgba(56, 189, 248, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                color: item.inJira ? '#38BDF8' : '#FCA5A5'
+                              }}>
+                                {item.jiraStatus}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.75rem 1rem', fontSize: '0.78rem', color: item.mismatchType === 'MATCHED' ? '#6EE7B7' : '#FBBF24', lineHeight: '1.5' }}>
+                              {item.reason}
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                )}
               </div>
 
               {/* Modal Footer */}

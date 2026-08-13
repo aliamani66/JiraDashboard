@@ -1313,4 +1313,30 @@ router.get('/mismatch-details', async (req, res) => {
   }
 });
 
+// GET /api/jira/last-sync-report
+// Returns the detailed audit report of the last sync run, including skipped/failed issues and reasons
+router.get('/last-sync-report', (req, res) => {
+  try {
+    const db = getDb();
+    const row = db.prepare(`SELECT value FROM system_settings WHERE key = 'LAST_SYNC_REPORT'`).get();
+    if (!row || !row.value) {
+      return res.json({
+        success: true,
+        report: {
+          syncTime: null,
+          rawIssuesCount: 0,
+          projectsSynced: 0,
+          tasksSynced: 0,
+          skippedOrFailedCount: 0,
+          skippedDetails: []
+        }
+      });
+    }
+    const report = JSON.parse(row.value);
+    res.json({ success: true, report });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در دریافت گزارش همگام‌سازی: ' + err.message });
+  }
+});
+
 module.exports = router;

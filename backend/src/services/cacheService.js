@@ -130,25 +130,78 @@ async function syncFromJira() {
       console.log(`[FULL SYNC] Raw issues returned from Jira: ${rawIssues.length}`);
 
       const knownEpicsSet = new Set(db.prepare('SELECT UPPER(id) as id FROM projects').all().map(p => p.id));
-      const parsedTasks = rawIssues.map((issue, idx) => {
-        const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx, knownEpicsSet) : issue;
-        if (parsed && !parsed.project_id) {
-          const projKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
-          parsed.project_id = projKey;
-        }
-        return parsed;
-      });
+      const skippedDetails = [];
 
-      db.transaction(() => {
-        for (const task of parsedTasks) {
-          if (task && task.id) {
-            task.last_synced = syncTime;
-            if (!task.parent_task_id) task.parent_task_id = null;
+      const parsedTasks = [];
+      for (let idx = 0; idx < rawIssues.length; idx++) {
+        const issue = rawIssues[idx];
+        const issueKey = (issue.key || '').trim().toUpperCase();
+        const summary = issue.fields?.summary || issueKey;
+        const issueTypeName = (issue.fields?.issuetype?.name || '').toLowerCase().trim();
+
+        if (!/^[A-Z0-9_]+-\d+$/i.test(issueKey)) {
+          skippedDetails.push({
+            key: issueKey || 'UNKNOWN',
+            title: summary,
+            reason: `شناسه «${issueKey}» فاقد الگوی استاندارد (پروژه-شماره) است و نادیده گرفته شد.`
+          });
+          continue;
+        }
+
+        if (issueTypeName === 'epic') {
+          skippedDetails.push({
+            key: issueKey,
+            title: summary,
+            reason: `آیتم «${issueKey}» از نوع اپیک است و در جدول پروژه‌ها ذخیره گردید.`
+          });
+          continue;
+        }
+
+        const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx, knownEpicsSet) : issue;
+        if (parsed) {
+          if (!parsed.project_id) {
+            const projKey = (issue.fields?.project?.key || issueKey.split('-')[0] || 'ORD').toUpperCase();
+            parsed.project_id = projKey;
+          }
+          parsedTasks.push(parsed);
+        } else {
+          skippedDetails.push({
+            key: issueKey,
+            title: summary,
+            reason: `تسک «${issueKey}» در پردازش اولیه نادیده گرفته شد.`
+          });
+        }
+      }
+
+      for (const task of parsedTasks) {
+        if (task && task.id) {
+          task.last_synced = syncTime;
+          if (!task.parent_task_id) task.parent_task_id = null;
+          try {
             insertTask.run(task);
             tasksSynced++;
+          } catch (dbErr) {
+            skippedDetails.push({
+              key: task.id,
+              title: task.title || task.id,
+              reason: `خطای دیتابیس در درج SQL: ${dbErr.message}`
+            });
           }
         }
-      })();
+      }
+
+      const syncReport = {
+        syncTime,
+        rawIssuesCount: rawIssues.length,
+        projectsSynced,
+        tasksSynced,
+        skippedOrFailedCount: skippedDetails.length,
+        skippedDetails
+      };
+
+      try {
+        db.prepare(`INSERT INTO system_settings (key, value) VALUES ('LAST_SYNC_REPORT', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(JSON.stringify(syncReport));
+      } catch (_) {}
 
       // Purge obsolete/deleted tasks in DB for configured projects that no longer exist in Jira
       const fetchedKeysSet = new Set(parsedTasks.map(t => (t.id || '').toUpperCase()).filter(Boolean));
