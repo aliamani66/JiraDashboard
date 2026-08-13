@@ -126,8 +126,9 @@ async function syncFromJira() {
       const rawIssues = (searchRes && searchRes.issues) ? searchRes.issues : [];
       console.log(`[FULL SYNC] Raw issues returned from Jira: ${rawIssues.length}`);
 
+      const knownEpicsSet = new Set(db.prepare('SELECT UPPER(id) as id FROM projects').all().map(p => p.id));
       const parsedTasks = rawIssues.map((issue, idx) => {
-        const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue;
+        const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx, knownEpicsSet) : issue;
         if (parsed && !parsed.project_id) {
           const projKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
           parsed.project_id = projKey;
@@ -742,8 +743,9 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 
     console.log(`[SYNC][${monthLabel}] Issues after JS project+date filter: ${finalIssues.length}`);
 
+    const knownEpicsSet = new Set(db.prepare('SELECT UPPER(id) as id FROM projects').all().map(p => p.id));
     const parsedTasks = finalIssues.map((issue, idx) => {
-      const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx) : issue;
+      const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx, knownEpicsSet) : issue;
       if (parsed && !parsed.project_id) {
         const projKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
         const proj = db.prepare('SELECT id FROM projects WHERE UPPER(id) = ? LIMIT 1').get(projKey);
@@ -820,8 +822,19 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 }
 
 function autoLinkTasksToEpics() {
-  // Real Epics are fetched and saved directly from Jira by fetchEpics().
-  // No fake or dummy project records are auto-inserted into the projects table.
+  try {
+    const db = getDb();
+    // 1. Link tasks whose project_id is not in projects, but parent_task_id is a valid epic in projects
+    db.prepare(`
+      UPDATE tasks
+      SET project_id = parent_task_id
+      WHERE (project_id NOT IN (SELECT id FROM projects) OR project_id IS NULL)
+        AND parent_task_id IS NOT NULL
+        AND parent_task_id IN (SELECT id FROM projects)
+    `).run();
+  } catch (e) {
+    console.error('Error in autoLinkTasksToEpics:', e.message);
+  }
 }
 
 function initCron() {

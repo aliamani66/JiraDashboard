@@ -538,14 +538,13 @@ async function fetchTasksForEpic(epicKey) {
     throw err;
   }
 }
-function parseTaskIssue(issue, epicKeyOverride = null, index = 0) {
+function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysSet = null) {
   const cfg = getJiraConfig();
   const mapping = cfg.mapping || jiraMapping;
   const customFields = mapping.customFields || {};
 
   let epicKey = epicKeyOverride;
   if (!epicKey) {
-    // Determine this issue's own project prefix (e.g. "OPS" from "OPS-501")
     const issueProjPrefix = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
 
     if (issue.fields?.epic?.key) {
@@ -554,24 +553,31 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0) {
       epicKey = typeof issue.fields.customfield_10014 === 'object' ? issue.fields.customfield_10014.key : issue.fields.customfield_10014;
     } else if (issue.fields?.customfield_10008) {
       epicKey = typeof issue.fields.customfield_10008 === 'object' ? issue.fields.customfield_10008.key : issue.fields.customfield_10008;
+    } else if (customFields.epicLinkField && issue.fields?.[customFields.epicLinkField]) {
+      const val = issue.fields[customFields.epicLinkField];
+      epicKey = typeof val === 'object' ? (val.key || val.value) : String(val);
     } else if (issue.fields?.parent?.key) {
       epicKey = issue.fields.parent.key;
     } else {
-      // Scan customfields for any Epic key pattern (e.g. OPS-101)
-      // ONLY accept keys with the SAME project prefix as this issue to avoid picking up SG-1, GHX-5 etc.
-      if (issue.fields && issueProjPrefix) {
+      // Scan ALL customfields for any Epic key pattern (e.g. OPS-101, ORD-205)
+      if (issue.fields) {
         for (const [k, val] of Object.entries(issue.fields)) {
           if (!val) continue;
           const strVal = typeof val === 'object' ? (val.key || val.value || JSON.stringify(val)) : String(val);
-          const match = strVal.match(/([A-Z0-9_]+-\d+)/);
-          if (match && match[1] && match[1] !== issue.key) {
-            const candidatePrefix = match[1].split('-')[0].toUpperCase();
-            // Only accept if same project prefix
-            if (candidatePrefix === issueProjPrefix) {
-              epicKey = match[1];
-              break;
+          const matches = strVal.matchAll(/([A-Z0-9_]+-\d+)/g);
+          for (const match of matches) {
+            const candidateKey = match[1] ? match[1].toUpperCase() : null;
+            if (candidateKey && candidateKey !== (issue.key || '').toUpperCase()) {
+              if (knownEpicKeysSet && knownEpicKeysSet.has(candidateKey)) {
+                epicKey = candidateKey;
+                break;
+              } else if (!knownEpicKeysSet) {
+                epicKey = candidateKey;
+                break;
+              }
             }
           }
+          if (epicKey) break;
         }
       }
       if (!epicKey) {
