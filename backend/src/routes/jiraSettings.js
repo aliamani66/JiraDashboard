@@ -1546,6 +1546,184 @@ router.get('/live-mapping-inspector', async (req, res) => {
   }
 });
 
+// POST /api/jira/sync-missing-tasks
+// Syncs and saves any tasks returned from Jira live that are not yet present in SQLite DB
+router.post('/sync-missing-tasks', async (req, res) => {
+  try {
+    const db = getDb();
+    const cfg = jiraService.getJiraConfig();
+    const rebuildMonths = parseInt(req.body.months, 10) || parseInt(cfg.rebuildMonths, 10) || 3;
+
+    const projKeyStr = (cfg.projectKey || '').trim().toUpperCase();
+    let projectFilter = '';
+    if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
+      const projects = projKeyStr.split(',').map(p => {
+        const clean = p.trim().toUpperCase();
+        return /^[A-Z0-9_]+$/.test(clean) ? clean : `"${clean}"`;
+      }).filter(Boolean);
+      if (projects.length > 1) {
+        projectFilter = `AND project IN (${projects.join(',')})`;
+      } else if (projects.length === 1) {
+        projectFilter = `AND project = ${projects[0]}`;
+      }
+    }
+
+    const now = new Date();
+    const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
+    const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
+    const dateClause = `created >= "${startDateStr}"`;
+    const fullClause = projectFilter ? `${projectFilter.replace(/^AND\s+/i, '')} AND ${dateClause}` : dateClause;
+
+    const jql = `${fullClause} ORDER BY created ASC`;
+    const INSPECTION_FIELDS = [
+      'summary',
+      'description',
+      'status',
+      'issuetype',
+      'parent',
+      'project',
+      'created',
+      'duedate',
+      'assignee',
+      'issuelinks',
+      'customfield_10006',
+      'customfield_10014',
+      'customfield_10008',
+      'customfield_10004',
+      'customfield_10020'
+    ];
+
+    const jiraRes = await jiraService.jiraSearch(jql, INSPECTION_FIELDS, { maxResults: 1000, timeout: 15000 });
+    const rawIssues = jiraRes?.issues || [];
+
+    const knownEpicsSet = new Set(db.prepare("SELECT UPPER(id) as id FROM projects").all().map(p => p.id));
+
+    let savedCount = 0;
+    const nowIso = new Date().toISOString();
+
+    const insertTaskStmt = db.prepare(`
+      INSERT INTO tasks (
+        id, project_id, epic_id, parent_task_id, parent_key, linked_tasks,
+        title, description, status, is_waiting, waiting_team, waiting_reason,
+        assignee, time_estimate, time_spent, created_at, start_date, due_date,
+        is_subtask, sprint_name, sprint_start_date, sprint_end_date, component, last_synced
+      ) VALUES (
+        @id, @project_id, @epic_id, @parent_task_id, @parent_key, @linked_tasks,
+        @title, @description, @status, @is_waiting, @waiting_team, @waiting_reason,
+        @assignee, @time_estimate, @time_spent, @created_at, @start_date, @due_date,
+        @is_subtask, @sprint_name, @sprint_start_date, @sprint_end_date, @component, @last_synced
+      )
+      ON CONFLICT(id) DO UPDATE SET
+        project_id = excluded.project_id,
+        epic_id = excluded.epic_id,
+        parent_task_id = excluded.parent_task_id,
+        parent_key = excluded.parent_key,
+        linked_tasks = excluded.linked_tasks,
+        title = excluded.title,
+        status = excluded.status,
+        is_waiting = excluded.is_waiting,
+        assignee = excluded.assignee,
+        start_date = excluded.start_date,
+        due_date = excluded.due_date,
+        last_synced = excluded.last_synced
+    `);
+
+    const insertRelationStmt = db.prepare(`
+      INSERT INTO task_relations (
+        task_id, linked_task_id, relation_type, relationship, title, status, assignee, start_date, due_date, created_at
+      ) VALUES (
+        @task_id, @linked_task_id, @relation_type, @relationship, @title, @status, @assignee, @start_date, @due_date, @created_at
+      )
+    `);
+
+    for (let idx = 0; idx < rawIssues.length; idx++) {
+      const issue = rawIssues[idx];
+      const issueKey = (issue.key || '').trim().toUpperCase();
+      if (!/^[A-Z][A-Z0-9_]*-\d+$/i.test(issueKey)) continue;
+
+      const issueTypeName = (issue.fields?.issuetype?.name || '').toLowerCase().trim();
+      if (issueTypeName === 'epic') {
+        try {
+          db.prepare(`
+            INSERT INTO projects (id, title, description, status, category, capabilities, confluence_link, start_date, due_date, last_synced)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET title=excluded.title, status=excluded.status, last_synced=excluded.last_synced
+          `).run(issueKey, issue.fields?.summary || issueKey, '', issue.fields?.status?.name || 'To Do', 'general', '', null, issue.fields?.created?.split('T')[0] || null, issue.fields?.duedate || null, nowIso);
+          savedCount++;
+        } catch (_) {}
+        continue;
+      }
+
+      const parsed = jiraService.parseTaskIssue(issue, null, idx, knownEpicsSet);
+      if (parsed && parsed.id) {
+        try {
+          insertTaskStmt.run({
+            id: parsed.id,
+            project_id: parsed.project_id || issueKey.split('-')[0],
+            epic_id: parsed.epic_id || null,
+            parent_task_id: parsed.parent_task_id || null,
+            parent_key: parsed.parent_key || null,
+            linked_tasks: parsed.linked_tasks || '[]',
+            title: parsed.title || issueKey,
+            description: parsed.description || '',
+            status: parsed.status || 'To Do',
+            is_waiting: parsed.is_waiting || 0,
+            waiting_team: parsed.waiting_team || null,
+            waiting_reason: parsed.waiting_reason || null,
+            assignee: parsed.assignee || null,
+            time_estimate: parsed.time_estimate || 0,
+            time_spent: parsed.time_spent || 0,
+            created_at: parsed.created_at || nowIso,
+            start_date: parsed.start_date || null,
+            due_date: parsed.due_date || null,
+            is_subtask: parsed.is_subtask || 0,
+            sprint_name: parsed.sprint_name || null,
+            sprint_start_date: parsed.sprint_start_date || null,
+            sprint_end_date: parsed.sprint_end_date || null,
+            component: parsed.component || null,
+            last_synced: nowIso
+          });
+
+          if (Array.isArray(parsed.raw_linked_tasks) && parsed.raw_linked_tasks.length > 0) {
+            try { db.prepare("DELETE FROM task_relations WHERE task_id = ?").run(parsed.id); } catch (_) {}
+            for (const rel of parsed.raw_linked_tasks) {
+              if (rel && rel.key && /^[A-Z][A-Z0-9_]*-\d+$/i.test(rel.key)) {
+                try {
+                  insertRelationStmt.run({
+                    task_id: parsed.id,
+                    linked_task_id: rel.key.toUpperCase(),
+                    relation_type: rel.type || 'Related',
+                    relationship: rel.relationship || 'relates to',
+                    title: rel.title || null,
+                    status: rel.status || null,
+                    assignee: rel.assignee || null,
+                    start_date: rel.startDate || null,
+                    due_date: rel.dueDate || null,
+                    created_at: nowIso
+                  });
+                } catch (_) {}
+              }
+            }
+          }
+
+          savedCount++;
+        } catch (e) {
+          console.error(`Error inserting missing task ${parsed.id}:`, e.message);
+        }
+      }
+    }
+
+    saveDb();
+    res.json({
+      success: true,
+      savedCount,
+      message: `${savedCount} تسک با موفقیت از جیرا دریافت و در دیتابیس لوکال ذخیره گردید.`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در سینک تسک‌های جامانده: ' + err.message });
+  }
+});
+
 // GET /api/jira/last-sync-report
 // Returns the detailed audit report of the last sync run, including skipped/failed issues and reasons
 router.get('/last-sync-report', (req, res) => {

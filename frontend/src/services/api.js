@@ -65,6 +65,7 @@ export const api = {
   getDbStats: (months) => fetchWithAuth('/jira/db-stats' + (months ? `?months=${months}` : '')),
   getLastSyncReport: () => fetchWithAuth('/jira/last-sync-report'),
   getLiveMappingInspector: (months) => fetchWithAuth('/jira/live-mapping-inspector' + (months ? `?months=${months}` : '')),
+  syncMissingTasks: (months) => fetchWithAuth('/jira/sync-missing-tasks', { method: 'POST', body: JSON.stringify({ months }) }),
   getDbTables: () => fetchWithAuth('/db/tables'),
   getDbTableData: (tableName, page = 1, search = '', category = 'all', limit = 50) => fetchWithAuth(`/db/data/${tableName}?page=${page}&search=${encodeURIComponent(search)}&category=${category}&limit=${limit}`),
   runDbQuery: (sql) => fetchWithAuth('/db/query', { method: 'POST', body: JSON.stringify({ sql }) }),

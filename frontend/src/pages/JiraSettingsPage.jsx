@@ -272,6 +272,27 @@ const JiraSettingsPage = () => {
     }
   };
 
+  const [syncingMissing, setSyncingMissing] = useState(false);
+  const handleSyncMissingTasks = async () => {
+    try {
+      setSyncingMissing(true);
+      showToast('⚡ در حال استخراج و ذخیره مستقیم تسک‌های جامانده از Jira...');
+      const months = parseInt(cfg?.rebuildMonths, 10) || 3;
+      const res = await api.syncMissingTasks(months);
+      showToast(res.message || 'تسک‌های جامانده با موفقیت در دیتابیس ثبت شدند.', 'success');
+      await fetchLiveMappingInspector();
+      await fetchDbStats(months);
+      if (mismatchModalData?.category) {
+        const freshMismatch = await api.getMismatchDetails(mismatchModalData.category, months);
+        setMismatchModalData(freshMismatch);
+      }
+    } catch (e) {
+      showToast('خطا در سینک تسک‌های جامانده: ' + e.message, 'error');
+    } finally {
+      setSyncingMissing(false);
+    }
+  };
+
   const openMismatchDiagnosticModal = async (category = 'epics') => {
     try {
       setMismatchLoading(true);
@@ -2709,12 +2730,37 @@ const JiraSettingsPage = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setMismatchModalData(null)}
-                  style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#94A3B8', borderRadius: '10px', padding: '0.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                >
-                  <X size={20} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <button
+                    type="button"
+                    onClick={handleSyncMissingTasks}
+                    disabled={syncingMissing}
+                    style={{
+                      background: 'linear-gradient(135deg, #10B981, #059669)',
+                      border: 'none',
+                      color: '#FFFFFF',
+                      padding: '0.45rem 1rem',
+                      borderRadius: '10px',
+                      fontSize: '0.82rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      boxShadow: '0 3px 12px rgba(16, 185, 129, 0.35)'
+                    }}
+                  >
+                    <RefreshCw size={14} className={syncingMissing ? 'spin' : ''} />
+                    <span>{syncingMissing ? 'در حال ذخیره‌سازی...' : '⚡ سینک و ذخیره فوری تسک‌های جامانده در دیتابیس'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setMismatchModalData(null)}
+                    style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#94A3B8', borderRadius: '10px', padding: '0.4rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
               </div>
 
               {/* Filter / Search Bar */}
@@ -2811,13 +2857,37 @@ const JiraSettingsPage = () => {
                     ) : (
                       <>
                         {liveMappingData && (
-                          <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.12)', borderBottom: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap', fontSize: '0.8rem', color: '#6EE7B7' }}>
-                            <span><strong>📊 خلاصه نگاشت:</strong> {liveMappingData.totalJiraIssues} آیتم از جیرا خوانده شد</span>
-                            <span>| 🔗 <strong>تسک‌های دارای اپیک:</strong> {liveMappingData.withEpicCount}</span>
-                            <span>| ⚪ <strong>تسک‌های بدون اپیک:</strong> {liveMappingData.withoutEpicCount}</span>
-                            <span>| 🔹 <strong>زیرتسک‌ها (Sub-tasks):</strong> {liveMappingData.subtaskCount || 0}</span>
-                            <span>| 📌 <strong>اپیک‌های اصلی:</strong> {liveMappingData.epicsCount}</span>
-                            <span>| 💾 <strong>کل تسک‌های موجود در DB:</strong> {liveMappingData.dbTotalCount}</span>
+                          <div style={{ padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.12)', borderBottom: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', fontSize: '0.8rem', color: '#6EE7B7' }}>
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <span><strong>📊 خلاصه نگاشت:</strong> {liveMappingData.totalJiraIssues} آیتم از جیرا خوانده شد</span>
+                              <span>| 🔗 <strong>تسک‌های دارای اپیک:</strong> {liveMappingData.withEpicCount}</span>
+                              <span>| ⚪ <strong>تسک‌های بدون اپیک:</strong> {liveMappingData.withoutEpicCount}</span>
+                              <span>| 🔹 <strong>زیرتسک‌ها (Sub-tasks):</strong> {liveMappingData.subtaskCount || 0}</span>
+                              <span>| 📌 <strong>اپیک‌های اصلی:</strong> {liveMappingData.epicsCount}</span>
+                              <span>| 💾 <strong>کل تسک‌های موجود در DB:</strong> {liveMappingData.dbTotalCount}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleSyncMissingTasks}
+                              disabled={syncingMissing}
+                              style={{
+                                background: 'linear-gradient(135deg, #10B981, #059669)',
+                                border: 'none',
+                                color: '#FFFFFF',
+                                padding: '0.35rem 0.85rem',
+                                borderRadius: '8px',
+                                fontSize: '0.78rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)'
+                              }}
+                            >
+                              <RefreshCw size={13} className={syncingMissing ? 'spin' : ''} />
+                              <span>{syncingMissing ? 'در حال ذخیره‌سازی...' : '⚡ ذخیره و سینک فوری تمام این تسک‌ها در دیتابیس'}</span>
+                            </button>
                           </div>
                         )}
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'right' }}>
