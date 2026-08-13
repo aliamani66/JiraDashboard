@@ -582,11 +582,12 @@ const JiraSettingsPage = () => {
   };
 
   const handleFullSiteRebuild = async () => {
-    if (!window.confirm('🚨 آیا از بازسازی کامل دیتابیس مطمئن هستید؟\n\nاین عملیات دیتابیس را کاملاً پاکسازی و فشرده کرده، سپس تمام اطلاعات ۵ سال گذشته (۶۰ ماه) را ماه به ماه به صورت زنده استخراج می‌نماید.')) {
+    const rebuildMonths = parseInt(cfg.rebuildMonths, 10) || 3;
+    if (!window.confirm(`🚨 آیا از بازسازی کامل دیتابیس مطمئن هستید؟\n\nاین عملیات دیتابیس را کاملاً پاکسازی و فشرده کرده، سپس تمام اطلاعات ${rebuildMonths} ماه گذشته را ماه به ماه به صورت زنده استخراج می‌نماید.`)) {
       return;
     }
     try {
-      showToast('🗑️ در حال پاکسازی دیتابیس و شروع استخراج گام به گام ۵ سال گذشته (۶۰ ماه)...');
+      showToast(`🗑️ در حال پاکسازی دیتابیس و شروع استخراج گام به گام ${rebuildMonths} ماه گذشته...`);
       await api.clearDatabase();
       fetchDbStats();
 
@@ -595,7 +596,7 @@ const JiraSettingsPage = () => {
       const currentMonth = now.getMonth();
 
       const monthRanges = [];
-      for (let i = 59; i >= 0; i--) {
+      for (let i = rebuildMonths - 1; i >= 0; i--) {
         const d = new Date(currentYear, currentMonth - i, 1);
         const y = d.getFullYear();
         const m = d.getMonth();
@@ -610,7 +611,8 @@ const JiraSettingsPage = () => {
         const jalaliEndStr = `${jEnd.jy}/${String(jEnd.jm).padStart(2,'0')}/${String(jEnd.jd).padStart(2,'0')} 23:59`;
 
         monthRanges.push({
-          monthIndex: (parseInt(cfg.rebuildMonths, 10) || 3) - i,
+          monthIndex: rebuildMonths - i,
+          totalMonths: rebuildMonths,
           year: y,
           month: m + 1,
           jalaliName: monthInfo.jalali,
@@ -622,7 +624,7 @@ const JiraSettingsPage = () => {
         });
       }
 
-      await executeStepByStepSync(monthRanges, '🔥 بازسازی کامل دیتابیس (۵ سال گذشته - ۶۰ ماه)');
+      await executeStepByStepSync(monthRanges, `🔥 بازسازی کامل دیتابیس (${rebuildMonths} ماه گذشته)`);
       fetchDbStats();
     } catch (e) {
       showToast('خطا در بازسازی کامل سایت: ' + e.message, 'error');
