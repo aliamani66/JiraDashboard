@@ -60,5 +60,6 @@ export const api = {
   clearDatabase: () => fetchWithAuth('/jira/clear-db', { method: 'POST' }),
   getManagerAuditReport: () => fetchWithAuth('/reports/manager-audit'),
   getAllSprints: () => fetchWithAuth('/all-sprints'),
+  getJiraTotalCount: () => fetchWithAuth('/jira/jira-count'),
   getDbStats: () => fetchWithAuth('/jira/db-stats'),
 };

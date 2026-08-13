@@ -248,6 +248,38 @@ router.put('/config', (req, res) => {
   }
 });
 
+// GET: Single COUNT query to Jira — total tasks for configured projects, no date filter
+router.get('/jira-count', async (req, res) => {
+  try {
+    const cfg = jiraService.getJiraConfig();
+    if (!jiraService.isConfigured) {
+      return res.status(400).json({ success: false, message: 'جیرا پیکربندی نشده است' });
+    }
+    const projKeyStr = cfg.projectKey || '';
+
+    let projectClause = '';
+    if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
+      const projects = projKeyStr.split(',').map(p => {
+        const clean = p.trim().toUpperCase();
+        return /^[A-Z0-9_]+$/.test(clean) ? clean : `"${clean}"`;
+      }).filter(Boolean);
+      if (projects.length > 1) projectClause = `project IN (${projects.join(',')})`;
+      else if (projects.length === 1) projectClause = `project = ${projects[0]}`;
+    }
+
+    const countJql = projectClause
+      ? `${projectClause} AND issuetype != Epic ORDER BY created ASC`
+      : `issuetype != Epic ORDER BY created ASC`;
+
+    const countRes = await jiraService.jiraSearch(countJql, ['key'], { maxResults: 1, timeout: 15000, retries: 2, singlePage: true });
+    const total = countRes.total !== undefined ? countRes.total : null;
+
+    res.json({ success: true, total, jql: countJql, projectKey: projKeyStr });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در دریافت تعداد از جیرا: ' + err.message });
+  }
+});
+
 // POST 12-Month Batch Sync with detailed monthly report
 router.post('/sync-monthly', async (req, res) => {
   try {

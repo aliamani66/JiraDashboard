@@ -245,6 +245,8 @@ const JiraSettingsPage = () => {
   const [jqlPreviewLoading, setJqlPreviewLoading] = useState(false);
   const [jqlTestResults, setJqlTestResults] = useState(null);
   const [jqlTestLoading, setJqlTestLoading] = useState(false);
+  const [jiraTotalCount, setJiraTotalCount] = useState(null);
+  const [jiraTotalCountLoading, setJiraTotalCountLoading] = useState(false);
 
   const [rangeStartJalali, setRangeStartJalali] = useState(() => {
     const now = new Date();
@@ -558,6 +560,15 @@ const JiraSettingsPage = () => {
     setSyncProgress(null);
     setMonthlySyncing(false);
     showToast(`✅ همگام‌سازی با موفقیت انجام شد. مجموع ${totalTasksSynced} تسک از ${monthRanges.length} ماه ثبت گردید.`, 'success');
+    // Fetch total COUNT from Jira for comparison
+    try {
+      setJiraTotalCountLoading(true);
+      const countRes = await api.getJiraTotalCount();
+      if (countRes.success && countRes.total !== null) {
+        setJiraTotalCount({ total: countRes.total, jql: countRes.jql, projectKey: countRes.projectKey });
+      }
+    } catch (_) {}
+    finally { setJiraTotalCountLoading(false); }
   };
 
   const handleFullSiteRebuild = async () => {
@@ -1222,9 +1233,77 @@ const JiraSettingsPage = () => {
                 تعداد کل تسک‌های دریافت‌شده: <strong style={{ color: '#38BDF8', fontSize: '1.05rem' }}>{monthlyResults.totalTasksSynced || 0} تسک</strong> | تعداد بازه/ماه بررسی‌شده: <strong>{monthlyResults.monthlyResults?.length || 0} بازه</strong>
               </p>
             </div>
-            <button className="jsp-delete-row" style={{ color: '#A78BFA', cursor: 'pointer' }} onClick={() => setMonthlyResults(null)} title="بستن این گزارش">
+            <button className="jsp-delete-row" style={{ color: '#A78BFA', cursor: 'pointer' }} onClick={() => { setMonthlyResults(null); setJiraTotalCount(null); }} title="بستن این گزارش">
               <X size={20} />
             </button>
+          </div>
+
+          {/* ── JIRA vs DB COMPARISON BAR ── */}
+          <div style={{
+            margin: '1rem 0 0.5rem',
+            background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,27,75,0.8))',
+            border: '1px solid rgba(139,92,246,0.35)',
+            borderRadius: '14px',
+            padding: '0.9rem 1.2rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem'
+          }}>
+            {/* Synced from this run */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>📥 تسک‌های سینک‌شده (این عملیات)</span>
+              <strong style={{ fontSize: '1.45rem', color: '#38BDF8', fontWeight: 800, lineHeight: 1 }}>{(monthlyResults.totalTasksSynced || 0).toLocaleString()}</strong>
+              <span style={{ fontSize: '0.68rem', color: '#64748B' }}>تسک</span>
+            </div>
+
+            <div style={{ fontSize: '1.4rem', color: '#475569', fontWeight: 300 }}>vs</div>
+
+            {/* Jira total COUNT */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>🔢 COUNT کل جیرا (بدون فیلتر تاریخ)</span>
+              {jiraTotalCountLoading ? (
+                <span style={{ fontSize: '0.85rem', color: '#A78BFA' }}>⏳ در حال دریافت...</span>
+              ) : jiraTotalCount ? (
+                <strong style={{ fontSize: '1.45rem', color: '#C084FC', fontWeight: 800, lineHeight: 1 }}>{jiraTotalCount.total.toLocaleString()}</strong>
+              ) : (
+                <button onClick={async () => {
+                  try { setJiraTotalCountLoading(true); const r = await api.getJiraTotalCount(); if (r.success) setJiraTotalCount({ total: r.total, jql: r.jql }); } catch (_) {}
+                  finally { setJiraTotalCountLoading(false); }
+                }} style={{ background: 'rgba(192,132,252,0.15)', border: '1px solid rgba(192,132,252,0.4)', color: '#C084FC', borderRadius: '8px', padding: '0.3rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>
+                  کلیک کن تعداد جیرا بیاد
+                </button>
+              )}
+              <span style={{ fontSize: '0.68rem', color: '#64748B' }}>تسک</span>
+            </div>
+
+            <div style={{ fontSize: '1.4rem', color: '#475569', fontWeight: 300 }}>=</div>
+
+            {/* Difference */}
+            {jiraTotalCount && (() => {
+              const diff = jiraTotalCount.total - (monthlyResults.totalTasksSynced || 0);
+              const isOk = diff === 0;
+              const isNeg = diff < 0;
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>⚠️ اختلاف</span>
+                  <strong style={{ fontSize: '1.45rem', color: isOk ? '#10B981' : isNeg ? '#F59E0B' : '#EF4444', fontWeight: 800, lineHeight: 1 }}>
+                    {diff >= 0 ? '+' : ''}{diff.toLocaleString()}
+                  </strong>
+                  <span style={{ fontSize: '0.68rem', color: isOk ? '#6EE7B7' : '#94A3B8' }}>{isOk ? '✅ برابر' : isNeg ? 'بیشتر از جیرا سینک شده' : 'تسک سینک‌نشده'}</span>
+                </div>
+              );
+            })()}
+
+            {/* COUNT JQL label */}
+            {jiraTotalCount?.jql && (
+              <div style={{ width: '100%', marginTop: '0.15rem', paddingTop: '0.6rem', borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
+                <code style={{ fontSize: '0.67rem', color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace', display: 'block' }}>
+                  🔍 COUNT JQL: {jiraTotalCount.jql}
+                </code>
+              </div>
+            )}
           </div>
 
           <div className="jsp-diag-table-wrapper" style={{ marginTop: '1rem', maxHeight: '420px', overflowY: 'auto' }}>
