@@ -183,7 +183,7 @@ async function syncFromJira() {
       const deleteRelations = db.prepare(`DELETE FROM task_relations WHERE task_id = ?`);
 
       for (const task of parsedTasks) {
-        if (task && task.id) {
+        if (task && task.id && /^[A-Z][A-Z0-9_]*-\d+$/i.test(task.id)) {
           task.last_synced = syncTime;
           if (!task.parent_task_id) task.parent_task_id = null;
           try {
@@ -876,7 +876,7 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     let skippedCount = 0;
     db.transaction(() => {
       for (const task of parsedTasks) {
-        if (task && task.id) {
+        if (task && task.id && /^[A-Z][A-Z0-9_]*-\d+$/i.test(task.id)) {
           task.last_synced = syncTime;
           // Only insert tasks from configured project keys (check by key prefix, not exact epic ID)
           if (task.id && configuredProjKeys.size > 0) {

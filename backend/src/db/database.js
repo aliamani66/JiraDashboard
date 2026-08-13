@@ -193,6 +193,8 @@ async function initDb() {
   try { db.run("ALTER TABLE tasks ADD COLUMN description TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN created_at TEXT"); } catch (_) {}
   try { db.run("UPDATE tasks SET epic_id = parent_task_id WHERE (epic_id IS NULL OR epic_id = '') AND parent_task_id IS NOT NULL AND INSTR(parent_task_id, '-') > 0"); } catch (_) {}
+  try { db.run("DELETE FROM tasks WHERE id IS NULL OR id = '' OR INSTR(id, '-') = 0 OR id NOT LIKE '%-%'"); } catch (_) {}
+  try { db.run("DELETE FROM task_relations WHERE task_id IS NULL OR task_id = '' OR INSTR(task_id, '-') = 0 OR task_id NOT LIKE '%-%'"); } catch (_) {}
   try { db.run("UPDATE tasks SET created_at = COALESCE(start_date, due_date, SUBSTR(last_synced, 1, 10)) WHERE created_at IS NULL OR created_at = ''"); } catch (_) {}
 
 
