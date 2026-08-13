@@ -269,19 +269,22 @@ router.get('/jira-count', async (req, res) => {
       else if (projects.length === 1) projectClause = `project = ${projects[0]}`;
     }
 
-    // 1. Total Non-Epic Tasks Count JQL
-    const countJql = projectClause
-      ? `${projectClause} AND issuetype != Epic`
-      : `issuetype != Epic`;
+    // Calculate exact 5-year date boundary (60 months) to match Full Site Rebuild scope
+    const fiveYearsAgo = new Date();
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+    const startDateStr = fiveYearsAgo.toISOString().split('T')[0];
+    const dateClause = `created >= "${startDateStr}"`;
+    const fullClause = projectClause ? `${projectClause} AND ${dateClause}` : dateClause;
+
+    // 1. Total Non-Epic Tasks Count JQL (Last 5 Years)
+    const countJql = `${fullClause} AND issuetype != Epic`;
 
     const countRes = await jiraService.jiraSearch(countJql, ['key'], { maxResults: 1, timeout: 15000, retries: 2, singlePage: true });
     const total = countRes.total !== undefined ? countRes.total : 0;
 
-    // 2. Direct Jira Query for Tasks Without Epic: "Epic Link" EMPTY
+    // 2. Direct Jira Query for Tasks Without Epic (Last 5 Years): "Epic Link" EMPTY
     let withoutEpicCount = 0;
-    const withoutEpicJql = projectClause
-      ? `${projectClause} AND issuetype != Epic AND "Epic Link" EMPTY`
-      : `issuetype != Epic AND "Epic Link" EMPTY`;
+    const withoutEpicJql = `${fullClause} AND issuetype != Epic AND "Epic Link" EMPTY`;
 
     try {
       const withoutRes = await jiraService.jiraSearch(withoutEpicJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
@@ -291,9 +294,7 @@ router.get('/jira-count', async (req, res) => {
     } catch (e1) {
       // Fallback 1: "Epic Link" IS EMPTY
       try {
-        const altJql = projectClause
-          ? `${projectClause} AND issuetype != Epic AND "Epic Link" IS EMPTY`
-          : `issuetype != Epic AND "Epic Link" IS EMPTY`;
+        const altJql = `${fullClause} AND issuetype != Epic AND "Epic Link" IS EMPTY`;
         const altRes = await jiraService.jiraSearch(altJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
         if (altRes && altRes.total !== undefined) {
           withoutEpicCount = altRes.total;
@@ -301,9 +302,7 @@ router.get('/jira-count', async (req, res) => {
       } catch (e2) {
         // Fallback 2: parent IS EMPTY
         try {
-          const parentJql = projectClause
-            ? `${projectClause} AND issuetype != Epic AND parent IS EMPTY`
-            : `issuetype != Epic AND parent IS EMPTY`;
+          const parentJql = `${fullClause} AND issuetype != Epic AND parent IS EMPTY`;
           const parentRes = await jiraService.jiraSearch(parentJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
           if (parentRes && parentRes.total !== undefined) {
             withoutEpicCount = parentRes.total;
@@ -316,9 +315,10 @@ router.get('/jira-count', async (req, res) => {
 
     const withEpicCount = Math.max(0, total - withoutEpicCount);
 
+    // 3. Epics Count JQL (Last 5 Years)
     let jiraEpicsCount = 0;
     try {
-      const epicJql = projectClause ? `${projectClause} AND issuetype = Epic` : `issuetype = Epic`;
+      const epicJql = `${fullClause} AND issuetype = Epic`;
       const epicRes = await jiraService.jiraSearch(epicJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
       jiraEpicsCount = epicRes.total !== undefined ? epicRes.total : 0;
     } catch (_) {}
