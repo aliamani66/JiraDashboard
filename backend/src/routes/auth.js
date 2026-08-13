@@ -1,6 +1,6 @@
 const express = require('express');
 const { getDb } = require('../db/database');
-const { comparePassword, generateToken } = require('../services/authService');
+const { hashPassword, comparePassword, generateToken } = require('../services/authService');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
