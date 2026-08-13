@@ -1185,26 +1185,604 @@ const JiraSettingsPage = () => {
           <AnimatePresence mode="wait">
             {activeTab === 'database' && (
               <motion.div key="database" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                {sec_db}
+                <Section defaultOpen={true} icon={Cpu} title="نسخه و مسیرهای API جیرا (API Version & Custom Endpoints)" color="#6366F1">
+        <p className="jsp-section-desc">اگر جیرای سازمان شما نسخه Server / Data Center یا دارای آدرس‌های اختصاصی API است، می‌توانید نسخه و مسیرها را تعیین فرمایید.</p>
+        <div className="jsp-grid-2">
+          <Field label="نوع و نسخه Jira API" hint="تعیین نوع ساختار متدهای API">
+            <select
+              value={cfg.apiEndpoints?.apiVersion || 'auto'}
+              onChange={e => set('apiEndpoints', 'apiVersion', e.target.value)}
+              className="jsp-input"
+            >
+              <option value="auto">🔄 تشخیص خودکار (Auto-Detect Cloud v3 / Server v2)</option>
+              <option value="v3">🌐 Jira Cloud (REST API v3)</option>
+              <option value="v2">🖥️ Jira Server / Data Center (REST API v2)</option>
+            </select>
+          </Field>
+          <Field label="آدرس Endpoint جستجو (Search Endpoint)" hint="مسیر API جستجوی JQL">
+            <Input value={cfg.apiEndpoints?.searchEndpoint} onChange={v => set('apiEndpoints', 'searchEndpoint', v)} placeholder="/rest/api/3/search/jql" mono />
+          </Field>
+          <Field label="آدرس Endpoint پروژه (Project Endpoint)" hint="مسیر API دریافت اطلاعات پروژه">
+            <Input value={cfg.apiEndpoints?.projectEndpoint} onChange={v => set('apiEndpoints', 'projectEndpoint', v)} placeholder="/rest/api/3/project" mono />
+          </Field>
+        </div>
+      </Section>
               </motion.div>
             )}
 
             {activeTab === 'connection' && (
               <motion.div key="connection" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {sec_conn}
-                {sec_api}
-                {sec_conf}
+                <Section icon={Server} title="تنظیمات سرور و دیتابیس (Server & Database Management)" color="#10B981" defaultOpen={true}>
+        <p className="jsp-section-desc">پایش زنده وضعیت دیتابیس SQLite، تعداد کل تسک‌های ثبت‌شده، حجم فایل و به‌روزرسانی سیستم.</p>
+        
+        {/* 📊 DATABASE STATS TILE CARD */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
+          border: '1px solid rgba(16, 185, 129, 0.4)',
+          borderRadius: '20px',
+          padding: '1.25rem 1.6rem',
+          marginBottom: '1.5rem',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(16, 185, 129, 0.15)'
+        }}>
+          {/* 📊 DATABASE STATS HEADER & DB SIZE BADGE */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10B981', color: '#6EE7B7', width: '38px', height: '38px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Database size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#6EE7B7' }}>📊 پایش و آمار زنده دیتابیس سیستم (SQLite)</h3>
+                <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>مقایسه زنده و تطبیقی تمام شاخص‌های جیرا و دیتابیس در یک نگاه</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ background: 'rgba(14, 165, 233, 0.12)', border: '1px solid rgba(14, 165, 233, 0.35)', borderRadius: '10px', padding: '0.35rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ fontSize: '0.76rem', color: '#94A3B8' }}>💾 حجم دیتابیس:</span>
+                <strong style={{ fontSize: '0.95rem', color: '#38BDF8', fontWeight: 800 }}>{dbStats?.dbSizeMb ?? '0.00'} MB</strong>
+              </div>
+              <button
+                type="button"
+                onClick={fetchDbStats}
+                disabled={dbStatsLoading}
+                style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#38BDF8', padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <RefreshCw size={14} className={dbStatsLoading ? 'spin' : ''} />
+                {dbStatsLoading ? 'بروزرسانی...' : 'بروزرسانی آمار'}
+              </button>
+            </div>
+          </div>
+
+          {/* ⚖️ UNIFIED COMPREHENSIVE JIRA VS DATABASE COMPARISON TABLE */}
+          <div style={{ marginTop: '0.5rem', marginBottom: '1.25rem' }}>
+            <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                ⚖️ جدول جامع مقایسه زنده آمار و شاخص‌ها (سرور جیرا vs دیتابیس SQLite)
+              </span>
+              <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+                پایش تطابق لحظه‌ای داده‌ها
+              </span>
+            </div>
+
+            <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'right' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#94A3B8', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <th style={{ padding: '0.65rem 0.9rem' }}>نوع داده / شاخص</th>
+                    <th style={{ padding: '0.65rem 0.9rem', color: '#38BDF8' }}>🌐 سرور جیرا (Jira Live)</th>
+                    <th style={{ padding: '0.65rem 0.9rem', color: '#C084FC' }}>💾 دیتابیس سیستم (SQLite)</th>
+                    <th style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>📊 وضعیت تطابق</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Row 1: Tasks with epic */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
+                      ⚡ تسک‌های دارای اپیک
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
+                      {jiraCountData?.withEpicCount !== undefined ? `${jiraCountData.withEpicCount.toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
+                      {dbStats?.totalTasks !== undefined ? `${Math.max(0, (dbStats.totalTasks || 0) - (dbStats.unlinkedTasksCount || 0)).toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      {jiraCountData?.withEpicCount !== undefined && dbStats?.totalTasks !== undefined ? (
+                        jiraCountData.withEpicCount === Math.max(0, (dbStats.totalTasks || 0) - (dbStats.unlinkedTasksCount || 0)) ? (
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
+                        ) : (
+                          <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>
+                            ⚠️ اختلاف {Math.abs(jiraCountData.withEpicCount - Math.max(0, (dbStats.totalTasks || 0) - (dbStats.unlinkedTasksCount || 0)))}
+                          </span>
+                        )
+                      ) : '—'}
+                    </td>
+                  </tr>
+
+                  {/* Row 2: Tasks without epic */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
+                      ⚠️ تسک‌های بدون اپیک
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
+                      {jiraCountData?.withoutEpicCount !== undefined ? `${jiraCountData.withoutEpicCount.toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: (dbStats?.unlinkedTasksCount || 0) > 0 ? '#FCA5A5' : '#6EE7B7' }}>
+                      {dbStats?.unlinkedTasksCount !== undefined ? `${(dbStats.unlinkedTasksCount || 0).toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      {jiraCountData?.withoutEpicCount !== undefined && dbStats?.unlinkedTasksCount !== undefined ? (
+                        jiraCountData.withoutEpicCount === (dbStats.unlinkedTasksCount || 0) ? (
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
+                        ) : (
+                          <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>
+                            ⚠️ اختلاف {Math.abs(jiraCountData.withoutEpicCount - (dbStats.unlinkedTasksCount || 0))}
+                          </span>
+                        )
+                      ) : '—'}
+                    </td>
+                  </tr>
+
+                  {/* Row 3: Total Non-Epic Tasks */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: 'rgba(255, 255, 255, 0.02)' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#FFFFFF' }}>
+                      📝 مجموع کل تسک‌های غیر‌اپیک
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8', fontSize: '0.88rem' }}>
+                      {jiraCountData?.total !== undefined ? `${jiraCountData.total.toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC', fontSize: '0.88rem' }}>
+                      {dbStats?.totalTasks !== undefined ? `${dbStats.totalTasks.toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      {jiraCountData?.total !== undefined && dbStats?.totalTasks !== undefined ? (
+                        jiraCountData.total === dbStats.totalTasks ? (
+                          <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#6EE7B7', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800 }}>✅ همگام کامل</span>
+                        ) : (
+                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 800 }}>
+                            ⚠️ اختلاف {Math.abs(jiraCountData.total - dbStats.totalTasks)} تسک
+                          </span>
+                        )
+                      ) : '—'}
+                    </td>
+                  </tr>
+
+                  {/* Row 4: Total Epics */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
+                      📂 کل اپیک‌ها (پروژه‌ها)
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
+                      {jiraCountData?.jiraEpicsCount !== undefined ? `${jiraCountData.jiraEpicsCount.toLocaleString()} اپیک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
+                      {dbStats?.totalProjects !== undefined ? `${(dbStats.totalProjects || 0).toLocaleString()} اپیک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      {jiraCountData?.jiraEpicsCount !== undefined && dbStats?.totalProjects !== undefined ? (
+                        jiraCountData.jiraEpicsCount === dbStats.totalProjects ? (
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
+                        ) : (
+                          <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>
+                            ⚠️ اختلاف {Math.abs(jiraCountData.jiraEpicsCount - dbStats.totalProjects)}
+                          </span>
+                        )
+                      ) : '—'}
+                    </td>
+                  </tr>
+
+                  {/* Row 5: Epics without tasks */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
+                      📁 اپیک‌های بدون تسک
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#94A3B8' }}>
+                      —
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: (dbStats?.epicsWithoutTasksCount || 0) > 0 ? '#FBBF24' : '#6EE7B7' }}>
+                      {dbStats?.epicsWithoutTasksCount !== undefined ? `${(dbStats.epicsWithoutTasksCount || 0).toLocaleString()} اپیک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      {dbStats?.epicsWithoutTasksCount !== undefined ? (
+                        (dbStats.epicsWithoutTasksCount || 0) === 0 ? (
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تمام اپیک‌ها تسک دارند</span>
+                        ) : (
+                          <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>
+                            ⚠️ {dbStats.epicsWithoutTasksCount} اپیک بدون تسک
+                          </span>
+                        )
+                      ) : '—'}
+                    </td>
+                  </tr>
+
+                  {/* Row 6: Sprints */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
+                      🏃 اسپرینت‌های استخراج‌شده
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
+                      {dbStats?.totalSprints !== undefined ? `${(dbStats.totalSprints || 0).toLocaleString()} اسپرینت` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
+                      {dbStats?.totalSprints !== undefined ? `${(dbStats.totalSprints || 0).toLocaleString()} اسپرینت` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ ثبتی در دیتابیس</span>
+                    </td>
+                  </tr>
+
+                  {/* Row 7: Components */}
+                  <tr>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
+                      🏷️ کامپوننت‌های شناسایی‌شده
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
+                      {dbStats?.totalComponents !== undefined ? `${(dbStats.totalComponents || 0).toLocaleString()} نوع` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
+                      {dbStats?.totalComponents !== undefined ? `${(dbStats.totalComponents || 0).toLocaleString()} نوع` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ ثبتی در دیتابیس</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 📁 TASKS PER JIRA PROJECT KEY */}
+          {dbStats?.projectTaskCounts && dbStats.projectTaskCounts.length > 0 && (
+            <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px dashed rgba(255, 255, 255, 0.1)' }}>
+              <div style={{ marginBottom: '0.65rem' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  📁 تعداد تسک‌های دیتابیس به تفکیک پروژه جیرا ({dbStats.projectTaskCounts.length} پروژه):
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {dbStats.projectTaskCounts.map(proj => (
+                  <div key={proj.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'rgba(99, 102, 241, 0.08)',
+                    border: '1px solid rgba(99, 102, 241, 0.25)',
+                    borderRadius: '12px',
+                    padding: '0.6rem 1rem',
+                  }}>
+                    <span style={{
+                      fontSize: '0.95rem', color: '#A78BFA', fontWeight: 800,
+                      background: 'rgba(167,139,250,0.18)', padding: '0.2rem 0.7rem',
+                      borderRadius: '8px', letterSpacing: '0.05em'
+                    }}>{proj.id}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#C084FC', fontWeight: 700, background: 'rgba(192,132,252,0.12)', padding: '0.2rem 0.6rem', borderRadius: '7px', border: '1px solid rgba(192,132,252,0.3)' }}>
+                        ⚡ {proj.epicCount || 0} اپیک
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
+                        <strong style={{ fontSize: '1.25rem', color: proj.taskCount > 0 ? '#818CF8' : '#475569', fontWeight: 800 }}>
+                          {proj.taskCount.toLocaleString()}
+                        </strong>
+                        <span style={{ fontSize: '0.75rem', color: '#64748B' }}>تسک</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="jsp-grid-2">
+          <Field label="پورت سرور بک‌اند (Port)" hint="پورت سرویس‌دهنده Node.js">
+            <Input value={cfg.serverAndDb?.port} onChange={v => set('serverAndDb', 'port', v)} placeholder="3001" mono />
+          </Field>
+          <Field label="کلید امنیتی توکن‌ها (JWT Secret)" hint="برای امضای امن توکن‌های کاربران">
+            <Input value={cfg.serverAndDb?.jwtSecret} onChange={v => set('serverAndDb', 'jwtSecret', v)} placeholder="dev-secret-key" password />
+          </Field>
+          <Field label="نوع و شناسه دیتابیس متصل" hint="موتور دیتابیس ذخیره‌سازی محلی">
+            <Input value={cfg.serverAndDb?.dbDriver || 'SQLite 3 (database.sqlite)'} onChange={() => {}} placeholder="SQLite 3" mono />
+          </Field>
+          <Field label="وضعیت دیتابیس و مدیریت داده‌ها" hint="مدیریت پاکسازی و بازسازی فایل database.sqlite">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '0.3rem', flexWrap: 'wrap' }}>
+              <span className="diag-status-pill matched">✅ متصل و فعال</span>
+              <button 
+                type="button"
+                className="jsp-add-mapping-btn" 
+                style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.45)', color: '#FCA5A5' }}
+                onClick={async () => {
+                  if (window.confirm('⚠️ آیا مطمئن هستید که می‌خواهید دیتابیس را کاملاً خالی کنید؟ (تمام تسک‌ها و داده‌ها حذف خواهند شد تا بتوانید دوباره دیتای تازه سینک کنید)')) {
+                    try {
+                      showToast('در حال پاکسازی و خالی کردن دیتابیس...');
+                      const res = await api.clearDatabase();
+                      showToast(res.message || 'دیتابیس کاملاً خالی شد.', 'success');
+                      fetchDbStats();
+                    } catch (e) {
+                      showToast('خطا در پاکسازی دیتابیس', 'error');
+                    }
+                  }
+                }}
+              >
+                🗑️ خالی کردن کامل دیتابیس (حذف تمام تسک‌ها)
+              </button>
+              <button 
+                type="button"
+                className="jsp-add-mapping-btn" 
+                style={{ background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#38BDF8' }}
+                onClick={async () => {
+                  if (window.confirm('آیا مایلید تمام داده‌های دیتابیس بر اساس داده‌های ۱۰۰٪ زنده Jira Cloud بازنشانی شوند؟')) {
+                    try {
+                      showToast('در حال همگام‌سازی و بازسازی دیتابیس از Jira...');
+                      const res = await api.resetDatabase();
+                      showToast(res.message || 'دیتابیس با داده‌های زنده جیرا همگام شد.');
+                      setTimeout(() => window.location.reload(), 1500);
+                    } catch (e) {
+                      showToast('خطا در بازسازی دیتابیس', 'error');
+                    }
+                  }
+                }}
+              >
+                🔄 همگام‌سازی و بازسازی دیتابیس از Jira
+              </button>
+            </div>
+          </Field>
+        </div>
+      </Section>
+                <Section defaultOpen={true} icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
+        <div className="jsp-grid-2">
+          <Field label="آدرس پایه Jira (Base URL)" hint="مثال: https://10.100.71.140:8443 یا https://jira.company.com">
+            <Input value={cfg.connection?.baseUrl} onChange={v => set('connection', 'baseUrl', v)} placeholder="https://10.100.71.140:8443" />
+          </Field>
+          <Field label="نام کاربری / ایمیل حساب Jira" hint="نام کاربری یا ایمیل حساب جیرا">
+            <Input value={cfg.connection?.username} onChange={v => set('connection', 'username', v)} placeholder="m.ghafoory" />
+          </Field>
+          <Field label="API Token / کلمه عبور جیرا" hint="کلمه عبور یا توکن اختصاصی حساب جیرا">
+            <Input value={cfg.connection?.token} onChange={v => set('connection', 'token', v)} placeholder="NzIyMzUz..." password />
+          </Field>
+          <Field label="کلید پروژه اصلی (Project Key)" hint="مثال: ORD، OPS، DEV">
+            <Input value={cfg.connection?.projectKey} onChange={v => set('connection', 'projectKey', v)} placeholder="ORD" mono />
+          </Field>
+          <Field label="فاصله سینک خودکار (دقیقه)" hint="هر چند دقیقه داده‌های جیرا سینک شود">
+            <Input value={cfg.connection?.syncIntervalMinutes} onChange={v => set('connection', 'syncIntervalMinutes', v)} placeholder="60" mono />
+          </Field>
+
+          {/* 🌟 Multi-Select Jira Project Discovery Combo */}
+          <div style={{ gridColumn: 'span 2', marginTop: '0.5rem', background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--glass-border)', borderRadius: '14px', padding: '1.1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <strong style={{ color: '#38BDF8', fontSize: '0.94rem' }}>🌐 انتخاب چندتایی پروژه‌های Jira (Project Selector Combo):</strong>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  با زدن دکمه روبرو، لیست کامل پروژه‌های موجود در سرور جیرا دریافت می‌شود و می‌توانید چند پروژه را تیک بزنید.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="jsp-run-diag-btn secondary"
+                onClick={handleFetchProjects}
+                disabled={fetchingProjects}
+                style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem' }}
+              >
+                <RefreshCw size={14} className={fetchingProjects ? 'spin' : ''} />
+                {fetchingProjects ? 'در حال دریافت لیست...' : '🔍 دریافت لیست پروژه‌های Jira'}
+              </button>
+            </div>
+
+            {/* List of Discovered Projects Pills */}
+            {discoveredProjects.length > 0 ? (
+              <div>
+                {/* 🔍 Mini Live Search Box, Active Projects Toggle & Counter */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.65rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      value={projectSearchTerm}
+                      onChange={e => setProjectSearchTerm(e.target.value)}
+                      placeholder="🔍 جستجوی سریع پروژه‌ها (نام یا کلید)..."
+                      style={{
+                        flex: 1,
+                        maxWidth: '280px',
+                        background: 'rgba(0, 0, 0, 0.4)',
+                        border: '1px solid rgba(56, 189, 248, 0.4)',
+                        color: '#FFFFFF',
+                        borderRadius: '8px',
+                        padding: '0.35rem 0.75rem',
+                        fontSize: '0.82rem',
+                        outline: 'none'
+                      }}
+                    />
+
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.82rem', color: '#E2E8F0', cursor: 'pointer', userSelect: 'none', background: 'rgba(255, 255, 255, 0.06)', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                      <input
+                        type="checkbox"
+                        checked={onlyActiveProjects}
+                        onChange={e => setOnlyActiveProjects(e.target.checked)}
+                        style={{ accentColor: '#38BDF8', width: '15px', height: '15px', cursor: 'pointer' }}
+                      />
+                      <span>🔥 فقط پروژه‌های دارای اپیک (اپیک &gt; ۰)</span>
+                    </label>
+                  </div>
+
+                  <span style={{ fontSize: '0.8rem', color: '#38BDF8', fontWeight: 'bold' }}>
+                    📊 {filteredDiscoveredProjects.length} از {discoveredProjects.length} پروژه
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem', background: 'rgba(0,0,0,0.25)', padding: '0.85rem', borderRadius: '12px', border: '1px solid var(--glass-border)', maxHeight: '200px', overflowY: 'auto' }}>
+                  {filteredDiscoveredProjects.length === 0 ? (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.5rem' }}>
+                      نتیجه‌ای برای عبارات «{projectSearchTerm}» یافت نشد.
+                    </div>
+                  ) : (
+                    filteredDiscoveredProjects.map(p => {
+                      const isSel = selectedProjectKeys.includes(p.key);
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => toggleProjectKey(p.key)}
+                          style={{
+                            padding: '0.42rem 0.9rem',
+                            borderRadius: '20px',
+                            border: isSel ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.15)',
+                            background: isSel ? 'linear-gradient(135deg, rgba(14,165,233,0.35), rgba(59,130,246,0.35))' : 'rgba(255,255,255,0.05)',
+                            color: isSel ? '#FFFFFF' : 'var(--text-secondary)',
+                            fontWeight: isSel ? '800' : '500',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            fontSize: '0.84rem',
+                            boxShadow: isSel ? '0 0 12px rgba(56,189,248,0.3)' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          {isSel ? '✅' : '➕'} <strong>{p.key}</strong> <small style={{ opacity: 0.85 }}>({p.name})</small>
+                          {p.epicCount !== undefined && (
+                            <span style={{
+                              background: isSel ? 'rgba(255, 255, 255, 0.25)' : 'rgba(56, 189, 248, 0.2)',
+                              color: isSel ? '#FFFFFF' : '#38BDF8',
+                              padding: '0.1rem 0.5rem',
+                              borderRadius: '10px',
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              marginRight: '0.2rem'
+                            }}>
+                              {p.epicCount} اپیک
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.85rem', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.85rem', borderRadius: '8px' }}>
+                💡 برای دریافت لیست و کمبو باکس زنده تمام پروژه‌های سرور جیرا، دکمه <strong>«🔍 دریافت لیست پروژه‌های Jira»</strong> را کلیک بفرمایید.
+              </div>
+            )}
+
+            {/* Manual input field */}
+            <Field label="کلیدهای پروژه انتخاب‌شده جهت همگام‌سازی (Project Keys):" hint="می‌توانید به صورت دستی یا از لیست بالا انتخاب کنید (با ویرگول جدا می‌شوند)">
+              <Input value={cfg.connection?.projectKey} onChange={v => set('connection', 'projectKey', v)} placeholder="ORD, OPS, DEV" mono />
+            </Field>
+
+            {/* Selected Projects Summary Banner */}
+            {selectedProjectKeys.length > 0 && (
+              <div style={{ marginTop: '0.85rem', background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: '10px', padding: '0.75rem 1.05rem', fontSize: '0.86rem', lineHeight: '1.6' }}>
+                <strong style={{ color: '#38BDF8' }}>📌 پروژه‌های انتخاب‌شده فعلی جهت همگام‌سازی:</strong>
+                <div style={{ marginTop: '0.35rem', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {selectedProjectKeys.map(k => {
+                    const found = discoveredProjects.find(p => p.key === k);
+                    return (
+                      <span key={k} style={{ background: 'rgba(14, 165, 233, 0.25)', border: '1px solid #38BDF8', color: '#FFFFFF', padding: '0.2rem 0.65rem', borderRadius: '12px', fontSize: '0.82rem', fontWeight: 'bold' }}>
+                        {k} {found ? `(${found.name}${found.epicCount !== undefined ? ` - ${found.epicCount} اپیک` : ''})` : ''}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </Section>
+                <Section icon={GitBranch} title="اتصال به Confluence (مستندات)" color="#A78BFA" defaultOpen={true}>
+        <div className="jsp-grid-2">
+          <Field label="آدرس Confluence Base URL">
+            <Input value={cfg.confluence?.baseUrl} onChange={v => set('confluence', 'baseUrl', v)} placeholder="https://10.100.71.140:8443/wiki" />
+          </Field>
+          <Field label="ایمیل / نام کاربری حساب Confluence">
+            <Input value={cfg.confluence?.username} onChange={v => set('confluence', 'username', v)} placeholder="m.ghafoory" />
+          </Field>
+          <Field label="کلید پیش‌فرض Space" hint="مثال: OPS، TECH، DEV">
+            <Input value={cfg.confluence?.defaultSpaceKey} onChange={v => set('confluence', 'defaultSpaceKey', v)} placeholder="OPS" mono />
+          </Field>
+        </div>
+      </Section>
               </motion.div>
             )}
 
             {activeTab === 'mapping' && (
               <motion.div key="mapping" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {sec_cf}
-                {sec_stat}
-                {sec_wait}
-                {sec_date}
-                {sec_lbl}
-                {sec_feat}
+                <Section defaultOpen={true} icon={Cpu} title="فیلدهای کاستوم Jira (Custom Fields Mapping)" color="#EC4899">
+        <p className="jsp-section-desc">شماره کاستوم‌فیلدهای اختصاصی جیرای سازمان را وارد کنید. پس از اجرای پایش زنده، شناسه‌های دقیق نمایش داده می‌شوند.</p>
+        <div className="jsp-grid-2">
+          <Field label="فیلد لینک به اپیک (Epic Link)" hint="شناسه فیلد ارتباط تسک با اپیک در جیرای شما (customfield_10006)">
+            <Input value={cfg.customFields?.epicLinkField || 'customfield_10006'} onChange={v => set('customFields', 'epicLinkField', v)} placeholder="customfield_10006" mono />
+          </Field>
+          <Field label="فیلد Sprint" hint="معمولاً customfield_10004 (یا customfield_10020)">
+            <Input value={cfg.customFields?.sprintField} onChange={v => set('customFields', 'sprintField', v)} placeholder="customfield_10004" mono />
+          </Field>
+          <Field label="فیلد تیم منتظر (Waiting Team)" hint="اختیاری - شناسه فیلد کاستوم">
+            <Input value={cfg.customFields?.waitingTeamField} onChange={v => set('customFields', 'waitingTeamField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+          <Field label="فیلد دلیل انتظار (Waiting Reason)" hint="اختیاری">
+            <Input value={cfg.customFields?.waitingReasonField} onChange={v => set('customFields', 'waitingReasonField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+          <Field label="فیلد لینک Confluence" hint="اختیاری">
+            <Input value={cfg.customFields?.confluenceLinkField} onChange={v => set('customFields', 'confluenceLinkField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+          <Field label="فیلد قابلیت‌های عملیاتی (Capabilities)" hint="اختیاری">
+            <Input value={cfg.customFields?.capabilitiesField} onChange={v => set('customFields', 'capabilitiesField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+          <Field label="فیلد دسته‌بندی پروژه (Category)" hint="اختیاری">
+            <Input value={cfg.customFields?.categoryField} onChange={v => set('customFields', 'categoryField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+        </div>
+      </Section>
+                <Section defaultOpen={true} icon={Tag} title="نگاشت وضعیت‌های Jira به داشبورد (Status Mapping)" color="#10B981">
+        <p className="jsp-section-desc">هر وضعیت اصلی جیرا را به وضعیت داشبورد نگاشت کنید. وضعیت‌های داشبورد: Done، In Progress، Waiting، To Do</p>
+        <StatusMappingEditor
+          mapping={cfg.statusMapping || {}}
+          onChange={v => setCfg(prev => ({ ...prev, statusMapping: v }))}
+        />
+      </Section>
+                <Section defaultOpen={true} icon={AlertTriangle} title="وضعیت‌های «منتظر» (Waiting Status List)" color="#FBBF24">
+        <p className="jsp-section-desc">وضعیت‌های جیرا که باید به‌عنوان «منتظر تیم‌های دیگر» شناسایی شوند. هر وضعیت را وارد کرده و Enter بزنید.</p>
+        <TagList
+          items={cfg.waitingStatuses || []}
+          onChange={v => setCfg(prev => ({ ...prev, waitingStatuses: v }))}
+          placeholder="OnHolding، Waiting، Blocked..."
+        />
+      </Section>
+                <Section icon={Calendar} title="نگاشت فیلدهای تاریخ (Date Field Mapping)" color="#06B6D4" defaultOpen={true}>
+        <div className="jsp-grid-2">
+          <Field label="فیلد تاریخ شروع اپیک" hint="معمولاً created یا customfield_XXXXX">
+            <Input value={cfg.dateMapping?.epicStartDateField} onChange={v => set('dateMapping', 'epicStartDateField', v)} placeholder="created" mono />
+          </Field>
+          <Field label="فیلد تاریخ سررسید اپیک" hint="معمولاً duedate">
+            <Input value={cfg.dateMapping?.epicDueDateField} onChange={v => set('dateMapping', 'epicDueDateField', v)} placeholder="duedate" mono />
+          </Field>
+          <Field label="فیلد تاریخ شروع تسک" hint="اختیاری">
+            <Input value={cfg.dateMapping?.taskStartDateField} onChange={v => set('dateMapping', 'taskStartDateField', v)} placeholder="customfield_XXXXX" mono />
+          </Field>
+          <Field label="فیلد تاریخ سررسید تسک" hint="معمولاً duedate">
+            <Input value={cfg.dateMapping?.taskDueDateField} onChange={v => set('dateMapping', 'taskDueDateField', v)} placeholder="duedate" mono />
+          </Field>
+        </div>
+      </Section>
+                <Section icon={Tag} title="پیشوندهای لیبل‌های جیرا (Label Prefixes)" color="#F97316" defaultOpen={true}>
+        <p className="jsp-section-desc">برچسب‌هایی که برای تشخیص تیم منتظر، دلیل انتظار و قابلیت‌ها از لیبل‌های Jira استفاده می‌شوند.</p>
+        <div className="jsp-grid-2">
+          <Field label="پیشوند تیم منتظر" hint="مثال: wait: → لیبل: wait:infra-team">
+            <Input value={cfg.labelPrefixes?.waitingTeam} onChange={v => set('labelPrefixes', 'waitingTeam', v)} placeholder="wait:" mono />
+          </Field>
+          <Field label="پیشوند دلیل انتظار" hint="مثال: reason: → لیبل: reason:waiting-for-approval">
+            <Input value={cfg.labelPrefixes?.waitingReason} onChange={v => set('labelPrefixes', 'waitingReason', v)} placeholder="reason:" mono />
+          </Field>
+          <Field label="پیشوند قابلیت عملیاتی" hint="مثال: cap: → لیبل: cap:monitoring">
+            <Input value={cfg.labelPrefixes?.capability} onChange={v => set('labelPrefixes', 'capability', v)} placeholder="cap:" mono />
+          </Field>
+        </div>
+      </Section>
+                <Section icon={Cpu} title="کامپوننت‌های برجسته داشبورد (Featured Components)" color="#8B5CF6" defaultOpen={true}>
+        <p className="jsp-section-desc">کامپوننت‌هایی که به‌عنوان دکمه فیلتر سریع در صفحه داشبورد نمایش داده می‌شوند.</p>
+        <TagList
+          items={cfg.featuredComponents || []}
+          onChange={v => setCfg(prev => ({ ...prev, featuredComponents: v }))}
+          placeholder="learning، meeting، support..."
+        />
+      </Section>
               </motion.div>
             )}
           </AnimatePresence>
