@@ -396,26 +396,27 @@ const JiraSettingsPage = () => {
       if (res && res.success) {
         setDbStats(res);
       }
-      fetchJiraCount(false, targetMonths);
     } catch (e) {
       console.error('Failed to fetch DB stats:', e);
     } finally {
       setDbStatsLoading(false);
     }
-  }, [fetchJiraCount]);
+  }, []);
 
   const fetchConfig = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getJiraConfig();
       setCfg(data);
-      fetchDbStats(data?.rebuildMonths || 3);
+      const m = data?.rebuildMonths || 3;
+      fetchDbStats(m);
+      fetchJiraCount(false, m);
     } catch (e) {
       showToast('خطا در دریافت تنظیمات جیرا: ' + (e.message || ''), 'error');
     } finally {
       setLoading(false);
     }
-  }, [fetchDbStats]);
+  }, [fetchDbStats, fetchJiraCount]);
 
   useEffect(() => { fetchConfig(); }, []);
 
