@@ -364,8 +364,8 @@ router.get('/jira-count', async (req, res) => {
     } catch (_) {}
 
     // Fetch all keys from DB (withEpic and unlinked)
-    const dbWithEpicRows = db.prepare(`SELECT id FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND INSTR(parent_task_id, '-') > 0${taskProjWhere2}${dbDateClause2}`).all();
-    const dbUnlinkedRows = db.prepare(`SELECT id FROM tasks WHERE (parent_task_id IS NULL OR parent_task_id = '' OR INSTR(parent_task_id, '-') = 0)${taskProjWhere2}${dbDateClause2}`).all();
+    const dbWithEpicRows = db.prepare(`SELECT id FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND INSTR(parent_task_id, '-') > 0${taskProjWhere2}`).all();
+    const dbUnlinkedRows = db.prepare(`SELECT id FROM tasks WHERE (parent_task_id IS NULL OR parent_task_id = '' OR INSTR(parent_task_id, '-') = 0)${taskProjWhere2}`).all();
     const dbWithEpicKeys = new Set(dbWithEpicRows.map(r => r.id.toUpperCase()));
     const dbUnlinkedKeys = new Set(dbUnlinkedRows.map(r => r.id.toUpperCase()));
 
@@ -377,7 +377,7 @@ router.get('/jira-count', async (req, res) => {
     } catch (_) {}
 
     // Fetch all non-epic keys from DB directly for category=totalTasks
-    const dbAllRows = db.prepare(`SELECT id FROM tasks WHERE 1=1${taskProjWhere2}${dbDateClause2}`).all();
+    const dbAllRows = db.prepare(`SELECT id FROM tasks WHERE 1=1${taskProjWhere2}`).all();
     const dbAllKeys = new Set(dbAllRows.map(r => r.id.toUpperCase()));
 
     // Count Sub-tasks in Jira live
@@ -942,12 +942,12 @@ router.get('/db-stats', (req, res) => {
     let componentsList = [];
 
     let subtasksCount = 0;
-    try { totalTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE 1=1${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
-    try { subtasksCount = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE is_subtask = 1${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
+    try { totalTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE 1=1${taskProjWhere}`).get()?.count || 0; } catch (_) {}
+    try { subtasksCount = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE is_subtask = 1${taskProjWhere}`).get()?.count || 0; } catch (_) {}
     try { totalProjects = db.prepare(`SELECT COUNT(*) as count FROM projects WHERE ${epicWhere}`).get()?.count || 0; } catch (_) {}
-    try { doneTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('done', 'completed')${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
-    try { waitingTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE (is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked'))${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
-    try { inProgressTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('in progress', 'in_progress')${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
+    try { doneTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('done', 'completed')${taskProjWhere}`).get()?.count || 0; } catch (_) {}
+    try { waitingTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE (is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked'))${taskProjWhere}`).get()?.count || 0; } catch (_) {}
+    try { inProgressTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('in progress', 'in_progress')${taskProjWhere}`).get()?.count || 0; } catch (_) {}
 
     const todoTasks = Math.max(0, totalTasks - doneTasks - waitingTasks - inProgressTasks);
 
@@ -1058,7 +1058,7 @@ router.get('/db-stats', (req, res) => {
       unlinkedTasksCount = db.prepare(`
         SELECT COUNT(*) as c
         FROM tasks
-        WHERE (parent_task_id IS NULL OR parent_task_id = '' OR INSTR(parent_task_id, '-') = 0)${taskProjWhere}${dbDateClause}
+        WHERE (parent_task_id IS NULL OR parent_task_id = '' OR INSTR(parent_task_id, '-') = 0)${taskProjWhere}
       `).get()?.c || 0;
 
       if (unlinkedTasksCount > 0) {
@@ -1079,14 +1079,14 @@ router.get('/db-stats', (req, res) => {
       epicsWithoutTasksCount = db.prepare(`
         SELECT COUNT(*) as c
         FROM projects
-        WHERE ${epicWhere} AND id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''${dbDateClause})
+        WHERE ${epicWhere} AND id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != '')
       `).get()?.c || 0;
 
       if (epicsWithoutTasksCount > 0) {
         epicsWithoutTasksList = db.prepare(`
           SELECT id, title, status
           FROM projects
-          WHERE ${epicWhere} AND id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''${dbDateClause})
+          WHERE ${epicWhere} AND id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != '')
           LIMIT 50
         `).all() || [];
       }
@@ -1097,7 +1097,7 @@ router.get('/db-stats', (req, res) => {
       withEpicTasksCount = db.prepare(`
         SELECT COUNT(*) as c
         FROM tasks
-        WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND INSTR(parent_task_id, '-') > 0${taskProjWhere}${dbDateClause}
+        WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND INSTR(parent_task_id, '-') > 0${taskProjWhere}
       `).get()?.c || 0;
     } catch (_) {}
 
