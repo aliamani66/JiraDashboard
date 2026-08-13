@@ -326,7 +326,43 @@ router.get('/jira-count', async (req, res) => {
       withEpicCount = Math.max(0, total - withoutEpicCount);
     }
 
-    // 3. Epics Count JQL (All Epics in Project, without date bounds since Epics are standing containers)
+    // 3. DB data for SET-BASED comparison (not just count diff)
+    const db = getDb();
+    const projKeyUpper = projKeyStr.trim().toUpperCase();
+    const pKeys2 = (projKeyUpper && projKeyUpper !== 'ALL' && projKeyUpper !== '*')
+      ? projKeyUpper.split(',').map(k => k.trim()).filter(Boolean) : [];
+    const epicWhere2 = pKeys2.length > 0 ? `(${pKeys2.map(k => `id LIKE '${k}-%'`).join(' OR ')})` : "id LIKE '%-%'";
+    const taskProjWhere2 = pKeys2.length > 0 ? ` AND (${pKeys2.map(k => `id LIKE '${k}-%'`).join(' OR ')})` : '';
+    const dbDateClause2 = rebuildMonths < 60 ? ` AND last_synced >= '${startDateStr}'` : '';
+
+    // Fetch all keys from Jira (withEpic and unlinked)
+    let jiraWithEpicKeys = new Set();
+    let jiraUnlinkedKeys = new Set();
+    try {
+      const r = await jiraService.jiraSearch(withEpicJql, ['key'], { maxResults: 2000, timeout: 15000 });
+      jiraWithEpicKeys = new Set((r.issues || []).map(i => i.key.toUpperCase()));
+    } catch (_) {}
+    try {
+      const r = await jiraService.jiraSearch(withoutEpicJql, ['key'], { maxResults: 2000, timeout: 15000 });
+      jiraUnlinkedKeys = new Set((r.issues || []).map(i => i.key.toUpperCase()));
+    } catch (_) {}
+
+    // Fetch all keys from DB (withEpic and unlinked)
+    const dbWithEpicRows = db.prepare(`SELECT id FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND parent_task_id IN (SELECT id FROM projects WHERE ${epicWhere2}) AND (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere2}${dbDateClause2}`).all();
+    const dbUnlinkedRows = db.prepare(`SELECT id FROM tasks WHERE (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects WHERE ${epicWhere2})) AND (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere2}${dbDateClause2}`).all();
+    const dbWithEpicKeys = new Set(dbWithEpicRows.map(r => r.id.toUpperCase()));
+    const dbUnlinkedKeys = new Set(dbUnlinkedRows.map(r => r.id.toUpperCase()));
+
+    // Compute SET-BASED mismatch counts
+    const withEpicMismatchCount = [...new Set([...dbWithEpicKeys, ...jiraWithEpicKeys])].filter(k => !(dbWithEpicKeys.has(k) && jiraWithEpicKeys.has(k))).length;
+    const unlinkedMismatchCount = [...new Set([...dbUnlinkedKeys, ...jiraUnlinkedKeys])].filter(k => !(dbUnlinkedKeys.has(k) && jiraUnlinkedKeys.has(k))).length;
+    const totalMismatchCount = [...new Set([...dbWithEpicKeys, ...dbUnlinkedKeys, ...jiraWithEpicKeys, ...jiraUnlinkedKeys])].filter(k => {
+      const inDb = dbWithEpicKeys.has(k) || dbUnlinkedKeys.has(k);
+      const inJira = jiraWithEpicKeys.has(k) || jiraUnlinkedKeys.has(k);
+      return !(inDb && inJira);
+    }).length;
+
+    // 4. Epics
     let jiraEpicsCount = 0;
     try {
       const epicJql = projectClause ? `${projectClause} AND issuetype = Epic` : `issuetype = Epic`;
@@ -334,9 +370,7 @@ router.get('/jira-count', async (req, res) => {
       jiraEpicsCount = epicRes.total !== undefined ? epicRes.total : 0;
     } catch (_) {}
 
-    // 4. Calculate Epics without tasks from DB stats
-    const db = getDb();
-    const jiraEpicsWithoutTasksCount = db.prepare('SELECT COUNT(*) as c FROM projects WHERE id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL)').get()?.c || 0;
+    const jiraEpicsWithoutTasksCount = db.prepare(`SELECT COUNT(*) as c FROM projects WHERE ${epicWhere2} NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL AND project_id != ''${dbDateClause2})`).get()?.c || 0;
 
     res.json({
       success: true,
@@ -345,6 +379,10 @@ router.get('/jira-count', async (req, res) => {
       withoutEpicCount,
       jiraEpicsCount,
       jiraEpicsWithoutTasksCount,
+      // Set-based mismatch counts (for badge display — matches modal exactly)
+      withEpicMismatchCount,
+      unlinkedMismatchCount,
+      totalMismatchCount,
       rebuildMonths,
       jql: countJql,
       withoutEpicJql,
@@ -835,7 +873,7 @@ router.get('/db-stats', (req, res) => {
     const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
     const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
     const dbDateClause = (rebuildMonths < 60)
-      ? ` AND (start_date >= '${startDateStr}' OR last_synced >= '${startDateStr}')`
+      ? ` AND last_synced >= '${startDateStr}'`
       : '';
 
     let totalTasks = 0;
@@ -1065,7 +1103,7 @@ router.get('/mismatch-details', async (req, res) => {
 
     // Filter DB tasks by the same timeframe when rebuildMonths < 60
     const dbDateClause = (rebuildMonths < 60)
-      ? ` AND (start_date >= '${startDateStr}' OR start_date IS NULL OR start_date = '')`
+      ? ` AND last_synced >= '${startDateStr}'`
       : '';
 
     let items = [];
