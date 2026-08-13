@@ -353,14 +353,21 @@ router.get('/jira-count', async (req, res) => {
     const dbWithEpicKeys = new Set(dbWithEpicRows.map(r => r.id.toUpperCase()));
     const dbUnlinkedKeys = new Set(dbUnlinkedRows.map(r => r.id.toUpperCase()));
 
+    // Fetch all non-epic keys from Jira directly for category=totalTasks mismatch count
+    let jiraAllKeys = new Set();
+    try {
+      const r = await jiraService.jiraSearch(countJql, ['key'], { maxResults: 2000, timeout: 15000 });
+      jiraAllKeys = new Set((r.issues || []).map(i => i.key.toUpperCase()));
+    } catch (_) {}
+
+    // Fetch all non-epic keys from DB directly for category=totalTasks
+    const dbAllRows = db.prepare(`SELECT id FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere2}${dbDateClause2}`).all();
+    const dbAllKeys = new Set(dbAllRows.map(r => r.id.toUpperCase()));
+
     // Compute SET-BASED mismatch counts
     const withEpicMismatchCount = [...new Set([...dbWithEpicKeys, ...jiraWithEpicKeys])].filter(k => !(dbWithEpicKeys.has(k) && jiraWithEpicKeys.has(k))).length;
     const unlinkedMismatchCount = [...new Set([...dbUnlinkedKeys, ...jiraUnlinkedKeys])].filter(k => !(dbUnlinkedKeys.has(k) && jiraUnlinkedKeys.has(k))).length;
-    const totalMismatchCount = [...new Set([...dbWithEpicKeys, ...dbUnlinkedKeys, ...jiraWithEpicKeys, ...jiraUnlinkedKeys])].filter(k => {
-      const inDb = dbWithEpicKeys.has(k) || dbUnlinkedKeys.has(k);
-      const inJira = jiraWithEpicKeys.has(k) || jiraUnlinkedKeys.has(k);
-      return !(inDb && inJira);
-    }).length;
+    const totalMismatchCount = [...new Set([...dbAllKeys, ...jiraAllKeys])].filter(k => !(dbAllKeys.has(k) && jiraAllKeys.has(k))).length;
 
     // 4. Epics
     let jiraEpicsCount = 0;
