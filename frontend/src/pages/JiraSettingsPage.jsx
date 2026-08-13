@@ -247,6 +247,7 @@ const JiraSettingsPage = () => {
   const [jqlTestLoading, setJqlTestLoading] = useState(false);
   const [jiraTotalCount, setJiraTotalCount] = useState(null);
   const [jiraTotalCountLoading, setJiraTotalCountLoading] = useState(false);
+  const [showUnlinkedModal, setShowUnlinkedModal] = useState(false);
 
   const [rangeStartJalali, setRangeStartJalali] = useState(() => {
     const now = new Date();
@@ -1775,6 +1776,64 @@ const JiraSettingsPage = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* ⚠️ UNLINKED TASKS (TASKS WITHOUT MATCHED EPIC) */}
+          {dbStats?.unlinkedTasksCount !== undefined && (
+            <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px dashed rgba(239, 68, 68, 0.3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: dbStats.unlinkedTasksCount > 0 ? '#FCA5A5' : '#10B981', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  {dbStats.unlinkedTasksCount > 0 ? '⚠️ تسک‌های بدون اپیک (اپیک آنها در لیست ۶۱ اپیک دیتابیس نیست):' : '✅ کلیه تسک‌های دیتابیس دارای اپیک معتبر هستند.'}
+                </span>
+                {dbStats.unlinkedTasksCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowUnlinkedModal(!showUnlinkedModal)}
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      color: '#FCA5A5',
+                      borderRadius: '8px',
+                      padding: '0.25rem 0.65rem',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      fontWeight: 700
+                    }}
+                  >
+                    {showUnlinkedModal ? '▲ مخفی کردن لیست' : `▼ مشاهده ${dbStats.unlinkedTasksCount} تسک بدون اپیک`}
+                  </button>
+                )}
+              </div>
+
+              {showUnlinkedModal && dbStats.unlinkedTasksList && dbStats.unlinkedTasksList.length > 0 && (
+                <div style={{ marginTop: '0.65rem', maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingRight: '0.2rem' }}>
+                  {dbStats.unlinkedTasksList.map(t => (
+                    <div key={t.id} style={{
+                      background: 'rgba(239, 68, 68, 0.08)',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      borderRadius: '8px',
+                      padding: '0.45rem 0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+                        <code style={{ fontSize: '0.8rem', color: '#FCA5A5', fontWeight: 800, background: 'rgba(239, 68, 68, 0.2)', padding: '0.1rem 0.45rem', borderRadius: '5px', flexShrink: 0 }}>
+                          {t.id}
+                        </code>
+                        <span style={{ fontSize: '0.78rem', color: '#E2E8F0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.title}>
+                          {t.title}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#94A3B8', flexShrink: 0, background: 'rgba(255,255,255,0.05)', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                        project_id: <strong style={{ color: '#F8FAFC' }}>{t.project_id || 'خالی'}</strong>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -855,6 +855,27 @@ router.get('/db-stats', (req, res) => {
       }
     } catch (_) {}
 
+    // Unlinked tasks: tasks whose project_id is NOT in projects table (or null/empty)
+    let unlinkedTasksCount = 0;
+    let unlinkedTasksList = [];
+    try {
+      unlinkedTasksCount = db.prepare(`
+        SELECT COUNT(*) as c
+        FROM tasks
+        WHERE project_id NOT IN (SELECT id FROM projects) OR project_id IS NULL OR project_id = ''
+      `).get().c || 0;
+
+      if (unlinkedTasksCount > 0) {
+        unlinkedTasksList = db.prepare(`
+          SELECT id, title, project_id, status, assignee
+          FROM tasks
+          WHERE project_id NOT IN (SELECT id FROM projects) OR project_id IS NULL OR project_id = ''
+          ORDER BY id DESC
+          LIMIT 100
+        `).all() || [];
+      }
+    } catch (_) {}
+
     res.json({
       success: true,
       totalTasks,
@@ -869,7 +890,9 @@ router.get('/db-stats', (req, res) => {
       componentsList,
       totalSprints: sprintsList.length,
       sprintsList,
-      projectTaskCounts
+      projectTaskCounts,
+      unlinkedTasksCount,
+      unlinkedTasksList
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'خطا در دریافت آمار دیتابیس: ' + err.message });
