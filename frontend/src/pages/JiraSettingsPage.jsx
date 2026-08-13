@@ -274,13 +274,41 @@ const JiraSettingsPage = () => {
   };
 
   const [syncingMissing, setSyncingMissing] = useState(false);
+  const [syncingKey, setSyncingKey] = useState(null);
+
+  const handleSyncSingleKey = async (key) => {
+    if (!key) return;
+    try {
+      setSyncingKey(key);
+      showToast(`⚡ در حال استخراج و ذخیره مستقیم تسک ${key} از Jira...`);
+      const res = await api.syncMissingTasks({ keys: [key] });
+      showToast(res.message || `تسک ${key} با موفقیت در دیتابیس ذخیره شد.`, 'success');
+      const months = parseInt(cfg?.rebuildMonths, 10) || 3;
+      await fetchDbStats(months);
+      await fetchJiraCount();
+      const freshMismatch = await api.getMismatchDetails(mismatchModalData?.category || 'totalTasks', months);
+      setMismatchModalData(freshMismatch);
+    } catch (e) {
+      showToast(`خطا در ذخیره تسک ${key}: ` + e.message, 'error');
+    } finally {
+      setSyncingKey(null);
+    }
+  };
+
   const handleSyncMissingTasks = async () => {
     try {
       setSyncingMissing(true);
       const months = parseInt(cfg?.rebuildMonths, 10) || 3;
-      const missingKeys = mismatchModalData?.missingKeys || [];
+      const missingKeys = (mismatchModalData?.missingKeys && mismatchModalData.missingKeys.length > 0)
+        ? mismatchModalData.missingKeys
+        : (mismatchModalData?.mismatches || []).filter(i => i.mismatchType === 'JIRA_ONLY').map(i => i.id).filter(Boolean);
 
-      showToast(`⚡ در حال استخراج و ذخیره مستقیم ${missingKeys.length > 0 ? missingKeys.length + ' تسک' : 'تسک‌های'} اختلاف از Jira...`);
+      if (missingKeys.length === 0) {
+        showToast('هیچ تسک جامانده‌ای برای ذخیره در دیتابیس وجود ندارد.', 'info');
+        return;
+      }
+
+      showToast(`⚡ در حال استخراج و ذخیره مستقیم ${missingKeys.length} تسک اختلاف از Jira...`);
       const res = await api.syncMissingTasks({ months, keys: missingKeys });
       showToast(res.message || 'تسک‌های اختلاف با موفقیت در دیتابیس ذخیره شدند.', 'success');
       await fetchDbStats(months);
@@ -2766,6 +2794,7 @@ const JiraSettingsPage = () => {
                       <th style={{ padding: '0.75rem 0.9rem', width: '130px', color: '#38BDF8', fontWeight: 800 }}>وضعیت در Jira</th>
                       <th style={{ padding: '0.75rem 0.9rem', width: '130px', color: '#C084FC', fontWeight: 800 }}>وضعیت در DB</th>
                       <th style={{ padding: '0.75rem 0.9rem', color: '#FBBF24', fontWeight: 800 }}>نوع و شرح اختلاف</th>
+                      <th style={{ padding: '0.75rem 0.9rem', width: '130px', textAlign: 'center', color: '#6EE7B7', fontWeight: 800 }}>عملیات</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2786,7 +2815,7 @@ const JiraSettingsPage = () => {
                       if (list.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={6} style={{ padding: '2.5rem', textAlign: 'center', color: '#6EE7B7', fontWeight: 700 }}>
+                            <td colSpan={7} style={{ padding: '2.5rem', textAlign: 'center', color: '#6EE7B7', fontWeight: 700 }}>
                               🎉 هیچ موردی دارای اختلاف نیست! تمام داده‌های این بخش بین جیرا و دیتابیس ۱۰۰٪ منطبق و یکپارچه هستند.
                             </td>
                           </tr>
@@ -2795,6 +2824,7 @@ const JiraSettingsPage = () => {
 
                       return list.map((item, idx) => {
                         const isMissingInDb = item.mismatchType === 'JIRA_ONLY';
+                        const isThisSyncing = syncingKey === item.id;
                         return (
                           <tr key={item.id || idx} style={{
                             borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
@@ -2835,6 +2865,35 @@ const JiraSettingsPage = () => {
                             </td>
                             <td style={{ padding: '0.65rem 0.9rem', fontSize: '0.78rem', color: isMissingInDb ? '#FCA5A5' : '#FBBF24', lineHeight: '1.5' }}>
                               {item.reason}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                              {isMissingInDb ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSyncSingleKey(item.id)}
+                                  disabled={isThisSyncing || syncingMissing}
+                                  style={{
+                                    background: 'linear-gradient(135deg, #10B981, #059669)',
+                                    border: 'none',
+                                    color: '#FFFFFF',
+                                    padding: '0.3rem 0.75rem',
+                                    borderRadius: '8px',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
+                                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)'
+                                  }}
+                                  title={`ذخیره مستقیم فقط تسک ${item.id} در دیتابیس`}
+                                >
+                                  <RefreshCw size={11} className={isThisSyncing ? 'spin' : ''} />
+                                  <span>{isThisSyncing ? 'در حال ذخیره...' : '⚡ ذخیره در DB'}</span>
+                                </button>
+                              ) : (
+                                <span style={{ fontSize: '0.74rem', color: '#94A3B8' }}>—</span>
+                              )}
                             </td>
                           </tr>
                         );

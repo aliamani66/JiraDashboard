@@ -1460,15 +1460,11 @@ router.post('/sync-missing-tasks', async (req, res) => {
   try {
     const db = getDb();
     const cfg = jiraService.getJiraConfig();
-    const targetKeys = Array.isArray(req.body.keys) ? req.body.keys.map(k => String(k).trim().toUpperCase()).filter(k => /^[A-Z][A-Z0-9_]*-\d+$/i.test(k)) : [];
+    let targetKeys = Array.isArray(req.body.keys) ? req.body.keys.map(k => String(k).trim().toUpperCase()).filter(k => /^[A-Z][A-Z0-9_]*-\d+$/i.test(k)) : [];
 
-    let jql = '';
-    if (targetKeys.length > 0) {
-      // TARGETED SYNC: Query Jira only for the exact keys requested!
-      jql = `key IN (${targetKeys.join(',')}) ORDER BY created ASC`;
-    } else {
+    if (targetKeys.length === 0) {
+      // If no keys provided in body, discover ONLY the true missing keys from Jira
       const rebuildMonths = parseInt(req.body.months, 10) || parseInt(cfg.rebuildMonths, 10) || 3;
-
       const projKeyStr = (cfg.projectKey || '').trim().toUpperCase();
       let projectFilter = '';
       if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
@@ -1486,10 +1482,36 @@ router.post('/sync-missing-tasks', async (req, res) => {
       const now = new Date();
       const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
       const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
-      const dateClause = `created >= "${startDateStr}"`;
-      const fullClause = projectFilter ? `${projectFilter.replace(/^AND\s+/i, '')} AND ${dateClause}` : dateClause;
-      jql = `${fullClause} ORDER BY created ASC`;
+      const dateClause = (rebuildMonths < 60) ? `created >= "${startDateStr}"` : '';
+      const fullClause = projectFilter
+        ? (dateClause ? `${projectFilter.replace(/^AND\s+/i, '')} AND ${dateClause}` : projectFilter.replace(/^AND\s+/i, ''))
+        : (dateClause || '');
+
+      const searchJql = fullClause ? `${fullClause} ORDER BY created ASC` : `issuetype != Epic ORDER BY created ASC`;
+      const jiraRes = await jiraService.jiraSearch(searchJql, ['key'], { maxResults: 1000, timeout: 8000 });
+      const jiraIssues = jiraRes?.issues || [];
+
+      const existingDbKeys = new Set(db.prepare("SELECT UPPER(id) as id FROM tasks").all().map(t => t.id));
+      const existingDbProjects = new Set(db.prepare("SELECT UPPER(id) as id FROM projects").all().map(p => p.id));
+
+      for (const ji of jiraIssues) {
+        const kUpper = (ji.key || '').trim().toUpperCase();
+        if (kUpper && !existingDbKeys.has(kUpper) && !existingDbProjects.has(kUpper)) {
+          targetKeys.push(kUpper);
+        }
+      }
+
+      if (targetKeys.length === 0) {
+        return res.json({
+          success: true,
+          savedCount: 0,
+          message: 'هیچ تسک یا اپیک جامانده‌ای برای همگام‌سازی یافت نشد. همه داده‌ها در دیتابیس موجود هستند.'
+        });
+      }
     }
+
+    // TARGETED EXACT SYNC: Query Jira ONLY for the exact requested keys!
+    const jql = `key IN (${targetKeys.map(k => `"${k}"`).join(',')}) ORDER BY created ASC`;
 
     const INSPECTION_FIELDS = [
       'summary',
@@ -1509,7 +1531,7 @@ router.post('/sync-missing-tasks', async (req, res) => {
       'customfield_10020'
     ];
 
-    const jiraRes = await jiraService.jiraSearch(jql, INSPECTION_FIELDS, { maxResults: targetKeys.length > 0 ? targetKeys.length : 1000, timeout: 15000 });
+    const jiraRes = await jiraService.jiraSearch(jql, INSPECTION_FIELDS, { maxResults: targetKeys.length, timeout: 10000 });
     const rawIssues = jiraRes?.issues || [];
 
     const knownEpicsSet = new Set(db.prepare("SELECT UPPER(id) as id FROM projects").all().map(p => p.id));
