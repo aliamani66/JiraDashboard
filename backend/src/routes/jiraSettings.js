@@ -178,7 +178,6 @@ router.put('/config', (req, res) => {
       if (body.connection.username) updates.JIRA_USERNAME = body.connection.username;
       if (body.connection.token && body.connection.token !== '••••••••') updates.JIRA_TOKEN = body.connection.token;
       if (body.connection.projectKey) updates.JIRA_PROJECT_KEY = body.connection.projectKey;
-      if (body.connection.mockMode !== undefined) updates.JIRA_MOCK_MODE = String(body.connection.mockMode);
       if (body.connection.syncIntervalMinutes) updates.SYNC_INTERVAL_MINUTES = body.connection.syncIntervalMinutes;
     }
 

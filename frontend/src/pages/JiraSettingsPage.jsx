@@ -2143,34 +2143,6 @@ const JiraSettingsPage = () => {
           <Field label="کلید پروژه اصلی (Project Key)" hint="مثال: ORD، OPS، DEV">
             <Input value={cfg.connection?.projectKey} onChange={v => set('connection', 'projectKey', v)} placeholder="ORD" mono />
           </Field>
-          <Field label="حالت داده‌های تستی / ماک (Mock Mode)" hint="برای تست و توسعه سیستم در لوکال بدون نیاز به سرور جیرا">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingTop: '0.2rem' }}>
-              <button
-                type="button"
-                onClick={() => set('connection', 'mockMode', !cfg.connection?.mockMode)}
-                style={{
-                  background: cfg.connection?.mockMode ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.08)',
-                  border: cfg.connection?.mockMode ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.2)',
-                  color: cfg.connection?.mockMode ? '#6EE7B7' : '#94A3B8',
-                  padding: '0.45rem 1rem',
-                  borderRadius: '10px',
-                  fontWeight: 800,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <Zap size={16} color={cfg.connection?.mockMode ? '#10B981' : '#94A3B8'} />
-                {cfg.connection?.mockMode ? '⚡ حالت ماک (داده تستی) فعال است' : '🌐 حالت واقعی (متصل به سرور جیرا)'}
-              </button>
-              <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
-                {cfg.connection?.mockMode ? '✅ بدون نیاز به دسترسی به سرور اصلی؛ تمام کوئری‌ها و استخراج‌ها روی داده تستی محلی شبیه‌سازی می‌شوند.' : 'کوئری‌ها به سرور جیرا ارسال می‌گردند.'}
-              </span>
-            </div>
-          </Field>
           <Field label="فاصله سینک خودکار (دقیقه)" hint="هر چند دقیقه داده‌های جیرا سینک شود">
             <Input value={cfg.connection?.syncIntervalMinutes} onChange={v => set('connection', 'syncIntervalMinutes', v)} placeholder="60" mono />
           </Field>
