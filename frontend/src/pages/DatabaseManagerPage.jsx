@@ -104,10 +104,12 @@ const DatabaseManagerPage = () => {
   };
 
   const presets = [
-    { label: '📋 نمایش کل تسک‌ها', sql: 'SELECT id, project_id, parent_task_id, parent_key, is_subtask, title, status FROM tasks LIMIT 100' },
-    { label: '⚡ تسک‌های دارای اپیک', sql: "SELECT id, title, parent_task_id, status FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND INSTR(parent_task_id, '-') > 0 LIMIT 100" },
-    { label: '⚠️ تسک‌های بدون اپیک', sql: "SELECT id, title, parent_task_id, status FROM tasks WHERE (parent_task_id IS NULL OR parent_task_id = '' OR INSTR(parent_task_id, '-') = 0) LIMIT 100" },
+    { label: '📋 کل تسک‌ها', sql: 'SELECT id, project_id, epic_id, parent_task_id, parent_key, title, status FROM tasks LIMIT 100' },
+    { label: '⚡ تسک‌های دارای اپیک', sql: "SELECT id, title, epic_id, status FROM tasks WHERE epic_id IS NOT NULL AND epic_id != '' AND INSTR(epic_id, '-') > 0 LIMIT 100" },
+    { label: '⚠️ تسک‌های بدون اپیک', sql: "SELECT id, title, epic_id, status FROM tasks WHERE (epic_id IS NULL OR epic_id = '' OR INSTR(epic_id, '-') = 0) LIMIT 100" },
     { label: '🔹 زیرتسک‌ها (Sub-tasks)', sql: 'SELECT id, title, parent_key, status FROM tasks WHERE is_subtask = 1 LIMIT 100' },
+    { label: '🔗 کل روابط و تسک‌های مرتبط', sql: 'SELECT task_id, linked_task_id, relationship, title, status, assignee, start_date, due_date FROM task_relations LIMIT 100' },
+    { label: '⛔ تسک‌های دارای وابستگی (Blocked/Depends)', sql: "SELECT task_id, linked_task_id, relationship, title, status, assignee FROM task_relations WHERE relationship LIKE '%block%' OR relationship LIKE '%depend%' OR relationship LIKE '%wait%' LIMIT 100" },
     { label: '📌 پروژه‌ها و اپیک‌ها', sql: 'SELECT * FROM projects' },
     { label: '⚙️ تنظیمات سیستم', sql: 'SELECT * FROM system_settings' }
   ];
