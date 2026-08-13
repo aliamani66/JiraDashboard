@@ -2114,38 +2114,6 @@ const JiraSettingsPage = () => {
                       <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ ثبتی در دیتابیس</span>
                     </td>
                   </tr>
-
-                  {/* Row 7: Sprints */}
-                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
-                      🏃 اسپرینت‌های استخراج‌شده
-                    </td>
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
-                      {dbStats?.totalSprints !== undefined ? `${(dbStats.totalSprints || 0).toLocaleString()} اسپرینت` : '—'}
-                    </td>
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
-                      {dbStats?.totalSprints !== undefined ? `${(dbStats.totalSprints || 0).toLocaleString()} اسپرینت` : '—'}
-                    </td>
-                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ ثبتی در دیتابیس</span>
-                    </td>
-                  </tr>
-
-                  {/* Row 8: Components */}
-                  <tr>
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
-                      🏷️ کامپوننت‌های شناسایی‌شده
-                    </td>
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
-                      {dbStats?.totalComponents !== undefined ? `${(dbStats.totalComponents || 0).toLocaleString()} نوع` : '—'}
-                    </td>
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
-                      {dbStats?.totalComponents !== undefined ? `${(dbStats.totalComponents || 0).toLocaleString()} نوع` : '—'}
-                    </td>
-                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.2rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>✅ ثبتی در دیتابیس</span>
-                    </td>
-                  </tr>
                 </tbody>
               </table>
             </div>
