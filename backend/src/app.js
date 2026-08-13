@@ -91,15 +91,7 @@ async function start() {
     console.log(`Server is running on port ${PORT}`);
   });
 
-  // If Jira is configured, perform initial sync asynchronously in background without blocking login
-  if (jiraService.isConfigured) {
-    console.log('Jira configured. Running initial background sync from Jira...');
-    syncFromJira().catch(syncErr => {
-      console.error('Initial background Jira sync failed (server remains running):', syncErr.message);
-    });
-  }
-
-  // Initialize Cache Sync Cron
+  // Initialize Cache Sync Cron (runs only at configured intervals, not unconditionally on startup)
   initCron();
 }
 
