@@ -1710,7 +1710,7 @@ const JiraSettingsPage = () => {
                 style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#38BDF8', padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
               >
                 <RefreshCw size={14} className={dbStatsLoading ? 'spin' : ''} />
-                {dbStatsLoading ? 'بروزرسانی...' : 'بروزرسانی آمار'}
+                {dbStatsLoading ? 'در حال به‌روزرسانی...' : '🔄 به‌روزرسانی ستون دیتابیس'}
               </button>
             </div>
           </div>
@@ -1741,7 +1741,7 @@ const JiraSettingsPage = () => {
                 }}
               >
                 <RefreshCw size={13} className={jiraCountLoading ? 'spin' : ''} />
-                {jiraCountLoading ? 'در حال دریافت از جیرا...' : '🔄 استخراج / بروزرسانی آمار زنده جیرا'}
+                {jiraCountLoading ? 'در حال دریافت از جیرا...' : '🌐 استخراج و به‌روزرسانی آمار زنده Jira'}
               </button>
             </div>
 
