@@ -333,7 +333,7 @@ router.get('/jira-count', async (req, res) => {
       ? projKeyUpper.split(',').map(k => k.trim()).filter(Boolean) : [];
     const epicWhere2 = pKeys2.length > 0 ? `(${pKeys2.map(k => `id LIKE '${k}-%'`).join(' OR ')})` : "id LIKE '%-%'";
     const taskProjWhere2 = pKeys2.length > 0 ? ` AND (${pKeys2.map(k => `id LIKE '${k}-%'`).join(' OR ')})` : '';
-    const dbDateClause2 = rebuildMonths < 60 ? ` AND (created_at >= '${startDateStr}' OR start_date >= '${startDateStr}')` : '';
+    const dbDateClause2 = rebuildMonths < 60 ? ` AND (created_at >= '${startDateStr}' OR start_date >= '${startDateStr}' OR due_date >= '${startDateStr}')` : '';
 
     // Fetch all keys from Jira (withEpic and unlinked)
     let jiraWithEpicKeys = new Set();
@@ -880,7 +880,7 @@ router.get('/db-stats', (req, res) => {
     const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
     const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
     const dbDateClause = (rebuildMonths < 60)
-      ? ` AND (created_at >= '${startDateStr}' OR start_date >= '${startDateStr}')`
+      ? ` AND (created_at >= '${startDateStr}' OR start_date >= '${startDateStr}' OR due_date >= '${startDateStr}')`
       : '';
 
     let totalTasks = 0;
@@ -1110,7 +1110,7 @@ router.get('/mismatch-details', async (req, res) => {
 
     // Filter DB tasks by the same timeframe when rebuildMonths < 60
     const dbDateClause = (rebuildMonths < 60)
-      ? ` AND (created_at >= '${startDateStr}' OR start_date >= '${startDateStr}')`
+      ? ` AND (created_at >= '${startDateStr}' OR start_date >= '${startDateStr}' OR due_date >= '${startDateStr}')`
       : '';
 
     let items = [];

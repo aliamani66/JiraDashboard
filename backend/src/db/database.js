@@ -188,6 +188,7 @@ async function initDb() {
   try { db.run("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN description TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN created_at TEXT"); } catch (_) {}
+  try { db.run("UPDATE tasks SET created_at = COALESCE(start_date, due_date, SUBSTR(last_synced, 1, 10)) WHERE created_at IS NULL OR created_at = ''"); } catch (_) {}
 
 
   // Ensure Admin user always exists
