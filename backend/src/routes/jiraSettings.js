@@ -383,7 +383,7 @@ router.get('/jira-count', async (req, res) => {
     // Count Sub-tasks in Jira live
     let subtaskCount = 0;
     try {
-      const subJql = projectClause ? `${projectClause} AND issuetype IN (subTaskIssueTypes(), Sub-task, Subtask)` : `issuetype IN (Sub-task, Subtask)`;
+      const subJql = projectClause ? `${projectClause} AND issuetype IN (Sub-task, Subtask)` : `issuetype IN (Sub-task, Subtask)`;
       const subRes = await jiraService.jiraSearch(subJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
       if (subRes && subRes.total !== undefined) subtaskCount = subRes.total;
     } catch (_) {}
