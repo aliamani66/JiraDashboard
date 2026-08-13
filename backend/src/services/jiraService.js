@@ -615,12 +615,12 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
       epicKey = String(issue.fields.parent.key).toUpperCase();
     }
 
-    // 2. Scan ALL fields for any known Epic key
+    // 2. Scan ALL fields for any known Epic key (MUST start with a letter, e.g. ORD-101, NOT dates like 2026-08!)
     if (!epicKey && issue.fields) {
       for (const [k, val] of Object.entries(issue.fields)) {
         if (!val) continue;
         const strVal = typeof val === 'object' ? (val.key || val.value || JSON.stringify(val)) : String(val);
-        const matches = strVal.matchAll(/([A-Z0-9_]+-\d+)/g);
+        const matches = strVal.matchAll(/([A-Z][A-Z0-9_]*-\d+)/gi);
         for (const match of matches) {
           const candidateKey = match[1] ? match[1].toUpperCase() : null;
           if (candidateKey && candidateKey !== (issue.key || '').toUpperCase()) {

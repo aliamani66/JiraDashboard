@@ -1419,20 +1419,55 @@ router.get('/live-mapping-inspector', async (req, res) => {
       const isSubtask = parsed?.is_subtask === 1 || issue.fields?.issuetype?.subtask || issueTypeName.toLowerCase().includes('sub-task') || issueTypeName.toLowerCase().includes('subtask');
       
       let epicSourceText = '— بدون لینک اپیک';
+      let jiraEpicKey = null;
+
       if (isSubtask) {
         subtaskCount++;
-        const parentKey = issue.fields?.parent?.key || parsed?.parent_task_id || '—';
-        epicSourceText = `parent.key: ${parentKey}`;
+        const parentKey = issue.fields?.parent?.key || parsed?.parent_task_id || null;
+        if (parentKey && /^[A-Z0-9_]+-\d+$/i.test(parentKey)) {
+          jiraEpicKey = parentKey.toUpperCase();
+          epicSourceText = `parent.key: ${jiraEpicKey}`;
+        }
       } else if (issue.fields?.customfield_10006) {
-        epicSourceText = `customfield_10006: ${typeof issue.fields.customfield_10006 === 'object' ? (issue.fields.customfield_10006.key || issue.fields.customfield_10006.value) : issue.fields.customfield_10006}`;
-      } else if (issue.fields?.parent?.key) {
-        epicSourceText = `parent.key: ${issue.fields.parent.key}`;
+        const v = issue.fields.customfield_10006;
+        const keyVal = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
+        if (/^[A-Z0-9_]+-\d+$/i.test(keyVal)) {
+          jiraEpicKey = keyVal;
+          epicSourceText = `customfield_10006: ${jiraEpicKey}`;
+        }
       } else if (issue.fields?.epic?.key) {
-        epicSourceText = `epic.key: ${issue.fields.epic.key}`;
+        const keyVal = String(issue.fields.epic.key).toUpperCase();
+        if (/^[A-Z0-9_]+-\d+$/i.test(keyVal)) {
+          jiraEpicKey = keyVal;
+          epicSourceText = `epic.key: ${jiraEpicKey}`;
+        }
+      } else if (issue.fields?.customfield_10014) {
+        const v = issue.fields.customfield_10014;
+        const keyVal = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
+        if (/^[A-Z0-9_]+-\d+$/i.test(keyVal)) {
+          jiraEpicKey = keyVal;
+          epicSourceText = `customfield_10014: ${jiraEpicKey}`;
+        }
+      } else if (issue.fields?.customfield_10008) {
+        const v = issue.fields.customfield_10008;
+        const keyVal = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
+        if (/^[A-Z0-9_]+-\d+$/i.test(keyVal)) {
+          jiraEpicKey = keyVal;
+          epicSourceText = `customfield_10008: ${jiraEpicKey}`;
+        }
+      } else if (issue.fields?.parent?.key) {
+        const keyVal = String(issue.fields.parent.key).toUpperCase();
+        if (/^[A-Z0-9_]+-\d+$/i.test(keyVal)) {
+          jiraEpicKey = keyVal;
+          epicSourceText = `parent.key: ${jiraEpicKey}`;
+        }
       }
 
-      const parentTaskId = parsed?.parent_task_id || inDbTask?.parent_task_id || null;
-      const isWithEpic = !isSubtask && !!parentTaskId;
+      const isValidEpicKey = (k) => k && /^[A-Z][A-Z0-9_]*-\d+$/i.test(k);
+      const dbParentKey = (inDbTask?.parent_task_id && isValidEpicKey(inDbTask.parent_task_id)) ? inDbTask.parent_task_id.toUpperCase() : null;
+
+      const parentTaskId = isSubtask ? (jiraEpicKey || dbParentKey) : (isValidEpicKey(jiraEpicKey) ? jiraEpicKey : null);
+      const isWithEpic = !isSubtask && !!parentTaskId && isValidEpicKey(parentTaskId);
 
       if (!isSubtask) {
         if (isWithEpic) withEpicCount++;
@@ -1446,7 +1481,7 @@ router.get('/live-mapping-inspector', async (req, res) => {
         jiraEpicFieldVal: epicSourceText,
         dbSavedKey: inDbTask ? inDbTask.id : parsed?.id || issueKey,
         dbMappedStatus: inDbTask ? inDbTask.status : parsed?.status || rawStatus,
-        dbSavedParentEpic: parentTaskId ? `🔗 ${parentTaskId}` : '⚪ بدون اپیک',
+        dbSavedParentEpic: (parentTaskId && (isSubtask || isValidEpicKey(parentTaskId))) ? `🔗 ${parentTaskId}` : '⚪ بدون اپیک',
         classification: isSubtask ? 'SUB_TASK' : (isWithEpic ? 'WITH_EPIC' : 'WITHOUT_EPIC'),
         recordStatus: inDbTask
           ? (isSubtask ? `✅ ذخیره‌شده به‌عنوان زیرتسک (پدر: ${parentTaskId || 'نامشخص'})` : (isWithEpic ? '✅ ذخیره‌شده به‌عنوان تسک دارای اپیک' : '✅ ذخیره‌شده به‌عنوان تسک بدون اپیک'))
