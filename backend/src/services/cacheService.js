@@ -109,6 +109,7 @@ async function syncFromJira() {
 
     // Step 2: Fetch ALL tasks directly from Jira for configured projects (no date filter)
     try {
+      const cfg = jiraService.getJiraConfig();
       const projKeyStr = cfg.projectKey || '';
       let projectFilter = '';
       if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
