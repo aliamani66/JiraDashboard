@@ -403,26 +403,34 @@ const JiraSettingsPage = () => {
     }
   }, []);
 
+  const fetchBothStatsSync = useCallback(async (customMonths = null, isManualJira = false) => {
+    const targetMonths = customMonths || cfgRef.current?.rebuildMonths || 3;
+    await Promise.all([
+      fetchDbStats(targetMonths),
+      fetchJiraCount(isManualJira, targetMonths)
+    ]);
+  }, [fetchDbStats, fetchJiraCount]);
+
   const fetchConfig = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getJiraConfig();
       setCfg(data);
       const m = data?.rebuildMonths || 3;
-      fetchDbStats(m);
-      fetchJiraCount(false, m);
+      fetchBothStatsSync(m, false);
     } catch (e) {
       showToast('خطا در دریافت تنظیمات جیرا: ' + (e.message || ''), 'error');
     } finally {
       setLoading(false);
     }
-  }, [fetchDbStats, fetchJiraCount]);
+  }, [fetchBothStatsSync]);
 
   useEffect(() => { fetchConfig(); }, []);
 
   const handleSelectRebuildMonths = (months) => {
     const validMonths = Math.max(1, parseInt(months, 10) || 3);
     setCfg(prev => ({ ...prev, rebuildMonths: validMonths }));
+    fetchBothStatsSync(validMonths, false);
   };
 
   const handleFetchProjects = async () => {
@@ -1935,9 +1943,15 @@ const JiraSettingsPage = () => {
                         jiraCountData.jiraEpicsWithoutTasksCount === dbStats.epicsWithoutTasksCount ? (
                           <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
-                          <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>
-                            ⚠️ اختلاف {Math.abs(jiraCountData.jiraEpicsWithoutTasksCount - dbStats.epicsWithoutTasksCount)}
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => openMismatchDiagnosticModal('epics')}
+                            style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.35))', border: '1px solid rgba(245, 158, 11, 0.6)', color: '#FBBF24', padding: '0.2rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                            title="برای مشاهده گرید تحلیل اختلافات اپیک‌های بدون تسک کلیک فرمایید"
+                          >
+                            <Search size={13} color="#FBBF24" />
+                            <span>⚠️ اختلاف {Math.abs(jiraCountData.jiraEpicsWithoutTasksCount - dbStats.epicsWithoutTasksCount)}</span>
+                          </button>
                         )
                       ) : '—'}
                     </td>
