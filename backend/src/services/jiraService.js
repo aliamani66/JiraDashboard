@@ -124,11 +124,54 @@ async function jiraSearch(jql, fields = [], options = {}) {
     return mockJiraService.mockJiraSearch(jql, fields, options);
   }
   const authVariants = getAuthHeaderVariants(cfg.username, cfg.token);
-  const standardFields = ['*all'];
-  if (cfg.mapping?.customFields?.sprintField) {
-    standardFields.push(cfg.mapping.customFields.sprintField);
+  
+  // Build lean fields list including custom mapped fields (replaces heavy '*all')
+  const activeLeanFields = [
+    'summary',
+    'description',
+    'status',
+    'issuetype',
+    'parent',
+    'project',
+    'assignee',
+    'created',
+    'duedate',
+    'timeoriginalestimate',
+    'timespent',
+    'aggregatetimeoriginalestimate',
+    'aggregatetimespent',
+    'priority',
+    'labels',
+    'components',
+    'issuelinks',
+    'sprint',
+    'customfield_10004',
+    'customfield_10020',
+    'customfield_10006',
+    'customfield_10014',
+    'customfield_10008',
+    'epic'
+  ];
+  const customFields = cfg.mapping?.customFields || {};
+  const dateMapping = cfg.mapping?.dateMapping || {};
+  for (const f of [
+    customFields.sprintField,
+    customFields.waitingTeamField,
+    customFields.waitingReasonField,
+    customFields.confluenceLinkField,
+    customFields.capabilitiesField,
+    customFields.categoryField,
+    dateMapping.taskStartDateField,
+    dateMapping.taskDueDateField,
+    dateMapping.epicStartDateField,
+    dateMapping.epicDueDateField
+  ]) {
+    if (f && !activeLeanFields.includes(f)) {
+      activeLeanFields.push(f);
+    }
   }
-  const validFields = (fields && fields.length > 0) ? fields.filter(Boolean) : standardFields;
+
+  const validFields = (fields && fields.length > 0) ? fields.filter(Boolean) : activeLeanFields;
   const isCloud = cfg.baseUrl && cfg.baseUrl.includes('.atlassian.net');
 
   const pageSize = options.maxResults || 500;
