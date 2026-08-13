@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Server, Cpu, GitBranch, Tag, Calendar,
   RefreshCw, Save, CheckCircle2, AlertTriangle, X,
-  ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap, Database
+  ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap, Database, Search
 } from 'lucide-react';
 import { api } from '../services/api';
 import JalaliDatePicker from '../components/common/JalaliDatePicker';
