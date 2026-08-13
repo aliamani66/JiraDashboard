@@ -789,21 +789,32 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
 
   const estSec = issue.fields?.aggregatetimeoriginalestimate || issue.fields?.timeoriginalestimate || 0;
   const spentSec = issue.fields?.aggregatetimespent || issue.fields?.timespent || 0;
-  const isSubtask = (issue.fields?.issuetype?.subtask || issueTypeName.includes('sub-task') || issueTypeName.includes('subtask')) ? 1 : 0;
-  const actualProjectKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
+
   const parentIssueKey = (issue.fields?.parent?.key && /^[A-Z][A-Z0-9_]*-\d+$/i.test(issue.fields.parent.key)) ? issue.fields.parent.key.toUpperCase() : null;
+  const parentTypeIsEpic = issue.fields?.parent?.fields?.issuetype?.name === 'Epic' || issue.fields?.parent?.type === 'Epic';
+
+  const isSubtask = (
+    issue.fields?.issuetype?.subtask || 
+    issueTypeName.includes('sub-task') || 
+    issueTypeName.includes('subtask') || 
+    issueTypeName.includes('sub task') || 
+    issueTypeName.includes('زیرتسک') || 
+    (parentIssueKey && !parentTypeIsEpic)
+  ) ? 1 : 0;
+
+  const actualProjectKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
 
   // 1. parent_key: STRICTLY for Sub-tasks! Stores parent task issue key (e.g. ORD-1480).
-  const parentKey = isSubtask ? parentIssueKey : null;
+  const parentKey = (isSubtask && parentIssueKey) ? parentIssueKey : null;
 
-  // 2. If item is NOT a subtask and has parent.key, in Jira Software parent.key IS the Epic key!
-  if (!epicKey && !isSubtask && parentIssueKey) {
+  // 2. If item is NOT a subtask and parent is an Epic, parent.key IS the Epic key!
+  if (!epicKey && !isSubtask && parentIssueKey && parentTypeIsEpic) {
     epicKey = parentIssueKey;
   }
 
-  const isRealEpicKey = epicKey && /^[A-Z][A-Z0-9_]*-\d+$/i.test(epicKey) && epicKey.toUpperCase() !== (issue.key || '').toUpperCase();
+  const isRealEpicKey = epicKey && /^[A-Z][A-Z0-9_]*-\d+$/i.test(epicKey) && epicKey.toUpperCase() !== (issue.key || '').toUpperCase() && epicKey.toUpperCase() !== (parentKey || '');
   
-  // 3. parent_task_id: STRICTLY for Epics! Stores the EPIC key (e.g. ORD-101), NEVER a task key!
+  // 3. parent_task_id / epic_id: STRICTLY for Epics! Stores the EPIC key (e.g. ORD-101), NEVER a parent task key!
   const parentTaskId = isRealEpicKey ? epicKey.toUpperCase() : null;
 
   return {
