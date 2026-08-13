@@ -268,13 +268,26 @@ router.get('/jira-count', async (req, res) => {
     }
 
     const countJql = projectClause
-      ? `${projectClause} AND issuetype != Epic ORDER BY created ASC`
-      : `issuetype != Epic ORDER BY created ASC`;
+      ? `${projectClause} AND issuetype != Epic`
+      : `issuetype != Epic`;
 
     const countRes = await jiraService.jiraSearch(countJql, ['key'], { maxResults: 1, timeout: 15000, retries: 2, singlePage: true });
-    const total = countRes.total !== undefined ? countRes.total : null;
+    const total = countRes.total !== undefined ? countRes.total : 0;
 
-    res.json({ success: true, total, jql: countJql, projectKey: projKeyStr });
+    let withEpicCount = 0;
+    try {
+      const withEpicJql = projectClause
+        ? `${projectClause} AND issuetype != Epic AND ("Epic Link" IS NOT EMPTY OR parent IS NOT EMPTY)`
+        : `issuetype != Epic AND ("Epic Link" IS NOT EMPTY OR parent IS NOT EMPTY)`;
+      const withEpicRes = await jiraService.jiraSearch(withEpicJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
+      withEpicCount = withEpicRes.total !== undefined ? withEpicRes.total : 0;
+    } catch (_) {
+      withEpicCount = total;
+    }
+
+    const withoutEpicCount = Math.max(0, total - withEpicCount);
+
+    res.json({ success: true, total, withEpicCount, withoutEpicCount, jql: countJql, projectKey: projKeyStr });
   } catch (err) {
     res.status(500).json({ success: false, message: 'خطا در دریافت تعداد از جیرا: ' + err.message });
   }
@@ -532,6 +545,7 @@ router.post('/clear-db', async (req, res) => {
     db.prepare('DELETE FROM tasks').run();
     db.prepare('DELETE FROM projects').run();
     db.prepare('DELETE FROM task_estimate_history').run();
+    try { db.exec('VACUUM'); } catch (_) {}
     
     saveDb();
     res.json({ success: true, message: 'داده‌های تسک‌ها، اسپرینت‌ها و پروژه‌ها پاک شدند (جدول کاربران و دسترسی‌ها دست‌نخورده باقی ماند).' });

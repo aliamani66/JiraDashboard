@@ -326,12 +326,20 @@ const JiraSettingsPage = () => {
   const [dbStats, setDbStats] = useState(null);
   const [dbStatsLoading, setDbStatsLoading] = useState(false);
 
+  const [jiraCountData, setJiraCountData] = useState(null);
+
   const fetchDbStats = useCallback(async () => {
     try {
       setDbStatsLoading(true);
-      const res = await api.getDbStats();
-      if (res.success) {
+      const [res, countRes] = await Promise.all([
+        api.getDbStats().catch(() => null),
+        api.getJiraTotalCount().catch(() => null)
+      ]);
+      if (res && res.success) {
         setDbStats(res);
+      }
+      if (countRes && countRes.success) {
+        setJiraCountData(countRes);
       }
     } catch (e) {
       console.error('Failed to fetch DB stats:', e);
@@ -1728,63 +1736,103 @@ const JiraSettingsPage = () => {
             </div>
           )}
 
-          {/* ⚠️ UNLINKED TASKS (TASKS WITHOUT MATCHED EPIC) */}
-          {dbStats?.unlinkedTasksCount !== undefined && (
-            <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px dashed rgba(239, 68, 68, 0.3)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: dbStats.unlinkedTasksCount > 0 ? '#FCA5A5' : '#10B981', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  {dbStats.unlinkedTasksCount > 0 ? '⚠️ تسک‌های بدون اپیک (اپیک آنها در لیست ۶۱ اپیک دیتابیس نیست):' : '✅ کلیه تسک‌های دیتابیس دارای اپیک معتبر هستند.'}
-                </span>
-                {dbStats.unlinkedTasksCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowUnlinkedModal(!showUnlinkedModal)}
-                    style={{
-                      background: 'rgba(239, 68, 68, 0.15)',
-                      border: '1px solid rgba(239, 68, 68, 0.4)',
-                      color: '#FCA5A5',
-                      borderRadius: '8px',
-                      padding: '0.25rem 0.65rem',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                      fontWeight: 700
-                    }}
-                  >
-                    {showUnlinkedModal ? '▲ مخفی کردن لیست' : `▼ مشاهده ${dbStats.unlinkedTasksCount} تسک بدون اپیک`}
-                  </button>
-                )}
-              </div>
-
-              {showUnlinkedModal && dbStats.unlinkedTasksList && dbStats.unlinkedTasksList.length > 0 && (
-                <div style={{ marginTop: '0.65rem', maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingRight: '0.2rem' }}>
-                  {dbStats.unlinkedTasksList.map(t => (
-                    <div key={t.id} style={{
-                      background: 'rgba(239, 68, 68, 0.08)',
-                      border: '1px solid rgba(239, 68, 68, 0.25)',
-                      borderRadius: '8px',
-                      padding: '0.45rem 0.75rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.75rem'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
-                        <code style={{ fontSize: '0.8rem', color: '#FCA5A5', fontWeight: 800, background: 'rgba(239, 68, 68, 0.2)', padding: '0.1rem 0.45rem', borderRadius: '5px', flexShrink: 0 }}>
-                          {t.id}
-                        </code>
-                        <span style={{ fontSize: '0.78rem', color: '#E2E8F0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.title}>
-                          {t.title}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '0.7rem', color: '#94A3B8', flexShrink: 0, background: 'rgba(255,255,255,0.05)', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
-                        project_id: <strong style={{ color: '#F8FAFC' }}>{t.project_id || 'خالی'}</strong>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {/* ⚖️ LIVE JIRA VS DATABASE TASK COMPARISON */}
+          <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px dashed rgba(255, 255, 255, 0.15)' }}>
+            <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                ⚖️ مقایسه زنده آمار تسک‌ها (سرور جیرا vs دیتابیس SQLite)
+              </span>
+              <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+                تطابق تسک‌های دارای اپیک و بدون اپیک
+              </span>
             </div>
-          )}
+
+            <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'right' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#94A3B8', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <th style={{ padding: '0.65rem 0.9rem' }}>نوع تسک</th>
+                    <th style={{ padding: '0.65rem 0.9rem', color: '#38BDF8' }}>🌐 سرور جیرا (Jira Live)</th>
+                    <th style={{ padding: '0.65rem 0.9rem', color: '#C084FC' }}>💾 دیتابیس سیستم (SQLite)</th>
+                    <th style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>📊 وضعیت تطابق</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Row 1: Tasks with epic */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
+                      ⚡ تسک‌های دارای اپیک
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
+                      {jiraCountData?.withEpicCount !== undefined ? `${jiraCountData.withEpicCount.toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
+                      {dbStats?.totalTasks !== undefined ? `${Math.max(0, (dbStats.totalTasks || 0) - (dbStats.unlinkedTasksCount || 0)).toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      {jiraCountData?.withEpicCount !== undefined && dbStats?.totalTasks !== undefined ? (
+                        jiraCountData.withEpicCount === Math.max(0, (dbStats.totalTasks || 0) - (dbStats.unlinkedTasksCount || 0)) ? (
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
+                        ) : (
+                          <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>
+                            ⚠️ اختلاف {Math.abs(jiraCountData.withEpicCount - Math.max(0, (dbStats.totalTasks || 0) - (dbStats.unlinkedTasksCount || 0)))}
+                          </span>
+                        )
+                      ) : '—'}
+                    </td>
+                  </tr>
+
+                  {/* Row 2: Tasks without epic */}
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
+                      ⚠️ تسک‌های بدون اپیک
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
+                      {jiraCountData?.withoutEpicCount !== undefined ? `${jiraCountData.withoutEpicCount.toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: (dbStats?.unlinkedTasksCount || 0) > 0 ? '#FCA5A5' : '#6EE7B7' }}>
+                      {dbStats?.unlinkedTasksCount !== undefined ? `${(dbStats.unlinkedTasksCount || 0).toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      {jiraCountData?.withoutEpicCount !== undefined && dbStats?.unlinkedTasksCount !== undefined ? (
+                        jiraCountData.withoutEpicCount === (dbStats.unlinkedTasksCount || 0) ? (
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
+                        ) : (
+                          <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>
+                            ⚠️ اختلاف {Math.abs(jiraCountData.withoutEpicCount - (dbStats.unlinkedTasksCount || 0))}
+                          </span>
+                        )
+                      ) : '—'}
+                    </td>
+                  </tr>
+
+                  {/* Row 3: Total Tasks */}
+                  <tr style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#FFFFFF' }}>
+                      📝 مجموع کل تسک‌های غیر‌اپیک
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8', fontSize: '0.92rem' }}>
+                      {jiraCountData?.total !== undefined ? `${jiraCountData.total.toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC', fontSize: '0.92rem' }}>
+                      {dbStats?.totalTasks !== undefined ? `${dbStats.totalTasks.toLocaleString()} تسک` : '—'}
+                    </td>
+                    <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
+                      {jiraCountData?.total !== undefined && dbStats?.totalTasks !== undefined ? (
+                        jiraCountData.total === dbStats.totalTasks ? (
+                          <span style={{ background: 'rgba(16, 185, 129, 0.25)', color: '#6EE7B7', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.76rem', fontWeight: 800 }}>✅ همگام کامل</span>
+                        ) : (
+                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#FCA5A5', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.76rem', fontWeight: 800 }}>
+                            ⚠️ اختلاف {Math.abs(jiraCountData.total - dbStats.totalTasks)} تسک
+                          </span>
+                        )
+                      ) : '—'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <div className="jsp-grid-2">

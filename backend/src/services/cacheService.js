@@ -22,6 +22,7 @@ async function syncFromJira() {
     // Clear previous tasks before full rebuild (ensures DB count = Jira fetch count)
     db.prepare('DELETE FROM tasks').run();
     db.prepare('DELETE FROM task_estimate_history').run();
+    try { db.exec('VACUUM'); } catch (_) {}
 
     // Step 1: Fetch all epics and save as projects
     console.log('Starting Epic extraction from Jira...');
