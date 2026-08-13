@@ -92,7 +92,7 @@ function extractDateField(issue, fieldName) {
 async function jiraSearch(jql, fields = [], options = {}) {
   const cfg = getJiraConfig();
   const authVariants = getAuthHeaderVariants(cfg.username, cfg.token);
-  const standardFields = ['summary', 'description', 'status', 'assignee', 'created', 'duedate', 'project', 'priority', 'labels', 'components', 'issuelinks', 'parent', 'issuetype', 'epic', 'customfield_10014', 'customfield_10008', 'timeoriginalestimate', 'timespent', 'aggregatetimeoriginalestimate', 'aggregatetimespent', 'sprint', 'customfield_10004', 'customfield_10020'];
+  const standardFields = ['*all'];
   if (cfg.mapping?.customFields?.sprintField) {
     standardFields.push(cfg.mapping.customFields.sprintField);
   }
@@ -547,42 +547,50 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
   if (!epicKey) {
     const issueProjPrefix = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
 
+    // 1. Direct Jira epic field
     if (issue.fields?.epic?.key) {
-      epicKey = issue.fields.epic.key;
+      epicKey = String(issue.fields.epic.key).toUpperCase();
     } else if (issue.fields?.customfield_10014) {
-      epicKey = typeof issue.fields.customfield_10014 === 'object' ? issue.fields.customfield_10014.key : issue.fields.customfield_10014;
+      const v = issue.fields.customfield_10014;
+      epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
     } else if (issue.fields?.customfield_10008) {
-      epicKey = typeof issue.fields.customfield_10008 === 'object' ? issue.fields.customfield_10008.key : issue.fields.customfield_10008;
+      const v = issue.fields.customfield_10008;
+      epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
     } else if (customFields.epicLinkField && issue.fields?.[customFields.epicLinkField]) {
       const val = issue.fields[customFields.epicLinkField];
-      epicKey = typeof val === 'object' ? (val.key || val.value) : String(val);
+      epicKey = String(typeof val === 'object' ? (val.key || val.value) : val).toUpperCase();
     } else if (issue.fields?.parent?.key) {
-      epicKey = issue.fields.parent.key;
-    } else {
-      // Scan ALL customfields for any Epic key pattern (e.g. OPS-101, ORD-205)
-      if (issue.fields) {
-        for (const [k, val] of Object.entries(issue.fields)) {
-          if (!val) continue;
-          const strVal = typeof val === 'object' ? (val.key || val.value || JSON.stringify(val)) : String(val);
-          const matches = strVal.matchAll(/([A-Z0-9_]+-\d+)/g);
-          for (const match of matches) {
-            const candidateKey = match[1] ? match[1].toUpperCase() : null;
-            if (candidateKey && candidateKey !== (issue.key || '').toUpperCase()) {
-              if (knownEpicKeysSet && knownEpicKeysSet.has(candidateKey)) {
-                epicKey = candidateKey;
-                break;
-              } else if (!knownEpicKeysSet) {
-                epicKey = candidateKey;
-                break;
-              }
+      const pKey = String(issue.fields.parent.key).toUpperCase();
+      if (knownEpicKeysSet && knownEpicKeysSet.has(pKey)) {
+        epicKey = pKey;
+      }
+    }
+
+    // 2. Scan ALL fields for any known Epic key
+    if (!epicKey && issue.fields) {
+      for (const [k, val] of Object.entries(issue.fields)) {
+        if (!val) continue;
+        const strVal = typeof val === 'object' ? (val.key || val.value || JSON.stringify(val)) : String(val);
+        const matches = strVal.matchAll(/([A-Z0-9_]+-\d+)/g);
+        for (const match of matches) {
+          const candidateKey = match[1] ? match[1].toUpperCase() : null;
+          if (candidateKey && candidateKey !== (issue.key || '').toUpperCase()) {
+            if (knownEpicKeysSet && knownEpicKeysSet.has(candidateKey)) {
+              epicKey = candidateKey;
+              break;
+            } else if (!knownEpicKeysSet) {
+              epicKey = candidateKey;
+              break;
             }
           }
-          if (epicKey) break;
         }
+        if (epicKey) break;
       }
-      if (!epicKey) {
-        epicKey = issueProjPrefix || (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
-      }
+    }
+
+    // 3. Fallback to project key if no epic found
+    if (!epicKey) {
+      epicKey = issueProjPrefix || (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
     }
   }
 

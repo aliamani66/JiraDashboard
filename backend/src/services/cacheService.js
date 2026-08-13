@@ -824,7 +824,17 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
 function autoLinkTasksToEpics() {
   try {
     const db = getDb();
-    // 1. Link tasks whose project_id is not in projects, but parent_task_id is a valid epic in projects
+    // 1. Propagate epic project_id from parent task to sub-tasks
+    db.prepare(`
+      UPDATE tasks
+      SET project_id = (SELECT t2.project_id FROM tasks t2 WHERE t2.id = tasks.parent_task_id)
+      WHERE parent_task_id IS NOT NULL
+        AND parent_task_id IN (SELECT id FROM tasks)
+        AND (project_id NOT IN (SELECT id FROM projects) OR project_id IS NULL)
+        AND (SELECT t2.project_id FROM tasks t2 WHERE t2.id = tasks.parent_task_id) IN (SELECT id FROM projects)
+    `).run();
+
+    // 2. Direct parent task as epic if parent_task_id is in projects table
     db.prepare(`
       UPDATE tasks
       SET project_id = parent_task_id
