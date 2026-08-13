@@ -805,6 +805,29 @@ function cleanErrorMessage(e) {
 router.get('/db-stats', (req, res) => {
   try {
     const db = getDb();
+    const cfg = jiraService.getJiraConfig();
+    const rebuildMonths = parseInt(req.query.months, 10) || parseInt(cfg.rebuildMonths, 10) || 3;
+
+    const projKeyStr = (cfg.projectKey || '').trim().toUpperCase();
+    let taskProjWhere = '';
+    let epicWhere = "id LIKE '%-%'";
+    if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
+      const pKeys = projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean);
+      if (pKeys.length > 0) {
+        const epicLikes = pKeys.map(k => `id LIKE '${k}-%'`).join(' OR ');
+        epicWhere = `(${epicLikes})`;
+        const taskLikes = pKeys.map(k => `id LIKE '${k}-%'`).join(' OR ');
+        taskProjWhere = ` AND (${taskLikes})`;
+      }
+    }
+
+    const now = new Date();
+    const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
+    const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
+    const dbDateClause = (rebuildMonths < 60)
+      ? ` AND (start_date >= '${startDateStr}' OR last_synced >= '${startDateStr}')`
+      : '';
+
     let totalTasks = 0;
     let totalProjects = 0;
     let doneTasks = 0;
@@ -814,23 +837,11 @@ router.get('/db-stats', (req, res) => {
     let lastSynced = null;
     let componentsList = [];
 
-    try { totalTasks = db.prepare('SELECT COUNT(*) as count FROM tasks').get()?.count || 0; } catch (_) {}
-    try {
-      const cfg = jiraService.getJiraConfig();
-      const pKeyStr = (cfg.projectKey || '').trim().toUpperCase();
-      let epicWhere = "id LIKE '%-%'";
-      if (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') {
-        const pKeys = pKeyStr.split(',').map(k => k.trim()).filter(Boolean);
-        if (pKeys.length > 0) {
-          const likeClauses = pKeys.map(k => `id LIKE '${k}-%'`).join(' OR ');
-          epicWhere = `(${likeClauses})`;
-        }
-      }
-      totalProjects = db.prepare(`SELECT COUNT(*) as count FROM projects WHERE ${epicWhere}`).get()?.count || 0;
-    } catch (_) {}
-    try { doneTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('done', 'completed')").get()?.count || 0; } catch (_) {}
-    try { waitingTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked')").get()?.count || 0; } catch (_) {}
-    try { inProgressTasks = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('in progress', 'in_progress')").get()?.count || 0; } catch (_) {}
+    try { totalTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0)${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
+    try { totalProjects = db.prepare(`SELECT COUNT(*) as count FROM projects WHERE ${epicWhere}`).get()?.count || 0; } catch (_) {}
+    try { doneTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('done', 'completed')${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
+    try { waitingTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE (is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked'))${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
+    try { inProgressTasks = db.prepare(`SELECT COUNT(*) as count FROM tasks WHERE LOWER(status) IN ('in progress', 'in_progress')${taskProjWhere}${dbDateClause}`).get()?.count || 0; } catch (_) {}
 
     const todoTasks = Math.max(0, totalTasks - doneTasks - waitingTasks - inProgressTasks);
 

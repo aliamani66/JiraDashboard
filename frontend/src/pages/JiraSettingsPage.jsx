@@ -387,14 +387,15 @@ const JiraSettingsPage = () => {
     }
   }, []);
 
-  const fetchDbStats = useCallback(async () => {
+  const fetchDbStats = useCallback(async (customMonths = null) => {
     try {
       setDbStatsLoading(true);
-      const res = await api.getDbStats().catch(() => null);
+      const targetMonths = customMonths || cfgRef.current?.rebuildMonths || 3;
+      const res = await api.getDbStats(targetMonths).catch(() => null);
       if (res && res.success) {
         setDbStats(res);
       }
-      fetchJiraCount(false);
+      fetchJiraCount(false, targetMonths);
     } catch (e) {
       console.error('Failed to fetch DB stats:', e);
     } finally {
@@ -407,7 +408,7 @@ const JiraSettingsPage = () => {
       setLoading(true);
       const data = await api.getJiraConfig();
       setCfg(data);
-      fetchDbStats();
+      fetchDbStats(data?.rebuildMonths || 3);
     } catch (e) {
       showToast('خطا در دریافت تنظیمات جیرا: ' + (e.message || ''), 'error');
     } finally {
@@ -420,7 +421,7 @@ const JiraSettingsPage = () => {
   const handleSelectRebuildMonths = (months) => {
     const validMonths = Math.max(1, parseInt(months, 10) || 3);
     setCfg(prev => ({ ...prev, rebuildMonths: validMonths }));
-    fetchJiraCount(false, validMonths);
+    fetchDbStats(validMonths);
   };
 
   const handleFetchProjects = async () => {
