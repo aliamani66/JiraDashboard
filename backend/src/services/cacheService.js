@@ -848,6 +848,30 @@ function autoLinkTasksToEpics() {
         AND parent_task_id IN (SELECT id FROM projects)
     `).run();
 
+    // 3. Ensure any task whose project_id is missing from projects table gets linked to standing project container (e.g. 'OPS' or 'ORD')
+    const unlinkedRows = db.prepare(`
+      SELECT DISTINCT project_id, id FROM tasks
+      WHERE project_id NOT IN (SELECT id FROM projects) OR project_id IS NULL OR project_id = ''
+    `).all();
+
+    if (unlinkedRows && unlinkedRows.length > 0) {
+      const now = new Date().toISOString();
+      const insertProj = db.prepare(`
+        INSERT INTO projects (id, title, status, last_synced)
+        VALUES (?, ?, 'In Progress', ?)
+        ON CONFLICT(id) DO NOTHING
+      `);
+      db.transaction(() => {
+        for (const r of unlinkedRows) {
+          const fallbackId = (r.project_id || r.id || '').split('-')[0].toUpperCase();
+          if (fallbackId) {
+            insertProj.run(fallbackId, `پروژه ${fallbackId}`, now);
+            db.prepare('UPDATE tasks SET project_id = ? WHERE id = ?').run(fallbackId, r.id);
+          }
+        }
+      })();
+    }
+
     saveDb();
   } catch (e) {
     console.error('Error in autoLinkTasksToEpics:', e.message);
