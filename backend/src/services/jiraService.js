@@ -639,7 +639,11 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
         title: linkedIssue.fields?.summary || linkedIssue.key,
         linkType: typeName,
         relationship: linkType.inward || 'is related to',
-        status: linkedIssue.fields?.status?.name || null
+        direction: 'inward',
+        status: linkedIssue.fields?.status?.name || null,
+        assignee: linkedIssue.fields?.assignee ? (linkedIssue.fields.assignee.displayName || linkedIssue.fields.assignee.name) : null,
+        start_date: linkedIssue.fields?.created ? linkedIssue.fields.created.split('T')[0] : null,
+        due_date: linkedIssue.fields?.duedate || null
       });
 
       if (blockingKeywords.some(kw => inwardDesc.includes(kw))) {
@@ -663,7 +667,11 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
         title: outLinkedIssue.fields?.summary || outLinkedIssue.key,
         linkType: typeName,
         relationship: linkType.outward || 'relates to',
-        status: outLinkedIssue.fields?.status?.name || null
+        direction: 'outward',
+        status: outLinkedIssue.fields?.status?.name || null,
+        assignee: outLinkedIssue.fields?.assignee ? (outLinkedIssue.fields.assignee.displayName || outLinkedIssue.fields.assignee.name) : null,
+        start_date: outLinkedIssue.fields?.created ? outLinkedIssue.fields.created.split('T')[0] : null,
+        due_date: outLinkedIssue.fields?.duedate || null
       });
 
       if (blockingKeywords.some(kw => outwardDesc.includes(kw))) {
@@ -690,7 +698,11 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
         title: issue.fields.parent.fields?.summary || pKey,
         linkType: 'Parent',
         relationship: 'parent task',
-        status: issue.fields.parent.fields?.status?.name || null
+        direction: 'parent',
+        status: issue.fields.parent.fields?.status?.name || null,
+        assignee: issue.fields.parent.fields?.assignee ? issue.fields.parent.fields.assignee.displayName : null,
+        start_date: issue.fields.parent.fields?.created ? issue.fields.parent.fields.created.split('T')[0] : null,
+        due_date: issue.fields.parent.fields?.duedate || null
       });
     }
   }

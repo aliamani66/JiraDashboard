@@ -176,6 +176,12 @@ async function syncFromJira() {
         }
       }
 
+      const insertRelation = db.prepare(`
+        INSERT INTO task_relations (task_id, linked_task_id, relation_type, relationship, title, status, assignee, start_date, due_date, created_at)
+        VALUES (@task_id, @linked_task_id, @relation_type, @relationship, @title, @status, @assignee, @start_date, @due_date, @created_at)
+      `);
+      const deleteRelations = db.prepare(`DELETE FROM task_relations WHERE task_id = ?`);
+
       for (const task of parsedTasks) {
         if (task && task.id) {
           task.last_synced = syncTime;
@@ -183,6 +189,33 @@ async function syncFromJira() {
           try {
             insertTask.run(task);
             tasksSynced++;
+
+            // Sync with dedicated task_relations table
+            if (task.linked_tasks) {
+              let links = [];
+              try { links = typeof task.linked_tasks === 'string' ? JSON.parse(task.linked_tasks) : task.linked_tasks; } catch (_) {}
+              if (Array.isArray(links)) {
+                try { deleteRelations.run(task.id); } catch (_) {}
+                for (const link of links) {
+                  if (link && link.key) {
+                    try {
+                      insertRelation.run({
+                        task_id: task.id,
+                        linked_task_id: link.key,
+                        relation_type: link.linkType || 'Relates',
+                        relationship: link.relationship || 'relates to',
+                        title: link.title || link.key,
+                        status: link.status || null,
+                        assignee: link.assignee || null,
+                        start_date: link.start_date || null,
+                        due_date: link.due_date || null,
+                        created_at: syncTime
+                      });
+                    } catch (_) {}
+                  }
+                }
+              }
+            }
           } catch (dbErr) {
             skippedDetails.push({
               key: task.id,

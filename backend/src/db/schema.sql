@@ -63,6 +63,21 @@ CREATE TABLE IF NOT EXISTS sync_log (
     tasks_synced INTEGER DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS task_relations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id TEXT NOT NULL,
+    linked_task_id TEXT NOT NULL,
+    relation_type TEXT,
+    relationship TEXT,
+    title TEXT,
+    status TEXT,
+    assignee TEXT,
+    start_date TEXT,
+    due_date TEXT,
+    created_at TEXT,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS system_settings (
     key TEXT PRIMARY KEY,
     value TEXT
