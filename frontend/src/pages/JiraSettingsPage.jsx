@@ -329,26 +329,54 @@ const JiraSettingsPage = () => {
   const [dbStatsLoading, setDbStatsLoading] = useState(false);
 
   const [jiraCountData, setJiraCountData] = useState(null);
+  const [jiraCountLoading, setJiraCountLoading] = useState(false);
+  const [jiraCountError, setJiraCountError] = useState(null);
+
+  const fetchJiraCount = useCallback(async (isManualTrigger = false) => {
+    try {
+      setJiraCountLoading(true);
+      setJiraCountError(null);
+      if (isManualTrigger) {
+        showToast('🔄 در حال استخراج و مقایسه آمار زنده از سرور جیرا...', 'info');
+      }
+      const countRes = await api.getJiraTotalCount();
+      if (countRes && countRes.success) {
+        setJiraCountData(countRes);
+        if (isManualTrigger) {
+          showToast('✅ آمار زنده سرور جیرا با موفقیت دریافت گردید.', 'success');
+        }
+      } else {
+        const errMsg = countRes?.message || 'خطای نامشخص در دریافت آمار زنده از جیرا';
+        setJiraCountError(errMsg);
+        if (isManualTrigger) {
+          showToast('⚠️ ' + errMsg, 'error');
+        }
+      }
+    } catch (e) {
+      const errMsg = e.message || 'خطا در ارتباط با سرور جیرا';
+      setJiraCountError(errMsg);
+      if (isManualTrigger) {
+        showToast('⚠️ ' + errMsg, 'error');
+      }
+    } finally {
+      setJiraCountLoading(false);
+    }
+  }, []);
 
   const fetchDbStats = useCallback(async () => {
     try {
       setDbStatsLoading(true);
-      const [res, countRes] = await Promise.all([
-        api.getDbStats().catch(() => null),
-        api.getJiraTotalCount().catch(() => null)
-      ]);
+      const res = await api.getDbStats().catch(() => null);
       if (res && res.success) {
         setDbStats(res);
       }
-      if (countRes && countRes.success) {
-        setJiraCountData(countRes);
-      }
+      fetchJiraCount(false);
     } catch (e) {
       console.error('Failed to fetch DB stats:', e);
     } finally {
       setDbStatsLoading(false);
     }
-  }, []);
+  }, [fetchJiraCount]);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -1776,14 +1804,62 @@ const JiraSettingsPage = () => {
 
           {/* ⚖️ UNIFIED COMPREHENSIVE JIRA VS DATABASE COMPARISON TABLE */}
           <div style={{ marginTop: '0.5rem', marginBottom: '1.25rem' }}>
-            <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
               <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 ⚖️ جدول جامع مقایسه زنده آمار و شاخص‌ها (سرور جیرا vs دیتابیس SQLite)
               </span>
-              <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
-                پایش تطابق لحظه‌ای داده‌ها
-              </span>
+              <button
+                type="button"
+                onClick={() => fetchJiraCount(true)}
+                disabled={jiraCountLoading}
+                style={{
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                  color: '#38BDF8',
+                  padding: '0.35rem 0.85rem',
+                  borderRadius: '9px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <RefreshCw size={13} className={jiraCountLoading ? 'spin' : ''} />
+                {jiraCountLoading ? 'در حال دریافت از جیرا...' : '🔄 استخراج / بروزرسانی آمار زنده جیرا'}
+              </button>
             </div>
+
+            {jiraCountError && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                borderRadius: '10px',
+                padding: '0.65rem 0.95rem',
+                marginBottom: '0.75rem',
+                color: '#FCA5A5',
+                fontSize: '0.81rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.5rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <AlertTriangle size={16} color="#EF4444" />
+                  <span><strong>وضعیت اتصال جیرا:</strong> {jiraCountError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('connection')}
+                  style={{ background: 'rgba(239, 68, 68, 0.25)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#FFFFFF', padding: '0.25rem 0.65rem', borderRadius: '7px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}
+                >
+                  ⚙️ تنظیمات اتصال جیرا
+                </button>
+              </div>
+            )}
 
             <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'right' }}>

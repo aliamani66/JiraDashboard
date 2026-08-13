@@ -254,8 +254,8 @@ router.put('/config', (req, res) => {
 router.get('/jira-count', async (req, res) => {
   try {
     const cfg = jiraService.getJiraConfig();
-    if (!jiraService.isConfigured) {
-      return res.status(400).json({ success: false, message: 'جیرا پیکربندی نشده است' });
+    if (!cfg.isConfigured) {
+      return res.status(400).json({ success: false, message: 'جیرا پیکربندی نشده است. لطفاً آدرس و توکن جیرا را در تنظیمات وارد نمایید.' });
     }
     const projKeyStr = cfg.projectKey || '';
 
