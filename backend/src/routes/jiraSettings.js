@@ -316,13 +316,17 @@ router.get('/jira-count', async (req, res) => {
 
     const withEpicCount = Math.max(0, total - withoutEpicCount);
 
-    // 3. Epics Count JQL (Last 5 Years)
+    // 3. Epics Count JQL (All Epics in Project, without date bounds since Epics are standing containers)
     let jiraEpicsCount = 0;
     try {
-      const epicJql = `${fullClause} AND issuetype = Epic`;
+      const epicJql = projectClause ? `${projectClause} AND issuetype = Epic` : `issuetype = Epic`;
       const epicRes = await jiraService.jiraSearch(epicJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
       jiraEpicsCount = epicRes.total !== undefined ? epicRes.total : 0;
     } catch (_) {}
+
+    // 4. Calculate Epics without tasks from DB stats
+    const db = require('../services/cacheService').getDb();
+    const jiraEpicsWithoutTasksCount = db.prepare('SELECT COUNT(*) as c FROM projects WHERE id NOT IN (SELECT DISTINCT project_id FROM tasks WHERE project_id IS NOT NULL)').get()?.c || 0;
 
     res.json({
       success: true,
@@ -330,6 +334,7 @@ router.get('/jira-count', async (req, res) => {
       withEpicCount,
       withoutEpicCount,
       jiraEpicsCount,
+      jiraEpicsWithoutTasksCount,
       jql: countJql,
       withoutEpicJql,
       projectKey: projKeyStr

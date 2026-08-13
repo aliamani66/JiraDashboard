@@ -1897,19 +1897,19 @@ const JiraSettingsPage = () => {
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
                       📁 اپیک‌های بدون تسک
                     </td>
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#94A3B8' }}>
-                      —
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: (jiraCountData?.jiraEpicsWithoutTasksCount || 0) > 0 ? '#FBBF24' : '#38BDF8' }}>
+                      {jiraCountData?.jiraEpicsWithoutTasksCount !== undefined ? `${jiraCountData.jiraEpicsWithoutTasksCount.toLocaleString()} اپیک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: (dbStats?.epicsWithoutTasksCount || 0) > 0 ? '#FBBF24' : '#6EE7B7' }}>
                       {dbStats?.epicsWithoutTasksCount !== undefined ? `${(dbStats.epicsWithoutTasksCount || 0).toLocaleString()} اپیک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center' }}>
-                      {dbStats?.epicsWithoutTasksCount !== undefined ? (
-                        (dbStats.epicsWithoutTasksCount || 0) === 0 ? (
-                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تمام اپیک‌ها تسک دارند</span>
+                      {jiraCountData?.jiraEpicsWithoutTasksCount !== undefined && dbStats?.epicsWithoutTasksCount !== undefined ? (
+                        jiraCountData.jiraEpicsWithoutTasksCount === dbStats.epicsWithoutTasksCount ? (
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>✅ تطابق کامل</span>
                         ) : (
                           <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#FBBF24', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 700 }}>
-                            ⚠️ {dbStats.epicsWithoutTasksCount} اپیک بدون تسک
+                            ⚠️ اختلاف {Math.abs(jiraCountData.jiraEpicsWithoutTasksCount - dbStats.epicsWithoutTasksCount)}
                           </span>
                         )
                       ) : '—'}
