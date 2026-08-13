@@ -452,6 +452,18 @@ router.post('/test-all-jql', async (req, res) => {
 
     const results = (await Promise.all(queries.map(runOneQuery))).sort((a, b) => a.id - b.id);
 
+    // Run a total COUNT query for the full project (no date filter) to show grand total
+    let totalCountInJira = null;
+    let countJql = null;
+    try {
+      const countOnlyJql = projectClause ? `${projectClause} AND issuetype != Epic ORDER BY created ASC` : `issuetype != Epic ORDER BY created ASC`;
+      countJql = countOnlyJql;
+      const countRes = await jiraService.jiraSearch(countOnlyJql, ['key'], { maxResults: 1, timeout: 10000, retries: 1, singlePage: true });
+      totalCountInJira = countRes.total !== undefined ? countRes.total : null;
+    } catch (_countErr) {
+      totalCountInJira = null;
+    }
+
     const winner = results.find(r => r.status === 'success');
     res.json({
       success: true,
@@ -461,6 +473,8 @@ router.post('/test-all-jql', async (req, res) => {
       gregorianRange: `${gregStart} تا ${gregEnd}`,
       winnerJql: winner ? winner.jql : null,
       winnerId: winner ? winner.id : null,
+      totalCountInJira,
+      countJql,
       results
     });
   } catch (err) {
@@ -761,6 +775,19 @@ router.get('/db-stats', (req, res) => {
         });
     } catch (_) {}
 
+    // Task count per project
+    let projectTaskCounts = [];
+    try {
+      const projTaskRows = db.prepare(`
+        SELECT p.id, p.title, COUNT(t.id) as taskCount
+        FROM projects p
+        LEFT JOIN tasks t ON t.project_id = p.id
+        GROUP BY p.id, p.title
+        ORDER BY taskCount DESC
+      `).all();
+      projectTaskCounts = projTaskRows.map(r => ({ id: r.id, title: r.title || r.id, taskCount: r.taskCount || 0 }));
+    } catch (_) {}
+
     res.json({
       success: true,
       totalTasks,
@@ -774,7 +801,8 @@ router.get('/db-stats', (req, res) => {
       totalComponents: componentsList.length,
       componentsList,
       totalSprints: sprintsList.length,
-      sprintsList
+      sprintsList,
+      projectTaskCounts
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'خطا در دریافت آمار دیتابیس: ' + err.message });

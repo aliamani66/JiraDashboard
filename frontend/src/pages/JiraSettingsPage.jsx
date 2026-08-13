@@ -1150,6 +1150,33 @@ const JiraSettingsPage = () => {
                       );
                     })}
                   </div>
+                  {/* ── GRAND TOTAL COUNT FROM JIRA ── */}
+                  {jqlTestResults.totalCountInJira !== null && jqlTestResults.totalCountInJira !== undefined && (
+                    <div style={{
+                      marginTop: '0.85rem',
+                      borderTop: '1px solid rgba(56,189,248,0.25)',
+                      paddingTop: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ background: 'rgba(56,189,248,0.18)', border: '1px solid rgba(56,189,248,0.45)', color: '#38BDF8', fontSize: '0.68rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '20px' }}>🔢 کوئری COUNT کل</span>
+                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>تعداد کل تسک‌های پروژه در جیرا (بدون فیلتر تاریخ):</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
+                        <strong style={{ fontSize: '1.35rem', color: '#38BDF8', fontWeight: 800 }}>{jqlTestResults.totalCountInJira.toLocaleString()}</strong>
+                        <span style={{ fontSize: '0.78rem', color: '#64748B' }}>تسک</span>
+                      </div>
+                      {jqlTestResults.countJql && (
+                        <div style={{ width: '100%', marginTop: '0.3rem' }}>
+                          <code style={{ fontSize: '0.68rem', color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace', background: 'rgba(56,189,248,0.06)', padding: '0.25rem 0.5rem', borderRadius: '6px', display: 'block', border: '1px solid rgba(56,189,248,0.15)' }}>{jqlTestResults.countJql}</code>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1629,6 +1656,44 @@ const JiraSettingsPage = () => {
               )}
             </div>
           </div>
+
+          {/* 📁 TASKS PER PROJECT BREAKDOWN */}
+          {dbStats?.projectTaskCounts && dbStats.projectTaskCounts.length > 0 && (
+            <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px dashed rgba(255, 255, 255, 0.1)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  📁 تعداد تسک‌ها به تفکیک پروژه ({dbStats.projectTaskCounts.length} پروژه):
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {dbStats.projectTaskCounts.map(proj => (
+                  <div key={proj.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'rgba(99, 102, 241, 0.07)',
+                    border: '1px solid rgba(99, 102, 241, 0.2)',
+                    borderRadius: '10px',
+                    padding: '0.45rem 0.85rem',
+                    gap: '0.5rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                      <span style={{ fontSize: '0.72rem', color: '#A78BFA', fontWeight: 700, background: 'rgba(167,139,250,0.15)', padding: '0.1rem 0.45rem', borderRadius: '6px', flexShrink: 0 }}>{proj.id}</span>
+                      <span style={{ fontSize: '0.8rem', color: '#CBD5E1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={proj.title}>{proj.title}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', flexShrink: 0 }}>
+                      <strong style={{
+                        fontSize: '1.05rem',
+                        color: proj.taskCount > 0 ? '#818CF8' : '#475569',
+                        fontWeight: 800
+                      }}>{proj.taskCount.toLocaleString()}</strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748B' }}>تسک</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="jsp-grid-2">
