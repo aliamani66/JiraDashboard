@@ -430,7 +430,6 @@ const JiraSettingsPage = () => {
   const handleSelectRebuildMonths = (months) => {
     const validMonths = Math.max(1, parseInt(months, 10) || 3);
     setCfg(prev => ({ ...prev, rebuildMonths: validMonths }));
-    fetchBothStatsSync(validMonths, false);
   };
 
   const handleFetchProjects = async () => {
