@@ -1482,34 +1482,42 @@ router.get('/live-mapping-inspector', async (req, res) => {
 });
 
 // POST /api/jira/sync-missing-tasks
-// Syncs and saves any tasks returned from Jira live that are not yet present in SQLite DB
+// Syncs and saves targeted missing/error tasks returned from Jira live into SQLite DB
 router.post('/sync-missing-tasks', async (req, res) => {
   try {
     const db = getDb();
     const cfg = jiraService.getJiraConfig();
-    const rebuildMonths = parseInt(req.body.months, 10) || parseInt(cfg.rebuildMonths, 10) || 3;
+    const targetKeys = Array.isArray(req.body.keys) ? req.body.keys.map(k => String(k).trim().toUpperCase()).filter(k => /^[A-Z][A-Z0-9_]*-\d+$/i.test(k)) : [];
 
-    const projKeyStr = (cfg.projectKey || '').trim().toUpperCase();
-    let projectFilter = '';
-    if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
-      const projects = projKeyStr.split(',').map(p => {
-        const clean = p.trim().toUpperCase();
-        return /^[A-Z0-9_]+$/.test(clean) ? clean : `"${clean}"`;
-      }).filter(Boolean);
-      if (projects.length > 1) {
-        projectFilter = `AND project IN (${projects.join(',')})`;
-      } else if (projects.length === 1) {
-        projectFilter = `AND project = ${projects[0]}`;
+    let jql = '';
+    if (targetKeys.length > 0) {
+      // TARGETED SYNC: Query Jira only for the exact keys requested!
+      jql = `key IN (${targetKeys.join(',')}) ORDER BY created ASC`;
+    } else {
+      const rebuildMonths = parseInt(req.body.months, 10) || parseInt(cfg.rebuildMonths, 10) || 3;
+
+      const projKeyStr = (cfg.projectKey || '').trim().toUpperCase();
+      let projectFilter = '';
+      if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
+        const projects = projKeyStr.split(',').map(p => {
+          const clean = p.trim().toUpperCase();
+          return /^[A-Z0-9_]+$/.test(clean) ? clean : `"${clean}"`;
+        }).filter(Boolean);
+        if (projects.length > 1) {
+          projectFilter = `AND project IN (${projects.join(',')})`;
+        } else if (projects.length === 1) {
+          projectFilter = `AND project = ${projects[0]}`;
+        }
       }
+
+      const now = new Date();
+      const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
+      const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
+      const dateClause = `created >= "${startDateStr}"`;
+      const fullClause = projectFilter ? `${projectFilter.replace(/^AND\s+/i, '')} AND ${dateClause}` : dateClause;
+      jql = `${fullClause} ORDER BY created ASC`;
     }
 
-    const now = new Date();
-    const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
-    const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
-    const dateClause = `created >= "${startDateStr}"`;
-    const fullClause = projectFilter ? `${projectFilter.replace(/^AND\s+/i, '')} AND ${dateClause}` : dateClause;
-
-    const jql = `${fullClause} ORDER BY created ASC`;
     const INSPECTION_FIELDS = [
       'summary',
       'description',
@@ -1528,7 +1536,7 @@ router.post('/sync-missing-tasks', async (req, res) => {
       'customfield_10020'
     ];
 
-    const jiraRes = await jiraService.jiraSearch(jql, INSPECTION_FIELDS, { maxResults: 1000, timeout: 15000 });
+    const jiraRes = await jiraService.jiraSearch(jql, INSPECTION_FIELDS, { maxResults: targetKeys.length > 0 ? targetKeys.length : 1000, timeout: 15000 });
     const rawIssues = jiraRes?.issues || [];
 
     const knownEpicsSet = new Set(db.prepare("SELECT UPPER(id) as id FROM projects").all().map(p => p.id));

@@ -277,10 +277,14 @@ const JiraSettingsPage = () => {
   const handleSyncMissingTasks = async () => {
     try {
       setSyncingMissing(true);
-      showToast('⚡ در حال استخراج و ذخیره مستقیم تسک‌های جامانده از Jira...');
       const months = parseInt(cfg?.rebuildMonths, 10) || 3;
-      const res = await api.syncMissingTasks(months);
-      showToast(res.message || 'تسک‌های جامانده با موفقیت در دیتابیس ثبت شدند.', 'success');
+      const allLiveMappings = liveMappingData?.mappings || [];
+      const isErrorItem = (m) => !m.inDb || m.classification === 'INVALID_KEY' || (m.recordStatus && m.recordStatus.includes('🔴'));
+      const missingKeys = allLiveMappings.filter(isErrorItem).map(m => m.jiraKey).filter(Boolean);
+
+      showToast(`⚡ در حال استخراج و ذخیره مستقیم ${missingKeys.length > 0 ? missingKeys.length + ' تسک' : 'تسک‌های'} خطادار از Jira...`);
+      const res = await api.syncMissingTasks({ months, keys: missingKeys });
+      showToast(res.message || 'تسک‌های مورد نظر با موفقیت در دیتابیس ثبت شدند.', 'success');
       await fetchLiveMappingInspector();
       await fetchDbStats(months);
       if (mismatchModalData?.category) {
