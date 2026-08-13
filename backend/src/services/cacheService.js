@@ -149,6 +149,30 @@ async function syncFromJira() {
           }
         }
       })();
+
+      // Purge obsolete/deleted tasks in DB for configured projects that no longer exist in Jira
+      const fetchedKeysSet = new Set(parsedTasks.map(t => (t.id || '').toUpperCase()).filter(Boolean));
+      if (fetchedKeysSet.size > 0) {
+        let taskProjWhere = '';
+        if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
+          const pKeys = projKeyStr.split(',').map(p => p.trim().toUpperCase()).filter(Boolean);
+          if (pKeys.length > 0) {
+            const taskLikes = pKeys.map(k => `id LIKE '${k}-%'`).join(' OR ');
+            taskProjWhere = ` AND (${taskLikes})`;
+          }
+        }
+        const dbTasksInProj = db.prepare(`SELECT id FROM tasks WHERE 1=1 ${taskProjWhere}`).all();
+        const obsoleteKeys = dbTasksInProj.map(t => t.id).filter(id => !fetchedKeysSet.has(id.toUpperCase()));
+        if (obsoleteKeys.length > 0) {
+          db.transaction(() => {
+            const delStmt = db.prepare('DELETE FROM tasks WHERE id = ?');
+            for (const oldKey of obsoleteKeys) {
+              delStmt.run(oldKey);
+            }
+          })();
+          console.log(`[FULL SYNC] Purged ${obsoleteKeys.length} obsolete/deleted tasks from DB that no longer exist in Jira.`);
+        }
+      }
     } catch (taskErr) {
       console.error(`[FULL SYNC] Failed to fetch all tasks from Jira:`, taskErr.message);
     }
