@@ -21,12 +21,6 @@ function authenticate(req, res, next) {
   try {
     const decoded = verifyToken(token);
     const db = getDb();
-    
-    // Ensure permissions column exists
-    try {
-      db.prepare("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '[\"dashboard\",\"overall_timeline\",\"waiting_tasks\",\"user_management\",\"jira_settings\"]'").run();
-    } catch (e) {}
-
     let user = db.prepare('SELECT id, username, display_name, role, permissions FROM users WHERE id = ?').get(decoded.id);
     
     if (!user && decoded.username === 'admin') {

@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     display_name TEXT,
-    role TEXT DEFAULT 'viewer'
+    role TEXT DEFAULT 'viewer',
+    permissions TEXT DEFAULT '["dashboard","overall_timeline","waiting_tasks","user_management","jira_settings"]'
 );
 
 CREATE TABLE IF NOT EXISTS sync_log (

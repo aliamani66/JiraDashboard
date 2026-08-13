@@ -185,6 +185,7 @@ async function initDb() {
   try { db.run("CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY, value TEXT)"); } catch (_) {}
   try { db.run("CREATE TABLE IF NOT EXISTS task_estimate_history (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, old_estimate REAL DEFAULT 0, new_estimate REAL DEFAULT 0, delta_hours REAL DEFAULT 0, changed_at TEXT NOT NULL)"); } catch (_) {}
   try { db.run("CREATE TABLE IF NOT EXISTS task_relations (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, linked_task_id TEXT NOT NULL, relation_type TEXT, relationship TEXT, title TEXT, status TEXT, assignee TEXT, start_date TEXT, due_date TEXT, created_at TEXT)"); } catch (_) {}
+  try { db.run("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '[\"dashboard\",\"overall_timeline\",\"waiting_tasks\",\"user_management\",\"jira_settings\"]'"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN is_subtask INTEGER DEFAULT 0"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT"); } catch (_) {}
   try { db.run("ALTER TABLE tasks ADD COLUMN epic_id TEXT"); } catch (_) {}

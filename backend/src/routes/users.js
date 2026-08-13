@@ -10,12 +10,6 @@ router.use(authenticate);
 router.get('/', (req, res) => {
   try {
     const db = getDb();
-    
-    // Ensure permissions column exists
-    try {
-      db.prepare("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '[\"dashboard\",\"overall_timeline\",\"waiting_tasks\",\"user_management\",\"project_detail\"]'").run();
-    } catch (e) {}
-
     const users = db.prepare("SELECT id, username, display_name, role, permissions FROM users").all();
     const formatted = users.map(u => {
       let perms = ["dashboard", "overall_timeline", "waiting_tasks", "user_management", "project_detail"];
