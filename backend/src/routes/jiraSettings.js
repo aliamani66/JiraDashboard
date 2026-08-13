@@ -1240,10 +1240,26 @@ router.get('/mismatch-details', async (req, res) => {
       const isLinkedToEpic = (parentTaskId) => parentTaskId && knownEpicsSet.has(String(parentTaskId).toUpperCase());
 
       const jql = `${fullClause} AND issuetype != Epic ORDER BY created ASC`;
+      const INSPECTION_FIELDS = [
+        'summary',
+        'status',
+        'issuetype',
+        'parent',
+        'project',
+        'created',
+        'duedate',
+        'assignee',
+        'issuelinks',
+        'customfield_10006',
+        'customfield_10014',
+        'customfield_10008',
+        'customfield_10004',
+        'customfield_10020'
+      ];
 
       let rawJiraIssues = [];
       try {
-        const jiraRes = await jiraService.jiraSearch(jql, null, { maxResults: 2000, timeout: 20000 });
+        const jiraRes = await jiraService.jiraSearch(jql, INSPECTION_FIELDS, { maxResults: 1000, timeout: 12000 });
         if (jiraRes && jiraRes.issues) rawJiraIssues = jiraRes.issues;
       } catch (err) {
         console.error('Failed to fetch live tasks for mismatch details:', err.message);
@@ -1352,8 +1368,25 @@ router.get('/live-mapping-inspector', async (req, res) => {
 
     const jql = `${fullClause} ORDER BY created ASC`;
     let rawIssues = [];
+    const INSPECTION_FIELDS = [
+      'summary',
+      'status',
+      'issuetype',
+      'parent',
+      'project',
+      'created',
+      'duedate',
+      'assignee',
+      'issuelinks',
+      'customfield_10006',
+      'customfield_10014',
+      'customfield_10008',
+      'customfield_10004',
+      'customfield_10020'
+    ];
+
     try {
-      const jiraRes = await jiraService.jiraSearch(jql, null, { maxResults: 2000, timeout: 20000 });
+      const jiraRes = await jiraService.jiraSearch(jql, INSPECTION_FIELDS, { maxResults: 1000, timeout: 12000 });
       if (jiraRes && jiraRes.issues) rawIssues = jiraRes.issues;
     } catch (err) {
       console.error('Failed to fetch live issues for mapping inspector:', err.message);
