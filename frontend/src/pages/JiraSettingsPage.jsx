@@ -2616,12 +2616,12 @@ const JiraSettingsPage = () => {
               <div style={{ flex: 1, overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', background: 'rgba(15, 23, 42, 0.5)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem', textAlign: 'right' }}>
                   <thead>
-                    <tr style={{ background: 'rgba(255, 255, 255, 0.06)', color: '#94A3B8', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', position: 'sticky', top: 0, zIndex: 10 }}>
-                      <th style={{ padding: '0.75rem 1rem', width: '110px' }}>شناسه کلید</th>
-                      <th style={{ padding: '0.75rem 1rem' }}>عنوان / نام اصلی</th>
-                      <th style={{ padding: '0.75rem 1rem', width: '130px' }}>وضعیت در دیتابیس</th>
-                      <th style={{ padding: '0.75rem 1rem', width: '140px' }}>وضعیت زنده در Jira</th>
-                      <th style={{ padding: '0.75rem 1rem' }}>علت و توضیحات تحلیل</th>
+                    <tr style={{ background: '#1E293B', color: '#F1F5F9', borderBottom: '2px solid rgba(139, 92, 246, 0.4)', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 4px 15px rgba(0, 0, 0, 0.5)' }}>
+                      <th style={{ padding: '0.8rem 1rem', width: '110px', background: '#1E293B', color: '#38BDF8', fontWeight: 800 }}>شناسه کلید</th>
+                      <th style={{ padding: '0.8rem 1rem', background: '#1E293B', color: '#F1F5F9', fontWeight: 800 }}>عنوان / نام اصلی</th>
+                      <th style={{ padding: '0.8rem 1rem', width: '130px', background: '#1E293B', color: '#C084FC', fontWeight: 800 }}>وضعیت در دیتابیس</th>
+                      <th style={{ padding: '0.8rem 1rem', width: '140px', background: '#1E293B', color: '#38BDF8', fontWeight: 800 }}>وضعیت زنده در Jira</th>
+                      <th style={{ padding: '0.8rem 1rem', background: '#1E293B', color: '#F1F5F9', fontWeight: 800 }}>علت و توضیحات تحلیل</th>
                     </tr>
                   </thead>
                   <tbody>
