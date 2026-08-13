@@ -324,13 +324,13 @@ const DatabaseManagerPage = () => {
                 هیچ داده‌ای در این جدول با فیلترهای انتخابی یافت نشد.
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
+              <div style={{ overflowX: 'auto', maxHeight: '600px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', textAlign: 'right' }}>
                   <thead>
-                    <tr style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#94A3B8', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                      <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center', width: '40px' }}>#</th>
+                    <tr style={{ background: '#1E293B', color: '#94A3B8', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 3px 8px rgba(0, 0, 0, 0.5)' }}>
+                      <th style={{ padding: '0.7rem 0.8rem', textAlign: 'center', width: '40px', background: '#1E293B' }}>#</th>
                       {tableData.columns.map(col => (
-                        <th key={col.name} style={{ padding: '0.6rem 0.8rem', color: col.name === 'parent_task_id' ? '#6EE7B7' : (col.name === 'parent_key' ? '#60A5FA' : '#94A3B8') }}>
+                        <th key={col.name} style={{ padding: '0.7rem 0.8rem', background: '#1E293B', color: col.name === 'parent_task_id' ? '#6EE7B7' : (col.name === 'parent_key' ? '#60A5FA' : '#94A3B8'), fontWeight: 800 }}>
                           {col.name} {col.pk ? '🔑' : ''}
                         </th>
                       ))}
@@ -470,10 +470,10 @@ const DatabaseManagerPage = () => {
 
           {/* Query Results */}
           {queryResult && (
-            <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', overflow: 'hidden' }}>
-              <div style={{ padding: '0.65rem 1rem', background: 'rgba(255, 255, 255, 0.04)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ color: '#6EE7B7', fontSize: '0.78rem', fontWeight: 700 }}>
-                  ✅ اجرا با موفقیت انجام شد: {queryResult.rowCount} ردیف استخراج گردید (زمان: {queryResult.executionTimeMs}ms)
+            <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '12px', overflow: 'hidden' }}>
+              <div style={{ padding: '0.75rem 1.1rem', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.3))', borderBottom: '1px solid rgba(16, 185, 129, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ color: '#6EE7B7', fontSize: '0.82rem', fontWeight: 800 }}>
+                  ✅ اجرا با موفقیت انجام شد: {queryResult.rowCount} ردیف استخراج گردید (زمان پاسخ: {queryResult.executionTimeMs}ms)
                 </span>
               </div>
 
@@ -482,13 +482,13 @@ const DatabaseManagerPage = () => {
                   کوئری اجرا شد اما هیچ داده‌ای برای نمایش یافت نشد (0 ردیف).
                 </div>
               ) : (
-                <div style={{ overflowX: 'auto', maxHeight: '500px' }}>
+                <div style={{ overflowX: 'auto', maxHeight: '550px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', textAlign: 'right' }}>
                     <thead>
-                      <tr style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#94A3B8', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', position: 'sticky', top: 0, zIndex: 10 }}>
-                        <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center', width: '40px' }}>#</th>
+                      <tr style={{ background: '#1E293B', color: '#94A3B8', borderBottom: '2px solid rgba(255, 255, 255, 0.15)', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 3px 8px rgba(0, 0, 0, 0.5)' }}>
+                        <th style={{ padding: '0.7rem 0.8rem', textAlign: 'center', width: '40px', background: '#1E293B' }}>#</th>
                         {queryResult.columns.map(col => (
-                          <th key={col} style={{ padding: '0.6rem 0.8rem', color: col === 'parent_task_id' ? '#6EE7B7' : '#38BDF8' }}>
+                          <th key={col} style={{ padding: '0.7rem 0.8rem', background: '#1E293B', color: col === 'parent_task_id' ? '#6EE7B7' : '#38BDF8', fontWeight: 800 }}>
                             {col}
                           </th>
                         ))}
