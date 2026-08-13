@@ -3,6 +3,8 @@ import { Database, Search, Play, RefreshCw, Layers, CheckCircle2, AlertTriangle,
 import { api } from '../services/api';
 import './JiraSettingsPage.css';
 
+const isValidEpicKey = (k) => k && /^[A-Z][A-Z0-9_]*-\d+$/i.test(k);
+
 const DatabaseManagerPage = () => {
   const [activeTab, setActiveTab] = useState('browser'); // 'browser' | 'sql'
 
