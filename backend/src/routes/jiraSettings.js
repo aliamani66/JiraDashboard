@@ -1229,6 +1229,8 @@ router.get('/mismatch-details', async (req, res) => {
       }
     } else if (category === 'unlinkedTasks' || category === 'withEpicTasks' || category === 'totalTasks') {
       const knownEpicsSet = new Set(db.prepare('SELECT UPPER(id) as id FROM projects').all().map(p => p.id));
+      const isLinkedToEpic = (parentTaskId) => parentTaskId && knownEpicsSet.has(String(parentTaskId).toUpperCase());
+
       const jql = `${fullClause} AND issuetype != Epic ORDER BY created ASC`;
 
       let rawJiraIssues = [];
@@ -1246,23 +1248,22 @@ router.get('/mismatch-details', async (req, res) => {
       const jiraTaskMap = new Map();
       for (const t of parsedJiraTasks) {
         const upperId = t.id.toUpperCase();
-        if (category === 'unlinkedTasks' && t.parent_task_id) continue;
-        if (category === 'withEpicTasks' && !t.parent_task_id) continue;
+        const linked = isLinkedToEpic(t.parent_task_id);
+        if (category === 'unlinkedTasks' && linked) continue;
+        if (category === 'withEpicTasks' && !linked) continue;
         jiraTaskMap.set(upperId, t);
       }
 
-      let dbQuery = '';
-      if (category === 'unlinkedTasks') {
-        dbQuery = `SELECT id, project_id, title, status FROM tasks WHERE (parent_task_id IS NULL OR parent_task_id = '' OR parent_task_id NOT IN (SELECT id FROM projects)) AND (is_subtask IS NULL OR is_subtask = 0)${dbDateClause} ORDER BY id ASC`;
-      } else if (category === 'withEpicTasks') {
-        dbQuery = `SELECT id, project_id, title, status FROM tasks WHERE parent_task_id IS NOT NULL AND parent_task_id != '' AND parent_task_id IN (SELECT id FROM projects) AND (is_subtask IS NULL OR is_subtask = 0)${dbDateClause} ORDER BY id ASC`;
-      } else {
-        dbQuery = `SELECT id, project_id, title, status FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0)${dbDateClause} ORDER BY id ASC`;
-      }
-
+      let dbQuery = `SELECT id, project_id, parent_task_id, title, status FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0)${dbDateClause} ORDER BY id ASC`;
       const dbTasks = db.prepare(dbQuery).all();
       const dbTaskMap = new Map();
-      for (const t of dbTasks) dbTaskMap.set(t.id.toUpperCase(), t);
+      for (const t of dbTasks) {
+        const upperId = t.id.toUpperCase();
+        const linked = isLinkedToEpic(t.parent_task_id);
+        if (category === 'unlinkedTasks' && linked) continue;
+        if (category === 'withEpicTasks' && !linked) continue;
+        dbTaskMap.set(upperId, t);
+      }
 
       const allKeys = new Set([...dbTaskMap.keys(), ...jiraTaskMap.keys()]);
       for (const key of allKeys) {
