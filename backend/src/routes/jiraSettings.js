@@ -300,7 +300,9 @@ router.get('/jira-count', async (req, res) => {
     const countJql = `${fullClause} AND issuetype != Epic`;
     const withoutEpicJql = `${fullClause} AND issuetype != Epic AND parent IS EMPTY`;
     const withEpicJql = `${fullClause} AND issuetype != Epic AND parent IS NOT EMPTY`;
-    const subJql = projectClause ? `${projectClause} AND issuetype IN (Sub-task, Subtask)` : `issuetype IN (Sub-task, Subtask)`;
+    const subJql = fullClause
+      ? `${fullClause} AND (issuetype in subtaskIssueTypes() OR issuetype IN ("Sub-task", "Subtask", "sub-task", "Sub-Task", "زیرتسک"))`
+      : (projectClause ? `${projectClause} AND (issuetype in subtaskIssueTypes() OR issuetype IN ("Sub-task", "Subtask", "sub-task", "Sub-Task", "زیرتسک"))` : `issuetype in subtaskIssueTypes() OR issuetype IN ("Sub-task", "Subtask", "sub-task", "Sub-Task", "زیرتسک")`);
     const epicJql = projectClause ? `${projectClause} AND issuetype = Epic` : `issuetype = Epic`;
 
     // Run ALL Jira count queries concurrently in parallel with singlePage: true & ['key'] only
@@ -316,7 +318,19 @@ router.get('/jira-count', async (req, res) => {
           return await jiraService.jiraSearch(`${fullClause} AND issuetype != Epic AND "Epic Link" is NOT EMPTY`, ['key'], { maxResults: 1, timeout: 4000, retries: 1, singlePage: true });
         } catch (_) { return { total: 0 }; }
       }),
-      jiraService.jiraSearch(subJql, ['key'], { maxResults: 1, timeout: 6000, retries: 1, singlePage: true }).catch(() => ({ total: 0 })),
+      jiraService.jiraSearch(subJql, ['key'], { maxResults: 1, timeout: 6000, retries: 1, singlePage: true }).catch(async () => {
+        try {
+          const fallbackSub1 = fullClause ? `${fullClause} AND issuetype in subtaskIssueTypes()` : `issuetype in subtaskIssueTypes()`;
+          return await jiraService.jiraSearch(fallbackSub1, ['key'], { maxResults: 1, timeout: 4000, retries: 1, singlePage: true });
+        } catch (_) {
+          try {
+            const fallbackSub2 = fullClause ? `${fullClause} AND parent IS NOT EMPTY` : `parent IS NOT EMPTY`;
+            return await jiraService.jiraSearch(fallbackSub2, ['key'], { maxResults: 1, timeout: 4000, retries: 1, singlePage: true });
+          } catch (_) {
+            return { total: 0 };
+          }
+        }
+      }),
       jiraService.jiraSearch(epicJql, ['key'], { maxResults: 1, timeout: 6000, retries: 1, singlePage: true }).catch(() => ({ total: 0 }))
     ]);
 
