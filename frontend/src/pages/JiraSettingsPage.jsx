@@ -2856,10 +2856,19 @@ const JiraSettingsPage = () => {
                                   <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.76rem', color: '#FBBF24', fontFamily: 'monospace' }}>
                                     {m.jiraEpicFieldVal}
                                   </td>
-                                  <td style={{ padding: '0.65rem 0.85rem', fontWeight: 800, color: m.classification === 'WITH_EPIC' ? '#6EE7B7' : '#94A3B8' }}>
+                                  <td style={{
+                                    padding: '0.65rem 0.85rem',
+                                    fontWeight: 800,
+                                    color: m.classification === 'WITH_EPIC' ? '#6EE7B7' : m.classification === 'SUB_TASK' ? '#60A5FA' : m.classification === 'EPIC_PROJECT' ? '#C084FC' : '#FBBF24'
+                                  }}>
                                     {m.dbSavedParentEpic}
                                   </td>
-                                  <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.78rem', fontWeight: 700, color: m.inDb ? '#6EE7B7' : '#F87171' }}>
+                                  <td style={{
+                                    padding: '0.65rem 0.85rem',
+                                    fontSize: '0.78rem',
+                                    fontWeight: 700,
+                                    color: !m.inDb ? '#F87171' : (m.classification === 'WITH_EPIC' ? '#6EE7B7' : m.classification === 'SUB_TASK' ? '#60A5FA' : m.classification === 'EPIC_PROJECT' ? '#C084FC' : '#FBBF24')
+                                  }}>
                                     {m.recordStatus}
                                   </td>
                                 </tr>

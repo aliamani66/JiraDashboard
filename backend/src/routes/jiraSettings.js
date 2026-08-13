@@ -1484,7 +1484,7 @@ router.get('/live-mapping-inspector', async (req, res) => {
         dbSavedParentEpic: (parentTaskId && (isSubtask || isValidEpicKey(parentTaskId))) ? `🔗 ${parentTaskId}` : '⚪ بدون اپیک',
         classification: isSubtask ? 'SUB_TASK' : (isWithEpic ? 'WITH_EPIC' : 'WITHOUT_EPIC'),
         recordStatus: inDbTask
-          ? (isSubtask ? `✅ ذخیره‌شده به‌عنوان زیرتسک (پدر: ${parentTaskId || 'نامشخص'})` : (isWithEpic ? '✅ ذخیره‌شده به‌عنوان تسک دارای اپیک' : '✅ ذخیره‌شده به‌عنوان تسک بدون اپیک'))
+          ? (isSubtask ? `✅ ذخیره‌شده به‌عنوان زیرتسک (پدر: ${parentTaskId || 'نامشخص'})` : (isWithEpic ? '✅ ذخیره‌شده به‌عنوان تسک دارای اپیک' : '⚠️ ذخیره‌شده به‌عنوان تسک بدون اپیک'))
           : '🔴 هنوز در دیتابیس سینک نشده است',
         inDb: !!inDbTask
       });
