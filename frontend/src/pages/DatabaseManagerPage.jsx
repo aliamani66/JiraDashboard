@@ -198,25 +198,6 @@ const DatabaseManagerPage = () => {
               </div>
             </div>
           </div>
-
-          {/* Per Project Live Breakdown Cards */}
-          {Array.isArray(tableData.stats.projectBreakdown) && tableData.stats.projectBreakdown.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', background: 'rgba(30, 41, 59, 0.4)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '0.75rem 1rem' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                📊 تفکیک زنده پروژه‌های جیرا:
-              </span>
-              {tableData.stats.projectBreakdown.map((p, idx) => (
-                <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '8px', padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8rem' }}>
-                  <strong style={{ color: '#38BDF8', fontWeight: 800 }}>پروژه {p.projectKey}</strong>
-                  <span style={{ color: '#CBD5E1' }}>|</span>
-                  <span style={{ color: '#C084FC', fontWeight: 700 }}>{p.epicCount} اپیک کل</span>
-                  <span style={{ color: '#CBD5E1' }}>|</span>
-                  <span style={{ color: '#6EE7B7', fontWeight: 700 }}>{p.taskCount} تسک در دیتابیس</span>
-                </div>
-              ))}
-            </div>
-          )}
-
         </div>
       )}
 

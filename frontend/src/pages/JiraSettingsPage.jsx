@@ -1779,13 +1779,8 @@ const JiraSettingsPage = () => {
           {/* ⚖️ UNIFIED COMPREHENSIVE JIRA VS DATABASE COMPARISON TABLE */}
           <div style={{ marginTop: '0.5rem', marginBottom: '1.25rem' }}>
             <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#38BDF8', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem' }}>
-                <span>⚖️ جدول جامع مقایسه زنده آمار و شاخص‌ها (سرور جیرا vs دیتابیس SQLite)</span>
-                {Array.isArray(dbStats?.projectTaskCounts) && dbStats.projectTaskCounts.length > 0 && (
-                  <span style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.35)', color: '#FCD34D', padding: '0.12rem 0.55rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>
-                    {dbStats.projectTaskCounts.map(p => `پروژه ${p.id}: ${p.epicCount || 0} اپیک کل — ${p.taskCount || 0} تسک`).join(' | ')}
-                  </span>
-                )}
+              <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                ⚖️ جدول جامع مقایسه زنده آمار و شاخص‌ها (سرور جیرا vs دیتابیس SQLite)
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button
@@ -2047,30 +2042,18 @@ const JiraSettingsPage = () => {
                     </td>
                   </tr>
 
-                  {/* Row 4: Total Epics with Per-Project Breakdown */}
+                  {/* Row 4: Total Epics */}
                   <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', cursor: 'pointer', transition: 'background 0.2s ease' }} onClick={() => openMismatchDiagnosticModal('epics')} title="کلیک کنید برای مشاهده گرید تحلیل دقیق زنده اختلافات اپیک‌ها">
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
-                        <span>📂 کل اپیک‌ها (پروژه‌ها)</span>
-                        <span style={{ fontSize: '0.7rem', color: '#8B5CF6', background: 'rgba(139, 92, 246, 0.15)', padding: '0.1rem 0.4rem', borderRadius: '6px' }}>🔍 مشاهده تحلیل</span>
-                      </div>
-                      {/* Live Per-Project Epics & Tasks Breakdown Badge Pills */}
-                      {Array.isArray(dbStats?.projectTaskCounts) && dbStats.projectTaskCounts.length > 0 && (
-                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                          {dbStats.projectTaskCounts.map((p, pIdx) => (
-                            <span key={pIdx} style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38BDF8', padding: '0.12rem 0.45rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700 }}>
-                              📌 پروژه {p.id}: {p.epicCount || 0} اپیک کل — {p.taskCount || 0} تسک
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 700, color: '#E2E8F0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>📂 کل اپیک‌ها (پروژه‌ها)</span>
+                      <span style={{ fontSize: '0.7rem', color: '#8B5CF6', background: 'rgba(139, 92, 246, 0.15)', padding: '0.1rem 0.4rem', borderRadius: '6px' }}>🔍 مشاهده تحلیل</span>
                     </td>
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8', verticalAlign: 'top' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#38BDF8' }}>
                       {jiraCountLoading ? (
                         <span style={{ color: '#FBBF24', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><RefreshCw size={12} className="animate-spin" /> ⏳ در حال دریافت...</span>
                       ) : jiraCountData?.jiraEpicsCount !== undefined ? `${jiraCountData.jiraEpicsCount.toLocaleString()} اپیک` : '—'}
                     </td>
-                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC', verticalAlign: 'top' }}>
+                    <td style={{ padding: '0.65rem 0.9rem', fontWeight: 800, color: '#C084FC' }}>
                       {dbStatsLoading ? '⏳...' : dbStats?.totalProjects !== undefined ? `${(dbStats.totalProjects || 0).toLocaleString()} اپیک` : '—'}
                     </td>
                     <td style={{ padding: '0.65rem 0.9rem', textAlign: 'center', verticalAlign: 'top' }}>
