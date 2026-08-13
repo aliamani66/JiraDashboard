@@ -1314,6 +1314,150 @@ router.get('/mismatch-details', async (req, res) => {
   }
 });
 
+// GET /api/jira/live-mapping-inspector
+// Returns item-by-item side-by-side Jira to DB mapping inspection report
+router.get('/live-mapping-inspector', async (req, res) => {
+  try {
+    const db = getDb();
+    const cfg = jiraService.getJiraConfig();
+    const rebuildMonths = parseInt(req.query.months, 10) || parseInt(cfg.rebuildMonths, 10) || 3;
+
+    const projKeyStr = (cfg.projectKey || '').trim().toUpperCase();
+    let projectFilter = '';
+    if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
+      const projects = projKeyStr.split(',').map(p => {
+        const clean = p.trim().toUpperCase();
+        return /^[A-Z0-9_]+$/.test(clean) ? clean : `"${clean}"`;
+      }).filter(Boolean);
+      if (projects.length > 1) {
+        projectFilter = `AND project IN (${projects.join(',')})`;
+      } else if (projects.length === 1) {
+        projectFilter = `AND project = ${projects[0]}`;
+      }
+    }
+
+    const now = new Date();
+    const startMonthDate = new Date(now.getFullYear(), now.getMonth() - (rebuildMonths - 1), 1);
+    const startDateStr = `${startMonthDate.getFullYear()}-${String(startMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
+    const dateClause = `created >= "${startDateStr}"`;
+    const fullClause = projectFilter ? `${projectFilter.replace(/^AND\s+/i, '')} AND ${dateClause}` : dateClause;
+
+    const jql = `${fullClause} ORDER BY created ASC`;
+    let rawIssues = [];
+    try {
+      const jiraRes = await jiraService.jiraSearch(jql, null, { maxResults: 2000, timeout: 20000 });
+      if (jiraRes && jiraRes.issues) rawIssues = jiraRes.issues;
+    } catch (err) {
+      console.error('Failed to fetch live issues for mapping inspector:', err.message);
+    }
+
+    const dbDateClause = (rebuildMonths < 60)
+      ? ` AND (created_at >= '${startDateStr}' OR start_date >= '${startDateStr}')`
+      : '';
+    const dbTasks = db.prepare(`SELECT id, project_id, parent_task_id, title, status FROM tasks WHERE (is_subtask IS NULL OR is_subtask = 0)${dbDateClause}`).all();
+    const dbTaskMap = new Map();
+    for (const dt of dbTasks) dbTaskMap.set(dt.id.toUpperCase(), dt);
+
+    const dbEpics = db.prepare(`SELECT id, title, status FROM projects`).all();
+    const dbEpicMap = new Map();
+    for (const de of dbEpics) dbEpicMap.set(de.id.toUpperCase(), de);
+
+    const knownEpicsSet = new Set(dbEpicMap.keys());
+
+    const mappings = [];
+    let withEpicCount = 0;
+    let withoutEpicCount = 0;
+    let epicsCount = 0;
+    let invalidKeyCount = 0;
+
+    for (let idx = 0; idx < rawIssues.length; idx++) {
+      const issue = rawIssues[idx];
+      const issueKey = (issue.key || '').trim().toUpperCase();
+      const summary = issue.fields?.summary || issueKey;
+      const issueTypeName = issue.fields?.issuetype?.name || 'Task';
+      const rawStatus = issue.fields?.status?.name || 'To Do';
+
+      if (!/^[A-Z0-9_]+-\d+$/i.test(issueKey)) {
+        invalidKeyCount++;
+        mappings.push({
+          jiraKey: issueKey || 'INVALID',
+          jiraIssueType: issueTypeName,
+          jiraRawStatus: rawStatus,
+          jiraEpicFieldVal: '—',
+          dbSavedKey: '🔴 ذخیره نشد',
+          dbMappedStatus: '—',
+          dbSavedParentEpic: '—',
+          classification: 'INVALID_KEY',
+          recordStatus: '⚠️ ردشده (الگوی شناسه فاقد شماره استاندارد است)',
+          inDb: false
+        });
+        continue;
+      }
+
+      if (issueTypeName.toLowerCase().trim() === 'epic') {
+        epicsCount++;
+        const inDbEpic = dbEpicMap.get(issueKey);
+        mappings.push({
+          jiraKey: issueKey,
+          jiraIssueType: 'Epic (اپیک)',
+          jiraRawStatus: rawStatus,
+          jiraEpicFieldVal: 'کانتینر اصلی پروژه/اپیک',
+          dbSavedKey: inDbEpic ? inDbEpic.id : '📌 ثبت پروژه‌ها',
+          dbMappedStatus: inDbEpic ? inDbEpic.status : rawStatus,
+          dbSavedParentEpic: '— (خود اپیک است)',
+          classification: 'EPIC_PROJECT',
+          recordStatus: inDbEpic ? '📌 موجود در جدول پروژه‌ها/اپیک‌ها' : '🔴 عدم تطابق در دیتابیس',
+          inDb: !!inDbEpic
+        });
+        continue;
+      }
+
+      const parsed = jiraService.parseTaskIssue(issue, null, idx, knownEpicsSet);
+      const inDbTask = dbTaskMap.get(issueKey);
+
+      let epicSourceText = '— بدون لینک اپیک';
+      if (issue.fields?.customfield_10006) epicSourceText = `customfield_10006: ${typeof issue.fields.customfield_10006 === 'object' ? (issue.fields.customfield_10006.key || issue.fields.customfield_10006.value) : issue.fields.customfield_10006}`;
+      else if (issue.fields?.parent?.key) epicSourceText = `parent.key: ${issue.fields.parent.key}`;
+      else if (issue.fields?.epic?.key) epicSourceText = `epic.key: ${issue.fields.epic.key}`;
+
+      const parentTaskId = parsed?.parent_task_id || inDbTask?.parent_task_id || null;
+      const isWithEpic = !!parentTaskId;
+
+      if (isWithEpic) withEpicCount++;
+      else withoutEpicCount++;
+
+      mappings.push({
+        jiraKey: issueKey,
+        jiraIssueType: issueTypeName,
+        jiraRawStatus: rawStatus,
+        jiraEpicFieldVal: epicSourceText,
+        dbSavedKey: inDbTask ? inDbTask.id : parsed?.id || issueKey,
+        dbMappedStatus: inDbTask ? inDbTask.status : parsed?.status || rawStatus,
+        dbSavedParentEpic: parentTaskId ? `🔗 ${parentTaskId}` : '⚪ بدون اپیک',
+        classification: isWithEpic ? 'WITH_EPIC' : 'WITHOUT_EPIC',
+        recordStatus: inDbTask
+          ? (isWithEpic ? '✅ ذخیره‌شده به‌عنوان تسک دارای اپیک' : '✅ ذخیره‌شده به‌عنوان تسک بدون اپیک')
+          : '🔴 هنوز در دیتابیس سینک نشده است',
+        inDb: !!inDbTask
+      });
+    }
+
+    res.json({
+      success: true,
+      rebuildMonths,
+      totalJiraIssues: rawIssues.length,
+      withEpicCount,
+      withoutEpicCount,
+      epicsCount,
+      invalidKeyCount,
+      dbTotalCount: dbTasks.length,
+      mappings
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در استخراج نگاشت نظیر به نظیر: ' + err.message });
+  }
+});
+
 // GET /api/jira/last-sync-report
 // Returns the detailed audit report of the last sync run, including skipped/failed issues and reasons
 router.get('/last-sync-report', (req, res) => {
