@@ -135,6 +135,7 @@ function getFullConfigObject() {
     waitingStatuses: getVal('JIRA_WAITING_STATUSES', 'OnHolding,Waiting,Blocked,On Hold').split(',').map(s => s.trim()),
     statusMapping: jiraMapping.statusMapping || {},
     customFields: {
+      epicLinkField: getVal('JIRA_EPIC_LINK_FIELD', 'customfield_10006'),
       sprintField: getVal('JIRA_SPRINT_FIELD', 'customfield_10004'),
       waitingTeamField: getVal('JIRA_WAITING_TEAM_FIELD', ''),
       waitingReasonField: getVal('JIRA_WAITING_REASON_FIELD', ''),
@@ -204,6 +205,7 @@ router.put('/config', (req, res) => {
 
     if (body.customFields) {
       const cf = body.customFields;
+      if (cf.epicLinkField !== undefined) updates.JIRA_EPIC_LINK_FIELD = cf.epicLinkField;
       if (cf.sprintField !== undefined) updates.JIRA_SPRINT_FIELD = cf.sprintField;
       if (cf.waitingTeamField !== undefined) updates.JIRA_WAITING_TEAM_FIELD = cf.waitingTeamField;
       if (cf.waitingReasonField !== undefined) updates.JIRA_WAITING_REASON_FIELD = cf.waitingReasonField;

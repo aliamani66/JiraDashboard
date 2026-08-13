@@ -1929,6 +1929,9 @@ const JiraSettingsPage = () => {
       <Section icon={Cpu} title="فیلدهای کاستوم Jira (Custom Fields Mapping)" color="#EC4899">
         <p className="jsp-section-desc">شماره کاستوم‌فیلدهای اختصاصی جیرای سازمان را وارد کنید. پس از اجرای پایش زنده، شناسه‌های دقیق نمایش داده می‌شوند.</p>
         <div className="jsp-grid-2">
+          <Field label="فیلد لینک به اپیک (Epic Link)" hint="شناسه فیلد ارتباط تسک با اپیک در جیرای شما (customfield_10006)">
+            <Input value={cfg.customFields?.epicLinkField || 'customfield_10006'} onChange={v => set('customFields', 'epicLinkField', v)} placeholder="customfield_10006" mono />
+          </Field>
           <Field label="فیلد Sprint" hint="معمولاً customfield_10004 (یا customfield_10020)">
             <Input value={cfg.customFields?.sprintField} onChange={v => set('customFields', 'sprintField', v)} placeholder="customfield_10004" mono />
           </Field>

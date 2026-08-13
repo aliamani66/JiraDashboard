@@ -547,18 +547,21 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
   if (!epicKey) {
     const issueProjPrefix = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
 
-    // 1. Direct Jira epic field
-    if (issue.fields?.epic?.key) {
+    // 1. Direct Jira epic field (check customfield_10006 first!)
+    if (issue.fields?.customfield_10006) {
+      const v = issue.fields.customfield_10006;
+      epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
+    } else if (issue.fields?.epic?.key) {
       epicKey = String(issue.fields.epic.key).toUpperCase();
+    } else if (customFields.epicLinkField && issue.fields?.[customFields.epicLinkField]) {
+      const val = issue.fields[customFields.epicLinkField];
+      epicKey = String(typeof val === 'object' ? (val.key || val.value) : val).toUpperCase();
     } else if (issue.fields?.customfield_10014) {
       const v = issue.fields.customfield_10014;
       epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
     } else if (issue.fields?.customfield_10008) {
       const v = issue.fields.customfield_10008;
       epicKey = String(typeof v === 'object' ? (v.key || v.value) : v).toUpperCase();
-    } else if (customFields.epicLinkField && issue.fields?.[customFields.epicLinkField]) {
-      const val = issue.fields[customFields.epicLinkField];
-      epicKey = String(typeof val === 'object' ? (val.key || val.value) : val).toUpperCase();
     } else if (issue.fields?.parent?.key) {
       const pKey = String(issue.fields.parent.key).toUpperCase();
       if (knownEpicKeysSet && knownEpicKeysSet.has(pKey)) {
