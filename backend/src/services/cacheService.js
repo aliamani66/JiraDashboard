@@ -841,9 +841,12 @@ function autoLinkTasksToEpics() {
     if (pKeyStr && pKeyStr !== 'ALL' && pKeyStr !== '*') {
       pKeys = pKeyStr.split(',').map(k => k.trim()).filter(Boolean);
       if (pKeys.length > 0) {
-        const likeClauses = pKeys.map(k => `id LIKE '${k}-%' OR id = '${k}'`).join(' OR ');
-        // Purge any epics or projects from other project keys (e.g. 2026, 2025, SG) when filtering by specific project
-        db.prepare(`DELETE FROM projects WHERE NOT (${likeClauses})`).run();
+        const projLikeClauses = pKeys.map(k => `id LIKE '${k}-%' OR id = '${k}'`).join(' OR ');
+        const taskLikeClauses = pKeys.map(k => `id LIKE '${k}-%' OR project_id LIKE '${k}-%' OR project_id = '${k}'`).join(' OR ');
+        
+        // Purge any epics, projects, or tasks outside the user's configured project keys (e.g., ORD, OPS, DEV)
+        db.prepare(`DELETE FROM projects WHERE NOT (${projLikeClauses})`).run();
+        db.prepare(`DELETE FROM tasks WHERE NOT (${taskLikeClauses})`).run();
       }
     }
 
