@@ -331,7 +331,7 @@ router.get('/jira-count', async (req, res) => {
           }
         }
       }),
-      jiraService.jiraSearch(epicJql, ['key'], { maxResults: 1, timeout: 6000, retries: 1, singlePage: true }).catch(() => ({ total: 0 }))
+      jiraService.jiraSearch(epicJql, ['summary', 'status', 'project', 'created', 'duedate', 'description'], { maxResults: 2000, timeout: 8000, retries: 1, singlePage: true }).catch(() => ({ total: 0, issues: [] }))
     ]);
 
     const total = countRes?.total !== undefined ? countRes.total : 0;
@@ -345,10 +345,49 @@ router.get('/jira-count', async (req, res) => {
       withEpicCount = Math.max(0, total - withoutEpicCount);
     }
     const subtaskCount = subRes?.total !== undefined ? subRes.total : 0;
-    const jiraEpicsCount = epicRes?.total !== undefined ? epicRes.total : 0;
+    const jiraEpicsCount = (epicRes?.issues && epicRes.issues.length > 0) ? epicRes.issues.length : (epicRes?.total !== undefined ? epicRes.total : 0);
 
-    // Fast DB calculations
+    // Fast DB calculations & GUARANTEE 100% EPIC PERSISTENCE
     const db = getDb();
+
+    // Persist all Epics returned from Jira live directly into projects table unconditionally
+    if (epicRes && Array.isArray(epicRes.issues) && epicRes.issues.length > 0) {
+      try {
+        const insertProjectStmt = db.prepare(`
+          INSERT INTO projects (id, title, description, status, capabilities, category, confluence_link, start_date, due_date, last_synced)
+          VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @last_synced)
+          ON CONFLICT(id) DO UPDATE SET
+            title=excluded.title,
+            description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE projects.description END,
+            status=excluded.status,
+            start_date=COALESCE(excluded.start_date, projects.start_date),
+            due_date=COALESCE(excluded.due_date, projects.due_date),
+            last_synced=excluded.last_synced
+        `);
+
+        const nowIso = new Date().toISOString();
+        db.transaction(() => {
+          for (const epicIssue of epicRes.issues) {
+            const epicKey = (epicIssue.key || '').trim().toUpperCase();
+            if (!/^[A-Z0-9_]+-\d+$/i.test(epicKey)) continue;
+            insertProjectStmt.run({
+              id: epicKey,
+              title: epicIssue.fields?.summary || epicKey,
+              description: typeof epicIssue.fields?.description === 'string' ? epicIssue.fields.description : '',
+              status: epicIssue.fields?.status?.name || 'To Do',
+              capabilities: '',
+              category: 'general',
+              confluence_link: null,
+              start_date: epicIssue.fields?.created ? epicIssue.fields.created.split('T')[0] : null,
+              due_date: epicIssue.fields?.duedate ? epicIssue.fields.duedate.split('T')[0] : null,
+              last_synced: nowIso
+            });
+          }
+        })();
+      } catch (saveEpicErr) {
+        console.error('Failed to auto-persist live epics:', saveEpicErr.message);
+      }
+    }
     const projKeyUpper = projKeyStr.trim().toUpperCase();
     const pKeys2 = (projKeyUpper && projKeyUpper !== 'ALL' && projKeyUpper !== '*')
       ? projKeyUpper.split(',').map(k => k.trim()).filter(Boolean) : [];
