@@ -1697,6 +1697,54 @@ router.post('/sync-missing-tasks', async (req, res) => {
   }
 });
 
+// POST /api/jira/delete-db-only-tasks
+// Deletes specific extra items from SQLite database that do not exist in Jira
+router.post('/delete-db-only-tasks', (req, res) => {
+  try {
+    const db = getDb();
+    const { keys, category } = req.body;
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return res.status(400).json({ success: false, message: 'لیست شناسه‌ها برای حذف ارسال نشده است.' });
+    }
+
+    let deletedTasks = 0;
+    let deletedProjects = 0;
+
+    const delTask = db.prepare('DELETE FROM tasks WHERE UPPER(id) = UPPER(?)');
+    const delRelation1 = db.prepare('DELETE FROM task_relations WHERE UPPER(task_id) = UPPER(?)');
+    const delRelation2 = db.prepare('DELETE FROM task_relations WHERE UPPER(linked_task_id) = UPPER(?)');
+    const delHistory = db.prepare('DELETE FROM task_estimate_history WHERE UPPER(task_id) = UPPER(?)');
+    const delProject = db.prepare('DELETE FROM projects WHERE UPPER(id) = UPPER(?)');
+
+    db.transaction(() => {
+      for (const k of keys) {
+        if (!k) continue;
+        const keyUpper = String(k).trim().toUpperCase();
+        if (category === 'epics') {
+          const resProj = delProject.run(keyUpper);
+          if (resProj.changes > 0) deletedProjects += resProj.changes;
+        } else {
+          delRelation1.run(keyUpper);
+          delRelation2.run(keyUpper);
+          delHistory.run(keyUpper);
+          const resT = delTask.run(keyUpper);
+          if (resT.changes > 0) deletedTasks += resT.changes;
+        }
+      }
+    })();
+
+    saveDb();
+    res.json({
+      success: true,
+      deletedTasks,
+      deletedProjects,
+      message: `${deletedTasks > 0 ? `${deletedTasks} تسک ` : ''}${deletedProjects > 0 ? `${deletedProjects} اپیک ` : ''}اضافی با موفقیت از دیتابیس لوکال حذف شد.`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در حذف موارد اضافی: ' + err.message });
+  }
+});
+
 // GET /api/jira/last-sync-report
 // Returns the detailed audit report of the last sync run, including skipped/failed issues and reasons
 router.get('/last-sync-report', (req, res) => {

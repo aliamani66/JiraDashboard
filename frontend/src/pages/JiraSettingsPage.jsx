@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Server, Cpu, GitBranch, Tag, Calendar,
   RefreshCw, Save, CheckCircle2, AlertTriangle, X,
-  ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap, Database, Search
+  ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap, Database, Search, Trash2
 } from 'lucide-react';
 import { api } from '../services/api';
 import JalaliDatePicker from '../components/common/JalaliDatePicker';
@@ -275,6 +275,50 @@ const JiraSettingsPage = () => {
 
   const [syncingMissing, setSyncingMissing] = useState(false);
   const [syncingKey, setSyncingKey] = useState(null);
+  const [deletingDbOnly, setDeletingDbOnly] = useState(false);
+  const [deletingKey, setDeletingKey] = useState(null);
+
+  const handleDeleteSingleKey = async (key) => {
+    if (!key) return;
+    try {
+      setDeletingKey(key);
+      showToast(`🗑️ در حال حذف تسک ${key} از دیتابیس لوکال...`);
+      const res = await api.deleteDbOnlyTasks({ keys: [key], category: mismatchModalData?.category });
+      showToast(res.message || `مورد ${key} از دیتابیس لوکال حذف شد.`, 'success');
+      const months = parseInt(cfg?.rebuildMonths, 10) || 3;
+      await fetchDbStats(months);
+      await fetchJiraCount();
+      const freshMismatch = await api.getMismatchDetails(mismatchModalData?.category || 'totalTasks', months);
+      setMismatchModalData(freshMismatch);
+    } catch (e) {
+      showToast(`خطا در حذف ${key}: ` + e.message, 'error');
+    } finally {
+      setDeletingKey(null);
+    }
+  };
+
+  const handleDeleteDbOnlyTasks = async () => {
+    try {
+      setDeletingDbOnly(true);
+      const dbOnlyKeys = (mismatchModalData?.mismatches || []).filter(i => i.mismatchType === 'DB_ONLY').map(i => i.id).filter(Boolean);
+      if (dbOnlyKeys.length === 0) {
+        showToast('هیچ تسک اضافی در دیتابیس برای حذف وجود ندارد.', 'info');
+        return;
+      }
+      showToast(`🗑️ در حال حذف ${dbOnlyKeys.length} مورد اضافی از دیتابیس لوکال...`);
+      const res = await api.deleteDbOnlyTasks({ keys: dbOnlyKeys, category: mismatchModalData?.category });
+      showToast(res.message || 'موارد اضافی با موفقیت از دیتابیس حذف شدند.', 'success');
+      const months = parseInt(cfg?.rebuildMonths, 10) || 3;
+      await fetchDbStats(months);
+      await fetchJiraCount();
+      const freshMismatch = await api.getMismatchDetails(mismatchModalData?.category || 'totalTasks', months);
+      setMismatchModalData(freshMismatch);
+    } catch (e) {
+      showToast('خطا در حذف موارد اضافی: ' + e.message, 'error');
+    } finally {
+      setDeletingDbOnly(false);
+    }
+  };
 
   const handleSyncSingleKey = async (key) => {
     if (!key) return;
@@ -2677,6 +2721,36 @@ const JiraSettingsPage = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  {/* Batch Delete DB-Only Items Button */}
+                  {(() => {
+                    const dbOnlyItems = (mismatchModalData.mismatches || []).filter(i => i.mismatchType === 'DB_ONLY');
+                    if (dbOnlyItems.length === 0) return null;
+                    return (
+                      <button
+                        type="button"
+                        onClick={handleDeleteDbOnlyTasks}
+                        disabled={deletingDbOnly}
+                        style={{
+                          background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          padding: '0.5rem 1.15rem',
+                          borderRadius: '10px',
+                          fontSize: '0.84rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          boxShadow: '0 3px 12px rgba(239, 68, 68, 0.4)'
+                        }}
+                      >
+                        <Trash2 size={14} className={deletingDbOnly ? 'spin' : ''} />
+                        <span>{deletingDbOnly ? 'در حال حذف...' : `🗑️ حذف ${dbOnlyItems.length} مورد اضافی از دیتابیس`}</span>
+                      </button>
+                    );
+                  })()}
+
                   {(mismatchModalData.missingCount > 0 || (mismatchModalData.missingKeys && mismatchModalData.missingKeys.length > 0)) && (
                     <button
                       type="button"
@@ -2844,7 +2918,29 @@ const JiraSettingsPage = () => {
                                   <span>{isThisSyncing ? 'در حال ذخیره...' : '⚡ ذخیره در DB'}</span>
                                 </button>
                               ) : (
-                                <span style={{ fontSize: '0.74rem', color: '#94A3B8' }}>—</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSingleKey(item.id)}
+                                  disabled={deletingKey === item.id || deletingDbOnly}
+                                  style={{
+                                    background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                                    border: 'none',
+                                    color: '#FFFFFF',
+                                    padding: '0.3rem 0.75rem',
+                                    borderRadius: '8px',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
+                                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.35)'
+                                  }}
+                                  title={`حذف فقط تسک ${item.id} از دیتابیس لوکال`}
+                                >
+                                  <Trash2 size={11} className={deletingKey === item.id ? 'spin' : ''} />
+                                  <span>{deletingKey === item.id ? 'در حال حذف...' : '🗑️ حذف از DB'}</span>
+                                </button>
                               )}
                             </td>
                           </tr>

@@ -66,6 +66,7 @@ export const api = {
   getLastSyncReport: () => fetchWithAuth('/jira/last-sync-report'),
   getLiveMappingInspector: (months) => fetchWithAuth('/jira/live-mapping-inspector' + (months ? `?months=${months}` : '')),
   syncMissingTasks: (payload) => fetchWithAuth('/jira/sync-missing-tasks', { method: 'POST', body: JSON.stringify(typeof payload === 'object' ? payload : { months: payload }) }),
+  deleteDbOnlyTasks: (payload) => fetchWithAuth('/jira/delete-db-only-tasks', { method: 'POST', body: JSON.stringify(payload) }),
   getDbTables: () => fetchWithAuth('/db/tables'),
   getDbTableData: (tableName, page = 1, search = '', category = 'all', limit = 50) => fetchWithAuth(`/db/data/${tableName}?page=${page}&search=${encodeURIComponent(search)}&category=${category}&limit=${limit}`),
   runDbQuery: (sql) => fetchWithAuth('/db/query', { method: 'POST', body: JSON.stringify({ sql }) }),
