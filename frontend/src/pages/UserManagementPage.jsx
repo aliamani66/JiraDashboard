@@ -31,7 +31,8 @@ import {
   Lock,
   Sparkles,
   Info,
-  Layers
+  Layers,
+  KeyRound
 } from 'lucide-react';
 import { api } from '../services/api';
 import './UserManagementPage.css';
@@ -133,6 +134,10 @@ const UserManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [passwordModalUser, setPasswordModalUser] = useState(null);
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
   const [activePermTab, setActivePermTab] = useState('navigation'); // 'navigation' | 'jira_settings' | 'database_manager' | 'all'
   const [permSearchTerm, setPermSearchTerm] = useState('');
 
@@ -269,13 +274,42 @@ const UserManagementPage = () => {
       await api.updateUserPermissions(editingUser.id, {
         permissions: editingUser.permissions,
         role: editingUser.role,
-        display_name: editingUser.display_name
+        display_name: editingUser.display_name,
+        password: editingUser.password
       });
-      showToastMsg('دسترسی‌های کاربر با موفقیت به‌روزرسانی شد.');
+      showToastMsg('اطلاعات و دسترسی‌های کاربر با موفقیت به‌روزرسانی شد.');
       setEditingUser(null);
       fetchUsers();
     } catch (err) {
       showToastMsg(err.message || 'خطا در به‌روزرسانی دسترسی‌ها', 'error');
+    }
+  };
+
+  // Quick Standalone Password Reset
+  const handleDirectPasswordReset = async (e) => {
+    e.preventDefault();
+    if (!passwordModalUser) return;
+    if (!newPasswordInput || newPasswordInput.trim().length === 0) {
+      showToastMsg('لطفاً کلمه عبور جدید را وارد فرمایید.', 'error');
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      await api.updateUserPermissions(passwordModalUser.id, {
+        password: newPasswordInput.trim(),
+        role: passwordModalUser.role,
+        display_name: passwordModalUser.display_name,
+        permissions: passwordModalUser.permissions
+      });
+      showToastMsg(`کلمه عبور کاربر «${passwordModalUser.username}» با موفقیت تغییر یافت.`);
+      setPasswordModalUser(null);
+      setNewPasswordInput('');
+      fetchUsers();
+    } catch (err) {
+      showToastMsg(err.message || 'خطا در تغییر کلمه عبور کاربر', 'error');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -503,7 +537,7 @@ const UserManagementPage = () => {
             <span>مدیریت کاربران و سطوح دسترسی</span>
           </h1>
           <p className="ump-subtitle">
-            تعریف حساب‌های کاربری، کنترل دسترسی به منوهای سایدبار و مجوزهای تخصصی دیتابیس و تنظیمات
+            تعریف حساب‌های کاربری، تغییر رمز عبور، کنترل دسترسی به منوهای سایدبار و تب‌های دیتابیس و تنظیمات
           </p>
         </div>
 
@@ -619,6 +653,7 @@ const UserManagementPage = () => {
                               setPermSearchTerm('');
                               setEditingUser({
                                 ...u,
+                                password: '',
                                 permissions: Array.isArray(u.permissions) ? u.permissions : []
                               });
                             }}
@@ -626,6 +661,18 @@ const UserManagementPage = () => {
                           >
                             <Edit3 size={15} />
                             <span>تخصیص دسترسی</span>
+                          </button>
+
+                          <button
+                            className="ump-action-btn password"
+                            onClick={() => {
+                              setPasswordModalUser(u);
+                              setNewPasswordInput('');
+                            }}
+                            title="تغییر کلمه عبور کاربر"
+                          >
+                            <KeyRound size={15} />
+                            <span>تغییر رمز</span>
                           </button>
 
                           {u.username !== 'admin' && (
@@ -739,7 +786,7 @@ const UserManagementPage = () => {
         )}
       </AnimatePresence>
 
-      {/* EDIT PERMISSIONS MODAL */}
+      {/* EDIT USER & PERMISSIONS MODAL */}
       <AnimatePresence>
         {editingUser && (
           <div className="ump-modal-overlay" onClick={() => setEditingUser(null)}>
@@ -786,6 +833,17 @@ const UserManagementPage = () => {
                         <option value="admin">مدیر ارشد سیستم (Admin)</option>
                       </select>
                     </div>
+
+                    <div className="ump-input-group">
+                      <label>تغییر کلمه عبور (اختیاری):</label>
+                      <input
+                        type="password"
+                        placeholder="در صورت عدم تمایل به تغییر، خالی بگذارید"
+                        value={editingUser.password || ''}
+                        onChange={e => setEditingUser({ ...editingUser, password: e.target.value })}
+                        autoComplete="new-password"
+                      />
+                    </div>
                   </div>
 
                   {/* TABBED PERMISSIONS SELECTOR */}
@@ -802,6 +860,61 @@ const UserManagementPage = () => {
                   </button>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 🔑 DEDICATED QUICK PASSWORD RESET MODAL */}
+      <AnimatePresence>
+        {passwordModalUser && (
+          <div className="ump-modal-overlay" onClick={() => setPasswordModalUser(null)}>
+            <motion.div
+              className="glass-card ump-modal-content small"
+              onClick={e => e.stopPropagation()}
+              initial={{ scale: 0.94, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 15 }}
+              style={{ maxWidth: '440px' }}
+            >
+              <div className="ump-modal-header">
+                <h3>
+                  <KeyRound size={20} className="text-accent-orange" />
+                  <span>تغییر کلمه عبور @{passwordModalUser.username}</span>
+                </h3>
+                <button className="ump-close-modal" onClick={() => setPasswordModalUser(null)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleDirectPasswordReset} className="ump-password-form">
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '0.85rem 1rem', marginBottom: '1.25rem', fontSize: '0.84rem', color: '#CBD5E1', lineHeight: '1.5' }}>
+                  نام کاربر: <strong>{passwordModalUser.display_name || passwordModalUser.username}</strong>
+                  <br />
+                  <span style={{ fontSize: '0.76rem', color: '#94A3B8' }}>کلمه عبور جدید را وارد فرمایید تا بلافاصله فعال شود.</span>
+                </div>
+
+                <div className="ump-input-group" style={{ marginBottom: '1.5rem' }}>
+                  <label>کلمه عبور جدید:</label>
+                  <input
+                    type="password"
+                    placeholder="کلمه عبور جدید را وارد کنید..."
+                    value={newPasswordInput}
+                    onChange={e => setNewPasswordInput(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
+
+                <div className="ump-modal-footer" style={{ borderTop: 'none', padding: 0 }}>
+                  <button type="button" className="ump-cancel-btn" onClick={() => setPasswordModalUser(null)}>
+                    انصراف
+                  </button>
+                  <button type="submit" className="ump-submit-btn" disabled={passwordLoading}>
+                    {passwordLoading ? 'در حال ثبت...' : 'تغییر و ذخیره رمز'}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

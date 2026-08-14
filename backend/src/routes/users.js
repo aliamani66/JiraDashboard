@@ -55,25 +55,34 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update permissions for a user
-router.put('/:id/permissions', (req, res) => {
+// Update permissions and/or password for a user
+router.put('/:id/permissions', async (req, res) => {
   try {
     const { id } = req.params;
-    const { permissions, role, display_name } = req.body;
+    const { permissions, role, display_name, password } = req.body;
 
     const db = getDb();
     const permsJson = JSON.stringify(permissions || []);
 
-    db.prepare(`
-      UPDATE users 
-      SET permissions = ?, role = COALESCE(?, role), display_name = COALESCE(?, display_name)
-      WHERE id = ?
-    `).run(permsJson, role, display_name, id);
+    if (password && password.trim().length > 0) {
+      const password_hash = await hashPassword(password.trim());
+      db.prepare(`
+        UPDATE users 
+        SET permissions = ?, role = COALESCE(?, role), display_name = COALESCE(?, display_name), password_hash = ?
+        WHERE id = ?
+      `).run(permsJson, role, display_name, password_hash, id);
+    } else {
+      db.prepare(`
+        UPDATE users 
+        SET permissions = ?, role = COALESCE(?, role), display_name = COALESCE(?, display_name)
+        WHERE id = ?
+      `).run(permsJson, role, display_name, id);
+    }
 
-    res.json({ message: 'دسترسی‌های کاربر با موفقیت به‌روزرسانی شد.' });
+    res.json({ message: 'اطلاعات و دسترسی‌های کاربر با موفقیت به‌روزرسانی شد.' });
   } catch (err) {
     console.error('Error updating user permissions:', err.message);
-    res.status(500).json({ error: 'خطا در ویرایش دسترسی‌های کاربر' });
+    res.status(500).json({ error: 'خطا در ویرایش اطلاعات کاربر' });
   }
 });
 

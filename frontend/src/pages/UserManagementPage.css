@@ -324,6 +324,18 @@
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
 }
 
+.ump-action-btn.password {
+  background: rgba(245, 158, 11, 0.18);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.ump-action-btn.password:hover {
+  background: rgba(245, 158, 11, 0.35);
+  color: #FFFFFF;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.45);
+}
+
 .ump-action-btn.delete {
   background: rgba(239, 68, 68, 0.18);
   color: #FCA5A5;
