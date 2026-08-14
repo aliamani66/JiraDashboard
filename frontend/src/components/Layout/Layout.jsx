@@ -81,7 +81,7 @@ const Layout = ({ children }) => {
       const res = await api.triggerSync();
       const nowStr = new Date().toISOString();
       setLastSync(formatSyncTime(nowStr));
-      setToastMessage(`همگام‌سازی موفق با جیرا (${res.projectsSynced || 0} پروژه، ${res.tasksSynced || 0} تسک)`);
+      setToastMessage(res.message || `همگام‌سازی موفق ۱۰ روز اخیر با جیرا (${res.projectsSynced || 0} پروژه، ${res.tasksSynced || 0} تسک)`);
       setShowToast(true);
 
       setTimeout(() => {
@@ -108,15 +108,9 @@ const Layout = ({ children }) => {
       <Sidebar isOpen={isSidebarOpen} toggle={() => setIsSidebarOpen(!isSidebarOpen)} />
       
       <div className="layout-content">
-        <header className="topbar glass-card">
+        <header className="topbar">
           <div className="topbar-right">
-            <button className="menu-toggle" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-              ☰
-            </button>
-            <div className="topbar-brand">
-              <div className="brand-pulse-badge">
-                <Sparkles size={16} className="text-accent-cyan" />
-              </div>
+            <div className="title-area">
               <h2 className="page-title">داشبورد ویترین عملیات R&D</h2>
             </div>
           </div>
@@ -140,7 +134,7 @@ const Layout = ({ children }) => {
               <button 
                 className={`sync-btn ${isSyncing ? 'syncing' : ''}`} 
                 onClick={handleSync}
-                title="همگام‌سازی فوری داده‌ها با سیستم جیرا"
+                title="همگام‌سازی ۱۰ روز گذشته با جیرا (بدون پاک شدن دیتابیس)"
               >
                 <RefreshCw size={17} className={isSyncing ? 'spin-icon' : ''} />
               </button>

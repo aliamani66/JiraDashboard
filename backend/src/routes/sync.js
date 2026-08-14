@@ -16,10 +16,11 @@ router.get('/status', (req, res) => {
   }
 });
 
-// POST /api/sync - Trigger manual sync
+// POST /api/sync - Trigger safe sync for recent 10 days (does NOT clear DB, upserts changes)
 router.post('/', async (req, res) => {
   try {
-    const result = await cacheService.syncFromJira();
+    const days = parseInt(req.body?.days || req.query?.days, 10) || 10;
+    const result = await cacheService.syncRecentFromJira(days);
     if (result.success) {
       res.json(result);
     } else {
