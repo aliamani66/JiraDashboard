@@ -1367,7 +1367,7 @@ async function syncRecentFromJira(days = 10) {
     updateProjectStats();
     saveDb();
 
-    db.prepare(`INSERT INTO system_settings (key, value, updated_at) VALUES ('LAST_SYNC_TIME', ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`).run(syncTime, syncTime);
+    db.prepare(`INSERT INTO system_settings (key, value) VALUES ('LAST_SYNC_TIME', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`).run(syncTime);
 
     return {
       success: true,
