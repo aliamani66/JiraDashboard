@@ -285,11 +285,33 @@ const JiraSettingsPage = () => {
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsLiveStream, setLogsLiveStream] = useState(true);
   const [logsStreamStatus, setLogsStreamStatus] = useState('connecting'); // 'connected' | 'connecting' | 'paused' | 'error'
-  const [logsLevelFilter, setLogsLevelFilter] = useState('ALL');
+  const [logsLevelFilters, setLogsLevelFilters] = useState(['ALL']);
   const [logsSearchTerm, setLogsSearchTerm] = useState('');
   const [logsAutoScroll, setLogsAutoScroll] = useState(true);
   const logsContainerRef = useRef(null);
   const [expandedLogId, setExpandedLogId] = useState(null);
+
+  const toggleLogsLevelFilter = (lvlKey) => {
+    if (lvlKey === 'ALL') {
+      setLogsLevelFilters(['ALL']);
+      return;
+    }
+
+    setLogsLevelFilters(prev => {
+      const prevWithoutAll = prev.filter(k => k !== 'ALL');
+      let next;
+      if (prevWithoutAll.includes(lvlKey)) {
+        next = prevWithoutAll.filter(k => k !== lvlKey);
+      } else {
+        next = [...prevWithoutAll, lvlKey];
+      }
+
+      if (next.length === 0) {
+        return ['ALL'];
+      }
+      return next;
+    });
+  };
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -3565,7 +3587,7 @@ const JiraSettingsPage = () => {
 
                   {/* Filter Row: Level Filter Pills and Search Input */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-                    {/* Level Pills */}
+                    {/* Level Pills (Multi-Select Supported) */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '0.8rem', color: '#94A3B8', marginLeft: '0.3rem' }}>فیلتر سطح:</span>
                       {[
@@ -3575,26 +3597,38 @@ const JiraSettingsPage = () => {
                         { key: 'INFO', label: '🔵 INFO', color: '#38BDF8' },
                         { key: 'HTTP', label: '🟣 HTTP', color: '#A855F7' },
                         { key: 'DEBUG', label: '⚙️ DEBUG', color: '#10B981' }
-                      ].map(lvl => (
-                        <button
-                          key={lvl.key}
-                          type="button"
-                          onClick={() => setLogsLevelFilter(lvl.key)}
-                          style={{
-                            padding: '0.25rem 0.7rem',
-                            borderRadius: '20px',
-                            border: `1px solid ${logsLevelFilter === lvl.key ? lvl.color : 'rgba(255, 255, 255, 0.1)'}`,
-                            background: logsLevelFilter === lvl.key ? `${lvl.color}25` : 'rgba(255, 255, 255, 0.03)',
-                            color: logsLevelFilter === lvl.key ? (lvl.key === 'ALL' ? '#FFFFFF' : lvl.color) : '#94A3B8',
-                            fontSize: '0.76rem',
-                            fontWeight: logsLevelFilter === lvl.key ? 800 : 500,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          {lvl.label}
-                        </button>
-                      ))}
+                      ].map(lvl => {
+                        const isSelected = lvl.key === 'ALL'
+                          ? logsLevelFilters.includes('ALL')
+                          : logsLevelFilters.includes(lvl.key);
+
+                        return (
+                          <button
+                            key={lvl.key}
+                            type="button"
+                            onClick={() => toggleLogsLevelFilter(lvl.key)}
+                            style={{
+                              padding: '0.28rem 0.75rem',
+                              borderRadius: '20px',
+                              border: `1px solid ${isSelected ? lvl.color : 'rgba(255, 255, 255, 0.12)'}`,
+                              background: isSelected ? `${lvl.color}28` : 'rgba(255, 255, 255, 0.03)',
+                              color: isSelected ? (lvl.key === 'ALL' ? '#FFFFFF' : lvl.color) : '#94A3B8',
+                              fontSize: '0.76rem',
+                              fontWeight: isSelected ? 800 : 500,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              boxShadow: isSelected ? `0 0 12px ${lvl.color}35` : 'none',
+                              transition: 'all 0.2s ease'
+                            }}
+                            title={lvl.key === 'ALL' ? 'نمایش تمام سطوح لاگ' : `انتخاب/لغو فیلتر سطح ${lvl.key}`}
+                          >
+                            {isSelected && lvl.key !== 'ALL' && <span style={{ fontSize: '0.75rem', fontWeight: 900 }}>✓</span>}
+                            {lvl.label}
+                          </button>
+                        );
+                      })}
                     </div>
 
                     {/* Search Input */}
@@ -3668,7 +3702,7 @@ const JiraSettingsPage = () => {
                     <span style={{ fontSize: '0.75rem', color: '#06B6D4', fontFamily: 'monospace' }}>
                       {(() => {
                         const filtered = systemLogs.filter(l => {
-                          if (logsLevelFilter !== 'ALL' && l.level !== logsLevelFilter) return false;
+                          if (!logsLevelFilters.includes('ALL') && !logsLevelFilters.includes(l.level)) return false;
                           if (logsSearchTerm) {
                             const q = logsSearchTerm.toLowerCase();
                             return l.message?.toLowerCase().includes(q) || l.tag?.toLowerCase().includes(q) || l.stack?.toLowerCase().includes(q);
@@ -3696,7 +3730,7 @@ const JiraSettingsPage = () => {
                   >
                     {(() => {
                       const filtered = systemLogs.filter(l => {
-                        if (logsLevelFilter !== 'ALL' && l.level !== logsLevelFilter) return false;
+                        if (!logsLevelFilters.includes('ALL') && !logsLevelFilters.includes(l.level)) return false;
                         if (logsSearchTerm) {
                           const q = logsSearchTerm.toLowerCase();
                           return l.message?.toLowerCase().includes(q) || l.tag?.toLowerCase().includes(q) || l.stack?.toLowerCase().includes(q);
