@@ -87,15 +87,20 @@ async function start() {
   }
 
   // Start HTTP Server FIRST so API endpoints & login are immediately available
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
 
   // Initialize Cache Sync Cron (runs only at configured intervals, not unconditionally on startup)
   initCron();
+  return server;
 }
 
-start().catch(err => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  start().catch(err => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { app, start };

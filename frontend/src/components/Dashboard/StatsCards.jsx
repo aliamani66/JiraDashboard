@@ -47,7 +47,7 @@ const StatCard = ({ title, value, icon: Icon, colorClass, delay, onClick }) => {
   );
 };
 
-const StatsCards = ({ stats, projects = [], onExport }) => {
+const StatsCards = ({ stats = {}, projects = [], onExport }) => {
   const navigate = useNavigate();
 
   return (
