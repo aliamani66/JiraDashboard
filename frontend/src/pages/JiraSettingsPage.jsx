@@ -1285,13 +1285,86 @@ const JiraSettingsPage = () => {
       {/* Toast */}
       <AnimatePresence>
         {toast && (
-          <motion.div
-            className={`ump-toast ${toast.type}`}
-            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-          >
-            {toast.type === 'success' ? <CheckCircle2 size={17} /> : <AlertTriangle size={17} />}
-            {toast.msg}
-          </motion.div>
+          <div style={{
+            position: 'fixed',
+            top: '28px',
+            left: 0,
+            right: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 99999,
+            pointerEvents: 'none',
+            padding: '0 1rem'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, y: -25, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -25, scale: 0.92 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              style={{
+                pointerEvents: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.85rem',
+                padding: '0.85rem 1.6rem',
+                borderRadius: '16px',
+                backdropFilter: 'blur(25px)',
+                WebkitBackdropFilter: 'blur(25px)',
+                background: toast.type === 'error'
+                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.96), rgba(185, 28, 28, 0.96))'
+                  : toast.type === 'warning'
+                  ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.96), rgba(217, 119, 6, 0.96))'
+                  : toast.type === 'info'
+                  ? 'linear-gradient(135deg, rgba(56, 189, 248, 0.96), rgba(14, 165, 233, 0.96))'
+                  : 'linear-gradient(135deg, rgba(16, 185, 129, 0.96), rgba(5, 150, 105, 0.96))',
+                border: toast.type === 'error'
+                  ? '1px solid rgba(254, 202, 202, 0.5)'
+                  : toast.type === 'warning'
+                  ? '1px solid rgba(254, 240, 138, 0.5)'
+                  : toast.type === 'info'
+                  ? '1px solid rgba(186, 230, 253, 0.5)'
+                  : '1px solid rgba(167, 243, 208, 0.5)',
+                boxShadow: '0 20px 45px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 0, 0, 0.35)',
+                color: '#FFFFFF',
+                fontSize: '0.92rem',
+                fontWeight: 700,
+                maxWidth: '680px',
+                textAlign: 'right',
+                direction: 'rtl'
+              }}
+            >
+              {toast.type === 'error' ? (
+                <AlertTriangle size={22} color="#FFFFFF" style={{ flexShrink: 0 }} />
+              ) : toast.type === 'warning' ? (
+                <AlertTriangle size={22} color="#FFFFFF" style={{ flexShrink: 0 }} />
+              ) : (
+                <CheckCircle2 size={22} color="#FFFFFF" style={{ flexShrink: 0 }} />
+              )}
+              <span style={{ lineHeight: 1.5, flex: 1 }}>{toast.msg}</span>
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF',
+                  cursor: 'pointer',
+                  marginRight: '0.25rem',
+                  flexShrink: 0
+                }}
+                title="بستن"
+              >
+                <X size={14} />
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
