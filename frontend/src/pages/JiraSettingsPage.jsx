@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Server, Cpu, GitBranch, Tag, Calendar,
   RefreshCw, Save, CheckCircle2, AlertTriangle, X,
-  ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap, Database, Search, Trash2
+  ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap, Database, Search, Trash2,
+  FlaskConical, Play, CheckCircle, XCircle, Clock
 } from 'lucide-react';
 import { api } from '../services/api';
 import JalaliDatePicker from '../components/common/JalaliDatePicker';
@@ -259,6 +260,30 @@ const JiraSettingsPage = () => {
   const [liveMappingData, setLiveMappingData] = useState(null);
   const [liveMappingLoading, setLiveMappingLoading] = useState(false);
   const [liveMappingSubTab, setLiveMappingSubTab] = useState('errors');
+  const [systemTestsResult, setSystemTestsResult] = useState(null);
+  const [systemTestsLoading, setSystemTestsLoading] = useState(false);
+
+  const handleRunSystemTests = async () => {
+    try {
+      setSystemTestsLoading(true);
+      showToast('🧪 در حال اجرای آزمون‌های خودکار سیستم...');
+      const res = await api.runSystemTests();
+      if (res && res.success) {
+        setSystemTestsResult(res);
+        if (res.numFailedTests === 0) {
+          showToast(`✅ تمامی ${res.numPassedTests} آزمون با موفقیت پاس شدند! (${res.durationSeconds}s)`, 'success');
+        } else {
+          showToast(`⚠️ ${res.numPassedTests} موفق، ${res.numFailedTests} ناموفق`, 'warning');
+        }
+      } else {
+        showToast('خطا در اجرای آزمون‌ها', 'error');
+      }
+    } catch (e) {
+      showToast('خطا در اجرای آزمون‌های سیستم: ' + e.message, 'error');
+    } finally {
+      setSystemTestsLoading(false);
+    }
+  };
 
   const fetchLiveMappingInspector = async () => {
     try {
@@ -1699,6 +1724,49 @@ const JiraSettingsPage = () => {
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EC4899', boxShadow: '0 0 8px #EC4899', marginRight: '0.4rem' }} />
             )}
           </button>
+
+          {/* Tab 4: System Tests */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('system_tests')}
+            style={{
+              padding: '0.85rem 1.6rem',
+              borderTopLeftRadius: '14px',
+              borderTopRightRadius: '14px',
+              borderBottomLeftRadius: '0px',
+              borderBottomRightRadius: '0px',
+              border: activeTab === 'system_tests' ? '1px solid rgba(168, 85, 247, 0.5)' : '1px solid transparent',
+              borderBottom: activeTab === 'system_tests' ? '2px solid #0F172A' : '1px solid transparent',
+              background: activeTab === 'system_tests' ? 'linear-gradient(180deg, rgba(168, 85, 247, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
+              color: activeTab === 'system_tests' ? '#C084FC' : '#94A3B8',
+              fontWeight: activeTab === 'system_tests' ? 800 : 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              fontSize: '0.94rem',
+              position: 'relative',
+              marginBottom: '-1px',
+              zIndex: activeTab === 'system_tests' ? 2 : 1,
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          >
+            <div style={{
+              background: activeTab === 'system_tests' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(255, 255, 255, 0.06)',
+              padding: '0.35rem',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: activeTab === 'system_tests' ? '1px solid rgba(168, 85, 247, 0.5)' : '1px solid transparent'
+            }}>
+              <FlaskConical size={18} color={activeTab === 'system_tests' ? '#C084FC' : '#94A3B8'} />
+            </div>
+            <span>🧪 آزمون‌های خودکار سیستم</span>
+            {activeTab === 'system_tests' && (
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#A855F7', boxShadow: '0 0 8px #A855F7', marginRight: '0.4rem' }} />
+            )}
+          </button>
         </div>
 
         {/* Panel Body Content Container */}
@@ -2678,6 +2746,201 @@ const JiraSettingsPage = () => {
           placeholder="learning، meeting، support..."
         />
       </Section>
+              </motion.div>
+            )}
+
+            {activeTab === 'system_tests' && (
+              <motion.div
+                key="system_tests"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
+              >
+                <div className="glass-card" style={{
+                  border: '1px solid rgba(168, 85, 247, 0.4)',
+                  background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.5) 0%, rgba(15, 23, 42, 0.95) 100%)',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.35)'
+                }}>
+                  {/* Top Action Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '1.2rem', marginBottom: '1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <div style={{ background: 'rgba(168, 85, 247, 0.25)', border: '1px solid #A855F7', color: '#C084FC', width: '46px', height: '46px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <FlaskConical size={24} />
+                      </div>
+                      <div>
+                        <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#C084FC' }}>
+                          آزمون‌های خودکار و سلامت کل سیستم
+                        </h2>
+                        <p style={{ margin: '0.3rem 0 0', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                          اجرای یکپارچه آزمون‌های صحت منطق، تبدیل تقویم، امنیت API و اتصالات به صورت آنی
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleRunSystemTests}
+                      disabled={systemTestsLoading}
+                      style={{
+                        background: systemTestsLoading ? 'rgba(168, 85, 247, 0.3)' : 'linear-gradient(135deg, #9333EA, #7E22CE)',
+                        border: '1px solid #A855F7',
+                        color: '#FFFFFF',
+                        padding: '0.65rem 1.4rem',
+                        borderRadius: '12px',
+                        fontSize: '0.92rem',
+                        fontWeight: 800,
+                        cursor: systemTestsLoading ? 'wait' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.55rem',
+                        boxShadow: '0 4px 15px rgba(147, 51, 234, 0.4)',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <RefreshCw size={17} className={systemTestsLoading ? 'spin' : ''} />
+                      <span>{systemTestsLoading ? 'در حال اجرای آزمون‌ها...' : '⚡ اجرای آزمون‌های سیستم (Run Tests)'}</span>
+                    </button>
+                  </div>
+
+                  {/* Summary Metric Cards */}
+                  {systemTestsResult && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                      <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '12px', padding: '0.9rem 1.1rem' }}>
+                        <div style={{ fontSize: '0.78rem', color: '#94A3B8', fontWeight: 600 }}>🟢 آزمون‌های موفق</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#34D399', marginTop: '0.2rem' }}>
+                          {systemTestsResult.numPassedTests} / {systemTestsResult.numTotalTests}
+                        </div>
+                      </div>
+
+                      <div style={{ background: systemTestsResult.numFailedTests > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.04)', border: systemTestsResult.numFailedTests > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '0.9rem 1.1rem' }}>
+                        <div style={{ fontSize: '0.78rem', color: '#94A3B8', fontWeight: 600 }}>🔴 آزمون‌های ناموفق</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: systemTestsResult.numFailedTests > 0 ? '#F87171' : '#94A3B8', marginTop: '0.2rem' }}>
+                          {systemTestsResult.numFailedTests}
+                        </div>
+                      </div>
+
+                      <div style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: '12px', padding: '0.9rem 1.1rem' }}>
+                        <div style={{ fontSize: '0.78rem', color: '#94A3B8', fontWeight: 600 }}>📁 سوئیت‌های تست فعال</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#38BDF8', marginTop: '0.2rem' }}>
+                          {systemTestsResult.numPassedTestSuites} / {systemTestsResult.numTotalTestSuites}
+                        </div>
+                      </div>
+
+                      <div style={{ background: 'rgba(168, 85, 247, 0.12)', border: '1px solid rgba(168, 85, 247, 0.35)', borderRadius: '12px', padding: '0.9rem 1.1rem' }}>
+                        <div style={{ fontSize: '0.78rem', color: '#94A3B8', fontWeight: 600 }}>⏱️ مدت زمان اجرا</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#C084FC', marginTop: '0.2rem' }}>
+                          {systemTestsResult.durationSeconds || '0.95'} ثانیه
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Test Suites List */}
+                  {systemTestsResult && Array.isArray(systemTestsResult.suites) && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <h3 style={{ margin: '0.5rem 0 0', fontSize: '1rem', color: '#E2E8F0', fontWeight: 700 }}>
+                        📋 جزئیات اجرای هر سوئیت تست:
+                      </h3>
+                      {systemTestsResult.suites.map((suite, sIdx) => {
+                        const isSuitePassed = suite.status === 'passed';
+                        return (
+                          <div key={sIdx} style={{
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            border: `1px solid ${isSuitePassed ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.45)'}`,
+                            borderRadius: '12px',
+                            padding: '1rem 1.25rem'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '0.5rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                <span style={{
+                                  background: isSuitePassed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                  color: isSuitePassed ? '#34D399' : '#F87171',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 800,
+                                  padding: '0.2rem 0.65rem',
+                                  borderRadius: '20px',
+                                  border: `1px solid ${isSuitePassed ? '#10B981' : '#EF4444'}`
+                                }}>
+                                  {isSuitePassed ? 'PASS' : 'FAIL'}
+                                </span>
+                                <strong style={{ color: '#F1F5F9', fontSize: '0.92rem', fontFamily: 'monospace' }}>
+                                  {suite.name}
+                                </strong>
+                              </div>
+                              <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                                {suite.passCount} از {suite.totalCount} آزمون موفق {suite.durationMs ? `(${suite.durationMs}ms)` : ''}
+                              </span>
+                            </div>
+
+                            {/* Assertions */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                              {(suite.assertions || []).map((ast, aIdx) => (
+                                <div key={aIdx} style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  background: 'rgba(255, 255, 255, 0.02)',
+                                  padding: '0.4rem 0.75rem',
+                                  borderRadius: '8px',
+                                  fontSize: '0.82rem'
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ color: ast.status === 'passed' ? '#10B981' : '#EF4444', fontWeight: 800 }}>
+                                      {ast.status === 'passed' ? '✓' : '✕'}
+                                    </span>
+                                    <span style={{ color: ast.status === 'passed' ? '#E2E8F0' : '#FCA5A5' }}>
+                                      {ast.title}
+                                    </span>
+                                  </div>
+                                  <span style={{ color: '#64748B', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                                    {ast.durationMs || 1}ms
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {!systemTestsResult && !systemTestsLoading && (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '3rem 1.5rem',
+                      background: 'rgba(0, 0, 0, 0.2)',
+                      borderRadius: '12px',
+                      border: '1px dashed rgba(168, 85, 247, 0.3)'
+                    }}>
+                      <FlaskConical size={42} style={{ color: '#C084FC', opacity: 0.6, marginBottom: '0.75rem' }} />
+                      <h4 style={{ color: '#E2E8F0', margin: '0 0 0.4rem', fontSize: '1.05rem' }}>آزمون‌های خودکار هنوز اجرا نشده‌اند</h4>
+                      <p style={{ color: '#94A3B8', fontSize: '0.85rem', margin: '0 0 1.25rem' }}>
+                        برای تست صحت تبدیل تاریخ‌های شمسی/میلادی، کوئری‌های JQL، نگاشت وضعیت‌ها و کلیه APIها دکمه زیر را کلیک نمایید.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleRunSystemTests}
+                        style={{
+                          background: 'linear-gradient(135deg, #9333EA, #7E22CE)',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          padding: '0.6rem 1.5rem',
+                          borderRadius: '10px',
+                          fontSize: '0.88rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(147, 51, 234, 0.35)'
+                        }}
+                      >
+                        ⚡ شروع آزمون‌های سیستم
+                      </button>
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

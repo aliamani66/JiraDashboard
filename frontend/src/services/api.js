@@ -72,4 +72,5 @@ export const api = {
   getDbTables: () => fetchWithAuth('/db/tables'),
   getDbTableData: (tableName, page = 1, search = '', category = 'all', limit = 50) => fetchWithAuth(`/db/data/${tableName}?page=${page}&search=${encodeURIComponent(search)}&category=${category}&limit=${limit}`),
   runDbQuery: (sql) => fetchWithAuth('/db/query', { method: 'POST', body: JSON.stringify({ sql }) }),
+  runSystemTests: () => fetchWithAuth('/jira/run-tests', { method: 'POST' }),
 };
