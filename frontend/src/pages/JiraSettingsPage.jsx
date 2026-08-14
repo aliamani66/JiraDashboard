@@ -242,12 +242,12 @@ const JiraSettingsPage = () => {
   const [cfg, setCfg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => {
-    if (isAdmin || perms.includes('jira_diagnostics') || perms.includes('jira_settings')) return 'database';
-    if (perms.includes('jira_config')) return 'connection';
-    if (perms.includes('jira_mapping')) return 'mapping';
-    if (perms.includes('system_tests')) return 'system_tests';
-    if (perms.includes('system_logs')) return 'system_logs';
-    return 'database';
+    if (isAdmin || canViewDiag) return 'database';
+    if (canConfigJira) return 'connection';
+    if (canMapping) return 'mapping';
+    if (canSystemTests) return 'system_tests';
+    if (canSystemLogs) return 'system_logs';
+    return 'mapping';
   });
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -2054,7 +2054,7 @@ const JiraSettingsPage = () => {
           flexWrap: 'wrap'
         }}>
           {/* Tab 1: Database (Diagnostic & Stats) */}
-          {(isAdmin || canViewDiag || perms.includes('jira_settings')) && (
+          {(isAdmin || canViewDiag) && (
             <button
               type="button"
               onClick={() => setActiveTab('database')}
@@ -2099,7 +2099,7 @@ const JiraSettingsPage = () => {
           )}
 
           {/* Tab 2: Connection */}
-          {(isAdmin || canConfigJira || perms.includes('jira_settings')) && (
+          {(isAdmin || canConfigJira) && (
             <button
               type="button"
               onClick={() => setActiveTab('connection')}
@@ -2144,7 +2144,7 @@ const JiraSettingsPage = () => {
           )}
 
           {/* Tab 3: Mapping */}
-          {(isAdmin || canMapping || perms.includes('jira_settings')) && (
+          {(isAdmin || canMapping) && (
             <button
               type="button"
               onClick={() => setActiveTab('mapping')}
@@ -2189,7 +2189,7 @@ const JiraSettingsPage = () => {
           )}
 
           {/* Tab 4: System Tests */}
-          {(isAdmin || canSystemTests || perms.includes('jira_settings')) && (
+          {(isAdmin || canSystemTests) && (
             <button
               type="button"
               onClick={() => setActiveTab('system_tests')}
@@ -2234,7 +2234,7 @@ const JiraSettingsPage = () => {
           )}
 
           {/* Tab 5: 📜 لاگ‌های زنده بک‌اند */}
-          {(isAdmin || canSystemLogs || perms.includes('jira_settings')) && (
+          {(isAdmin || canSystemLogs) && (
             <button
               type="button"
               onClick={() => setActiveTab('system_logs')}
