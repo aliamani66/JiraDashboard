@@ -336,7 +336,7 @@
   box-shadow: 0 0 14px rgba(239, 68, 68, 0.45);
 }
 
-/* Modal Overlay & Responsive Form Content */
+/* ─── MODAL CONTAINER & STRUCTURE ─── */
 .ump-modal-overlay {
   position: fixed;
   top: 0;
@@ -351,14 +351,16 @@
   justify-content: center;
   align-items: center;
   padding: 1.5rem;
+  direction: rtl;
 }
 
 .ump-modal-content.large {
   width: 100%;
-  max-width: 860px;
-  max-height: 90vh;
-  padding: 1.85rem;
-  background: rgba(15, 23, 42, 0.95) !important;
+  max-width: 880px;
+  height: 86vh;
+  max-height: 860px;
+  padding: 1.6rem 1.85rem 1.25rem 1.85rem;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99)) !important;
   backdrop-filter: blur(30px) saturate(200%) !important;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
@@ -366,13 +368,15 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
+/* FIXED MODAL HEADER */
 .ump-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-bottom: 0.85rem;
   flex-shrink: 0;
@@ -403,18 +407,29 @@
   color: #FFFFFF;
 }
 
-.ump-form {
+/* FORM WRAPPER (FLEX COLUMN, INNER SCROLL) */
+.ump-form-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* SCROLLABLE INNER BODY */
+.ump-form-scrollable {
+  flex: 1;
   overflow-y: auto;
   padding-left: 0.4rem;
   padding-right: 0.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
 }
 
 .ump-form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 0.85rem;
   flex-shrink: 0;
 }
@@ -449,15 +464,32 @@
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
 }
 
-/* ─── PERMISSIONS CONTAINER & CATEGORIZED CARDS ─── */
+/* ─── ROLE INFO BOX ─── */
+.ump-role-infobox {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.ump-role-infobox.admin {
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(236, 72, 153, 0.35);
+  color: #FBCFE8;
+}
+
+/* ─── PERMISSIONS CONTAINER ─── */
 .ump-perms-container {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.9rem;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
-  padding: 1.1rem;
+  padding: 1rem;
 }
 
 /* Presets Bar */
@@ -470,14 +502,14 @@
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
-  padding: 0.6rem 0.85rem;
+  padding: 0.55rem 0.85rem;
 }
 
 .ump-presets-title {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #F59E0B;
 }
@@ -493,9 +525,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.28rem 0.7rem;
+  padding: 0.25rem 0.65rem;
   border-radius: 8px;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   font-weight: 700;
   font-family: inherit;
   color: var(--text-primary);
@@ -509,15 +541,67 @@
   transform: translateY(-1px);
 }
 
+/* ─── TABS & SEARCH BAR (NEW) ─── */
+.ump-tabs-search-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.ump-perm-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.ump-perm-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ump-perm-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ump-perm-tab-btn.active {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+}
+
+.ump-tab-count-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.08);
+}
+
 /* Search bar */
 .ump-perm-search-box {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
   background: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
-  padding: 0.45rem 0.85rem;
+  padding: 0.35rem 0.75rem;
+  min-width: 200px;
+  flex: 1;
+  max-width: 280px;
 }
 
 .ump-perm-search-box input {
@@ -525,7 +609,7 @@
   border: none;
   outline: none;
   color: #FFFFFF;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   width: 100%;
   font-family: inherit;
 }
@@ -542,14 +626,14 @@
 .ump-groups-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .ump-group-card {
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  padding: 0.9rem;
+  padding: 0.85rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -562,7 +646,7 @@
   flex-wrap: wrap;
   gap: 0.6rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding-bottom: 0.6rem;
+  padding-bottom: 0.5rem;
 }
 
 .ump-group-info {
@@ -572,18 +656,18 @@
 }
 
 .ump-group-icon {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
 }
 
 .ump-group-title {
-  margin: 0 0 0.15rem 0;
-  font-size: 0.92rem;
+  margin: 0 0 0.1rem 0;
+  font-size: 0.88rem;
   font-weight: 800;
 }
 
 .ump-group-desc {
   margin: 0;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
 }
 
@@ -594,11 +678,11 @@
 }
 
 .ump-group-badge {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.06);
   color: #94A3B8;
-  padding: 0.2rem 0.55rem;
+  padding: 0.18rem 0.5rem;
   border-radius: 6px;
   font-family: monospace;
 }
@@ -607,10 +691,10 @@
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-secondary);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
   font-family: inherit;
-  padding: 0.25rem 0.65rem;
+  padding: 0.22rem 0.6rem;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -624,18 +708,18 @@
 /* Permissions Grid */
 .ump-perms-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.55rem;
 }
 
 .ump-perm-card {
   display: flex;
   align-items: flex-start;
-  gap: 0.65rem;
+  gap: 0.6rem;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  padding: 0.65rem 0.75rem;
+  padding: 0.6rem 0.75rem;
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
@@ -660,13 +744,13 @@
 }
 
 .ump-perm-checkbox {
-  padding-top: 0.15rem;
+  padding-top: 0.12rem;
   flex-shrink: 0;
 }
 
 .ump-custom-checkbox {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   border-radius: 5px;
   border: 1.5px solid rgba(255, 255, 255, 0.3);
   display: flex;
@@ -718,7 +802,7 @@
 }
 
 .ump-perm-label {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
@@ -727,30 +811,33 @@
 }
 
 .ump-danger-badge {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 900;
   background: rgba(239, 68, 68, 0.25);
   border: 1px solid rgba(239, 68, 68, 0.5);
   color: #FCA5A5;
-  padding: 0.08rem 0.35rem;
+  padding: 0.06rem 0.35rem;
   border-radius: 4px;
 }
 
 .ump-perm-help {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   line-height: 1.35;
 }
 
+/* ─── PINNED FIXED MODAL FOOTER ─── */
 .ump-modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-  margin-top: 0.5rem;
   padding-top: 0.85rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   flex-shrink: 0;
+  background: rgba(15, 23, 42, 0.98);
+  margin-top: auto;
+  z-index: 10;
 }
 
 .ump-cancel-btn {

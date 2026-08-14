@@ -29,7 +29,9 @@ import {
   Table,
   Code2,
   Lock,
-  Sparkles
+  Sparkles,
+  Info,
+  Layers
 } from 'lucide-react';
 import { api } from '../services/api';
 import './UserManagementPage.css';
@@ -38,8 +40,9 @@ import './UserManagementPage.css';
 export const PERMISSION_GROUPS = [
   {
     id: 'navigation',
-    title: 'منوهای اصلی سامانه (ناوبری سمت راست)',
-    description: 'دسترسی به بخش‌ها و صفحات در نوار کناری (سایدبار)',
+    title: 'منوهای اصلی سامانه (سایدبار)',
+    shortTitle: 'منوهای سایدبار',
+    description: 'دسترسی به بخش‌ها و صفحات در نوار کناری راست سامانه',
     icon: '🧭',
     color: '#38BDF8',
     permissions: [
@@ -55,7 +58,8 @@ export const PERMISSION_GROUPS = [
   },
   {
     id: 'jira_settings',
-    title: 'تب‌ها و عملکردهای تنظیمات جیرا',
+    title: 'تنظیمات و پایش جیرا',
+    shortTitle: 'تنظیمات جیرا',
     description: 'کنترل دسترسی به تب‌های تخصصی و عملیات‌های حساس صفحه تنظیمات',
     icon: '⚙️',
     color: '#A855F7',
@@ -71,7 +75,8 @@ export const PERMISSION_GROUPS = [
   },
   {
     id: 'database_manager',
-    title: 'تب‌ها و عملکردهای مدیریت دیتابیس',
+    title: 'مدیریت و پایش دیتابیس',
+    shortTitle: 'دیتابیس SQLite',
     description: 'کنترل سطح دسترسی به داده‌ها و کنسول دیتابیس SQLite',
     icon: '🗄️',
     color: '#10B981',
@@ -112,7 +117,7 @@ const ROLE_PRESETS = [
     perms: ['dashboard', 'sprints', 'overall_timeline', 'manager_reports', 'waiting_tasks']
   },
   {
-    name: 'توسعه‌دهنده / پشتیبان',
+    name: 'توسعه‌دهنده / DevOps',
     role: 'manager',
     icon: '🛠️',
     color: '#F59E0B',
@@ -128,6 +133,7 @@ const UserManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [activePermTab, setActivePermTab] = useState('navigation'); // 'navigation' | 'jira_settings' | 'database_manager' | 'all'
   const [permSearchTerm, setPermSearchTerm] = useState('');
 
   // New User Form State
@@ -212,7 +218,25 @@ const UserManagementPage = () => {
         permissions: [...preset.perms]
       });
     }
-    showToastMsg(`الگوی «${preset.name}» اعمال گردید.`);
+    showToastMsg(`الگوی «${preset.name}» اعمال شد.`);
+  };
+
+  // On Role Change in Dropdown: automatically suggest/set default permissions
+  const handleRoleChange = (newRole, isEdit = false) => {
+    const matchedPreset = ROLE_PRESETS.find(p => p.role === newRole);
+    if (isEdit && editingUser) {
+      setEditingUser({
+        ...editingUser,
+        role: newRole,
+        permissions: matchedPreset ? [...matchedPreset.perms] : editingUser.permissions
+      });
+    } else {
+      setFormData({
+        ...formData,
+        role: newRole,
+        permissions: matchedPreset ? [...matchedPreset.perms] : formData.permissions
+      });
+    }
   };
 
   const handleCreateUser = async (e) => {
@@ -247,7 +271,7 @@ const UserManagementPage = () => {
         role: editingUser.role,
         display_name: editingUser.display_name
       });
-      showToastMsg('دسترسی‌های کاربر به‌روزرسانی شد.');
+      showToastMsg('دسترسی‌های کاربر با موفقیت به‌روزرسانی شد.');
       setEditingUser(null);
       fetchUsers();
     } catch (err) {
@@ -273,16 +297,32 @@ const UserManagementPage = () => {
   };
 
   // Helper to render permissions selector component
-  const renderPermissionsSelector = (currentPerms, isEdit) => {
+  const renderPermissionsSelector = (currentPerms, isEdit, userRole) => {
     const term = permSearchTerm.trim().toLowerCase();
+
+    // Determine which groups to show based on active tab
+    const visibleGroups = PERMISSION_GROUPS.filter(g => {
+      if (activePermTab === 'all') return true;
+      return g.id === activePermTab;
+    });
 
     return (
       <div className="ump-perms-container">
+        {/* Role Explanation Note */}
+        {userRole === 'admin' && (
+          <div className="ump-role-infobox admin">
+            <Shield size={16} color="#F472B6" />
+            <span>
+              👑 <strong>توجه به نقش مدیر ارشد:</strong> کاربر با نقش Admin، به صورت پیش‌فرض و نامحدود به تمامی بخش‌ها و عملیات‌های حساس (از جمله بازسازی دیتابیس) دسترسی دارد.
+            </span>
+          </div>
+        )}
+
         {/* Presets Row */}
         <div className="ump-presets-row">
           <div className="ump-presets-title">
             <Sparkles size={14} color="#F59E0B" />
-            <span>الگوهای دسترسی آماده:</span>
+            <span>الگوهای آماده:</span>
           </div>
           <div className="ump-presets-btns">
             {ROLE_PRESETS.map((p, idx) => (
@@ -300,31 +340,83 @@ const UserManagementPage = () => {
           </div>
         </div>
 
-        {/* Search Input */}
-        <div className="ump-perm-search-box">
-          <Search size={15} color="#94A3B8" />
-          <input
-            type="text"
-            value={permSearchTerm}
-            onChange={e => setPermSearchTerm(e.target.value)}
-            placeholder="جستجو در نام منو، بخش یا مجوز..."
-          />
-          {permSearchTerm && (
-            <button type="button" onClick={() => setPermSearchTerm('')} className="ump-search-clear">
-              <X size={13} />
+        {/* Search Input & Category Tab Navigation */}
+        <div className="ump-tabs-search-bar">
+          {/* Tabs Navigation */}
+          <div className="ump-perm-tabs">
+            {PERMISSION_GROUPS.map(g => {
+              const count = g.permissions.filter(p => currentPerms.includes(p.key)).length;
+              const isActive = activePermTab === g.id;
+
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setActivePermTab(g.id)}
+                  className={`ump-perm-tab-btn ${isActive ? 'active' : ''}`}
+                  style={{
+                    borderColor: isActive ? g.color : 'transparent',
+                    color: isActive ? g.color : '#94A3B8'
+                  }}
+                >
+                  <span>{g.icon}</span>
+                  <span>{g.shortTitle}</span>
+                  <span className="ump-tab-count-badge" style={{ background: isActive ? `${g.color}25` : 'rgba(255,255,255,0.06)' }}>
+                    {count}/{g.permissions.length}
+                  </span>
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={() => setActivePermTab('all')}
+              className={`ump-perm-tab-btn ${activePermTab === 'all' ? 'active' : ''}`}
+              style={{
+                borderColor: activePermTab === 'all' ? '#38BDF8' : 'transparent',
+                color: activePermTab === 'all' ? '#38BDF8' : '#94A3B8'
+              }}
+            >
+              <Layers size={14} />
+              <span>همه بخش‌ها</span>
+              <span className="ump-tab-count-badge">
+                {currentPerms.length}/{ALL_PERMISSION_KEYS.length}
+              </span>
             </button>
-          )}
+          </div>
+
+          {/* Search Box */}
+          <div className="ump-perm-search-box">
+            <Search size={14} color="#94A3B8" />
+            <input
+              type="text"
+              value={permSearchTerm}
+              onChange={e => setPermSearchTerm(e.target.value)}
+              placeholder="جستجو در مجوزها..."
+            />
+            {permSearchTerm && (
+              <button type="button" onClick={() => setPermSearchTerm('')} className="ump-search-clear">
+                <X size={13} />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Categorized Groups */}
+        {/* Categorized Groups Inside Tab */}
         <div className="ump-groups-list">
-          {PERMISSION_GROUPS.map(group => {
+          {visibleGroups.map(group => {
             const filteredPerms = group.permissions.filter(p => {
               if (!term) return true;
               return p.label.toLowerCase().includes(term) || p.description.toLowerCase().includes(term) || p.key.toLowerCase().includes(term);
             });
 
-            if (filteredPerms.length === 0) return null;
+            if (filteredPerms.length === 0) {
+              return (
+                <div key={group.id} style={{ textAlign: 'center', padding: '1.5rem', color: '#64748B', fontSize: '0.84rem' }}>
+                  هیچ مجوزی در بخش «{group.title}» با عبارت «{permSearchTerm}» یافت نشد.
+                </div>
+              );
+            }
 
             const groupKeys = group.permissions.map(p => p.key);
             const activeCount = groupKeys.filter(k => currentPerms.includes(k)).length;
@@ -421,7 +513,15 @@ const UserManagementPage = () => {
             <span>بروزرسانی</span>
           </button>
 
-          <button className="ump-add-user-btn" onClick={() => setShowCreateModal(true)} title="افزودن کاربر جدید به سامانه">
+          <button
+            className="ump-add-user-btn"
+            onClick={() => {
+              setActivePermTab('navigation');
+              setPermSearchTerm('');
+              setShowCreateModal(true);
+            }}
+            title="افزودن کاربر جدید به سامانه"
+          >
             <UserPlus size={16} />
             <span>کاربر جدید</span>
           </button>
@@ -479,7 +579,7 @@ const UserManagementPage = () => {
                           <div className="ump-avatar">{u.display_name ? u.display_name.charAt(0) : u.username.charAt(0)}</div>
                           <div>
                             <strong className="ump-display-name">{u.display_name || u.username}</strong>
-                            {isAdmin && <span className="ump-admin-star">★ مدیر اصلی</span>}
+                            {isAdmin && <span className="ump-admin-star">★ مدیر ارشد سیستم</span>}
                           </div>
                         </div>
                       </td>
@@ -515,6 +615,7 @@ const UserManagementPage = () => {
                           <button
                             className="ump-action-btn edit"
                             onClick={() => {
+                              setActivePermTab('navigation');
                               setPermSearchTerm('');
                               setEditingUser({
                                 ...u,
@@ -558,6 +659,7 @@ const UserManagementPage = () => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.94, opacity: 0, y: 15 }}
             >
+              {/* FIXED MODAL HEADER */}
               <div className="ump-modal-header">
                 <h3>
                   <UserPlus size={20} className="text-accent-green" />
@@ -568,56 +670,61 @@ const UserManagementPage = () => {
                 </button>
               </div>
 
-              <form onSubmit={handleCreateUser} className="ump-form">
-                <div className="ump-form-grid">
-                  <div className="ump-input-group">
-                    <label>نام و نام خانوادگی:</label>
-                    <input
-                      type="text"
-                      value={formData.display_name}
-                      onChange={e => setFormData({ ...formData, display_name: e.target.value })}
-                      placeholder="مثال: علی امانی"
-                    />
+              {/* FORM WRAPPER WITH FIXED FOOTER & SCROLLABLE BODY */}
+              <form onSubmit={handleCreateUser} className="ump-form-wrapper">
+                {/* SCROLLABLE INNER BODY */}
+                <div className="ump-form-scrollable">
+                  <div className="ump-form-grid">
+                    <div className="ump-input-group">
+                      <label>نام و نام خانوادگی:</label>
+                      <input
+                        type="text"
+                        value={formData.display_name}
+                        onChange={e => setFormData({ ...formData, display_name: e.target.value })}
+                        placeholder="مثال: علی امانی"
+                      />
+                    </div>
+
+                    <div className="ump-input-group">
+                      <label>نام کاربری (جهت ورود به سیستم):</label>
+                      <input
+                        type="text"
+                        value={formData.username}
+                        onChange={e => setFormData({ ...formData, username: e.target.value })}
+                        placeholder="مثال: amani"
+                        required
+                      />
+                    </div>
+
+                    <div className="ump-input-group">
+                      <label>کلمه عبور:</label>
+                      <input
+                        type="password"
+                        value={formData.password}
+                        onChange={e => setFormData({ ...formData, password: e.target.value })}
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+
+                    <div className="ump-input-group">
+                      <label>نقش سازمانی در سامانه:</label>
+                      <select
+                        value={formData.role}
+                        onChange={e => handleRoleChange(e.target.value, false)}
+                      >
+                        <option value="viewer">مشاهده‌کننده (Viewer)</option>
+                        <option value="manager">مدیر پروژه (Project Manager)</option>
+                        <option value="admin">مدیر ارشد سیستم (Admin)</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="ump-input-group">
-                    <label>نام کاربری (جهت ورود به سیستم):</label>
-                    <input
-                      type="text"
-                      value={formData.username}
-                      onChange={e => setFormData({ ...formData, username: e.target.value })}
-                      placeholder="مثال: amani"
-                      required
-                    />
-                  </div>
-
-                  <div className="ump-input-group">
-                    <label>کلمه عبور:</label>
-                    <input
-                      type="password"
-                      value={formData.password}
-                      onChange={e => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="••••••••"
-                      required
-                    />
-                  </div>
-
-                  <div className="ump-input-group">
-                    <label>نقش سازمانی:</label>
-                    <select
-                      value={formData.role}
-                      onChange={e => setFormData({ ...formData, role: e.target.value })}
-                    >
-                      <option value="viewer">مشاهده‌کننده (Viewer)</option>
-                      <option value="manager">مدیر پروژه (Project Manager)</option>
-                      <option value="admin">مدیر ارشد سیستم (Admin)</option>
-                    </select>
-                  </div>
+                  {/* TABBED PERMISSIONS SELECTOR */}
+                  {renderPermissionsSelector(formData.permissions || [], false, formData.role)}
                 </div>
 
-                {/* PERMISSIONS SELECTOR */}
-                {renderPermissionsSelector(formData.permissions || [], false)}
-
+                {/* PINNED FIXED FOOTER */}
                 <div className="ump-modal-footer">
                   <button type="button" className="ump-cancel-btn" onClick={() => setShowCreateModal(false)}>
                     انصراف
@@ -643,6 +750,7 @@ const UserManagementPage = () => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.94, opacity: 0, y: 15 }}
             >
+              {/* FIXED MODAL HEADER */}
               <div className="ump-modal-header">
                 <h3>
                   <Edit3 size={20} className="text-accent-blue" />
@@ -653,33 +761,38 @@ const UserManagementPage = () => {
                 </button>
               </div>
 
-              <div className="ump-form">
-                <div className="ump-form-grid">
-                  <div className="ump-input-group">
-                    <label>نام و نام خانوادگی:</label>
-                    <input
-                      type="text"
-                      value={editingUser.display_name || ''}
-                      onChange={e => setEditingUser({ ...editingUser, display_name: e.target.value })}
-                    />
+              {/* FORM WRAPPER WITH FIXED FOOTER & SCROLLABLE BODY */}
+              <div className="ump-form-wrapper">
+                {/* SCROLLABLE INNER BODY */}
+                <div className="ump-form-scrollable">
+                  <div className="ump-form-grid">
+                    <div className="ump-input-group">
+                      <label>نام و نام خانوادگی:</label>
+                      <input
+                        type="text"
+                        value={editingUser.display_name || ''}
+                        onChange={e => setEditingUser({ ...editingUser, display_name: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="ump-input-group">
+                      <label>نقش کاربر در سامانه:</label>
+                      <select
+                        value={editingUser.role || 'viewer'}
+                        onChange={e => handleRoleChange(e.target.value, true)}
+                      >
+                        <option value="viewer">مشاهده‌کننده (Viewer)</option>
+                        <option value="manager">مدیر پروژه (Project Manager)</option>
+                        <option value="admin">مدیر ارشد سیستم (Admin)</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="ump-input-group">
-                    <label>نقش کاربر در سامانه:</label>
-                    <select
-                      value={editingUser.role || 'viewer'}
-                      onChange={e => setEditingUser({ ...editingUser, role: e.target.value })}
-                    >
-                      <option value="viewer">مشاهده‌کننده (Viewer)</option>
-                      <option value="manager">مدیر پروژه (Project Manager)</option>
-                      <option value="admin">مدیر ارشد سیستم (Admin)</option>
-                    </select>
-                  </div>
+                  {/* TABBED PERMISSIONS SELECTOR */}
+                  {renderPermissionsSelector(editingUser.permissions || [], true, editingUser.role)}
                 </div>
 
-                {/* PERMISSIONS SELECTOR */}
-                {renderPermissionsSelector(editingUser.permissions || [], true)}
-
+                {/* PINNED FIXED FOOTER */}
                 <div className="ump-modal-footer">
                   <button type="button" className="ump-cancel-btn" onClick={() => setEditingUser(null)}>
                     انصراف
