@@ -242,8 +242,25 @@ const JiraSettingsPage = () => {
   const [monthlySyncing, setMonthlySyncing] = useState(false);
   const syncLogsWrapperRef = useRef(null);
   const [monthlyResults, setMonthlyResults] = useState(null);
-  const [syncProgress, setSyncProgress] = useState(null);
-  const [showRangeModal, setShowRangeModal] = useState(false);
+
+  // 🔄 Unified Single-Modal Sync Flow State (Database Rebuild & Date Range Extraction)
+  const [syncFlowModal, setSyncFlowModal] = useState({
+    isOpen: false,
+    type: 'rebuild', // 'rebuild' | 'range'
+    phase: 'confirm', // 'confirm' | 'picker' | 'running' | 'completed' | 'error'
+    title: '',
+    badge: '',
+    description: '',
+    stepNum: 0,
+    totalSteps: 0,
+    progressPercent: 0,
+    currentMonthLabel: '',
+    dateRange: '',
+    totalTasksSoFar: 0,
+    results: [],
+    error: null
+  });
+
   const [jqlPreview, setJqlPreview] = useState(null);
   const [jqlPreviewLoading, setJqlPreviewLoading] = useState(false);
   const [jqlTestResults, setJqlTestResults] = useState(null);
@@ -789,10 +806,8 @@ const JiraSettingsPage = () => {
     };
   };
 
-  const executeStepByStepSync = async (monthRanges, titlePrefix) => {
-    setMonthlySyncing(true);
-    setMonthlyResults({ totalTasksSynced: 0, monthlyResults: [] });
-
+  // 🔄 UNIFIED STEP-BY-STEP SYNC ENGINE (Rebuild, Range & Monthly)
+  const executeFlowStepByStep = async (monthRanges, titlePrefix) => {
     let totalTasksSynced = 0;
     const results = [];
 
@@ -806,16 +821,15 @@ const JiraSettingsPage = () => {
       const totalSteps = monthRanges.length;
       const progressPercent = Math.round((stepNum / totalSteps) * 100);
 
-      setSyncProgress({
-        isSyncing: true,
-        titlePrefix,
+      setSyncFlowModal(prev => ({
+        ...prev,
         stepNum,
         totalSteps,
-        monthLabel: mRange.jalaliName,
+        progressPercent,
+        currentMonthLabel: mRange.jalaliName,
         dateRange: `${mRange.startStr.split(' ')[0]} تا ${mRange.endStr.split(' ')[0]}`,
-        totalTasksSoFar: totalTasksSynced,
-        progressPercent
-      });
+        totalTasksSoFar: totalTasksSynced
+      }));
 
       try {
         const res = await api.syncSingleMonthJiraConfig({
@@ -837,26 +851,24 @@ const JiraSettingsPage = () => {
           taskCount: res.taskCount || 0,
           jql: res.jql || '',
           winningVariant: res.winningVariant || '',
-          queryAuditResults: res.queryAuditResults || [],
           message: res.message || ''
         };
 
         totalTasksSynced += (monthRes.taskCount || 0);
         results.push(monthRes);
 
-        setSyncProgress(prev => (prev ? {
+        setSyncFlowModal(prev => ({
           ...prev,
-          totalTasksSoFar: totalTasksSynced
-        } : null));
+          totalTasksSoFar: totalTasksSynced,
+          results: [...results]
+        }));
 
         setMonthlyResults({
           totalTasksSynced,
           monthlyResults: [...results]
         });
 
-        // Live update DB stats column as each month is saved to DB
         fetchDbStats(cfgRef.current?.rebuildMonths || 3);
-
       } catch (err) {
         results.push({
           monthIndex: stepNum,
@@ -870,18 +882,21 @@ const JiraSettingsPage = () => {
           message: err.message || 'خطا'
         });
 
-        setMonthlyResults({
-          totalTasksSynced,
-          monthlyResults: [...results]
-        });
+        setSyncFlowModal(prev => ({
+          ...prev,
+          results: [...results]
+        }));
       }
     }
 
-    setSyncProgress(null);
-    setMonthlySyncing(false);
-    showToast(`✅ همگام‌سازی با موفقیت انجام شد. مجموع ${totalTasksSynced} تسک از ${monthRanges.length} ماه ثبت گردید.`, 'success');
-    
-    // Re-fetch BOTH DB stats and Jira live count together after sync completes
+    setSyncFlowModal(prev => ({
+      ...prev,
+      phase: 'completed',
+      progressPercent: 100,
+      totalTasksSoFar: totalTasksSynced,
+      results: [...results]
+    }));
+
     try {
       const activeMonths = cfgRef.current?.rebuildMonths || 3;
       await Promise.all([
@@ -891,17 +906,49 @@ const JiraSettingsPage = () => {
     } catch (_) {}
   };
 
-  
   useEffect(() => {
     if (syncLogsWrapperRef.current && monthlyResults?.monthlyResults?.length) {
       syncLogsWrapperRef.current.scrollTop = syncLogsWrapperRef.current.scrollHeight;
     }
   }, [monthlyResults?.monthlyResults?.length]);
 
-  const executeFullSiteRebuild = async () => {
+  // 🚀 Open Rebuild Modal (Confirmation Stage)
+  const handleOpenRebuildModal = () => {
     const rebuildMonths = parseInt(cfg?.rebuildMonths, 10) || 3;
+    setSyncFlowModal({
+      isOpen: true,
+      type: 'rebuild',
+      phase: 'confirm',
+      title: '🔥 بازسازی کامل دیتابیس و سیستم',
+      badge: `${rebuildMonths} ماه گذشته`,
+      description: `آیا از اجرای بازسازی کامل دیتابیس اطمینان دارید؟ دیتابیس فعلی پاکسازی شده و تمام اطلاعات ${rebuildMonths} ماه گذشته به صورت گام به گام و زنده از سرور جیرا استخراج و بازسازی خواهد شد.`,
+      stepNum: 0,
+      totalSteps: rebuildMonths,
+      progressPercent: 0,
+      currentMonthLabel: '',
+      dateRange: '',
+      totalTasksSoFar: 0,
+      results: [],
+      error: null
+    });
+  };
+
+  // 🚀 Start Rebuild Execution (In the same modal)
+  const startRebuildExecution = async () => {
+    const rebuildMonths = parseInt(cfg?.rebuildMonths, 10) || 3;
+    setMonthlySyncing(true);
+    setSyncFlowModal(prev => ({
+      ...prev,
+      phase: 'running',
+      stepNum: 0,
+      totalSteps: rebuildMonths,
+      progressPercent: 0,
+      totalTasksSoFar: 0,
+      results: [],
+      error: null
+    }));
+
     try {
-      showToast(`🗑️ در حال پاکسازی دیتابیس و شروع استخراج گام به گام ${rebuildMonths} ماه گذشته...`, 'info');
       setMatchEvaluated(false);
       setDbStats({
         totalTasks: 0,
@@ -949,65 +996,40 @@ const JiraSettingsPage = () => {
         });
       }
 
-      await executeStepByStepSync(monthRanges, `🔥 بازسازی کامل دیتابیس (${rebuildMonths} ماه گذشته)`);
-      fetchDbStats();
-      fetchJiraCount(false, rebuildMonths);
+      await executeFlowStepByStep(monthRanges, `🔥 بازسازی کامل دیتابیس (${rebuildMonths} ماه گذشته)`);
     } catch (e) {
-      showToast('خطا در بازسازی کامل سایت: ' + e.message, 'error');
+      setSyncFlowModal(prev => ({
+        ...prev,
+        phase: 'error',
+        error: e.message || 'خطا در بازسازی کامل سایت'
+      }));
+    } finally {
+      setMonthlySyncing(false);
     }
   };
 
-  const handleFullSiteRebuild = () => {
-    const rebuildMonths = parseInt(cfg?.rebuildMonths, 10) || 3;
-    setConfirmModal({
-      title: '🚨 تأیید نهایی بازسازی کامل دیتابیس و سایت',
-      icon: '🔥',
-      badge: `${rebuildMonths} ماه گذشته`,
-      type: 'warning',
-      description: `آیا از اجرا و بازسازی کامل دیتابیس اطمینان دارید؟ دیتابیس فعلی پاکسازی شده و تمام اطلاعات ${rebuildMonths} ماه گذشته به صورت گام به گام و زنده از سرور جیرا استخراج خواهد شد.`,
-      confirmText: '🚀 بله، بازسازی کامل انجام شود',
-      cancelText: 'انصراف',
-      onConfirm: () => executeFullSiteRebuild()
+  // 🚀 Open Date Range Modal (Picker Stage)
+  const handleOpenRangeModal = () => {
+    setSyncFlowModal({
+      isOpen: true,
+      type: 'range',
+      phase: 'picker',
+      title: '📅 همگام‌سازی و استخراج داده‌های جیرا در بازه زمانی دلخواه',
+      badge: 'انتخاب بازه تاریخ',
+      description: 'بازه تاریخ شمسی مورد نظر خود را با میان‌برهای سریع یا انتخاب‌گر تاریخ تعیین فرمایید.',
+      stepNum: 0,
+      totalSteps: 1,
+      progressPercent: 0,
+      currentMonthLabel: '',
+      dateRange: '',
+      totalTasksSoFar: 0,
+      results: [],
+      error: null
     });
   };
 
-  const handleMonthlySync = async () => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-
-    const monthRanges = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(currentYear, currentMonth - i, 1);
-      const y = d.getFullYear();
-      const m = d.getMonth();
-      const lastDay = new Date(y, m + 1, 0);
-
-      const startStr = `${y}-${String(m + 1).padStart(2, '0')}-01 00:00`;
-      const endStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')} 23:59`;
-      const monthInfo = getJalaliMonthLabel(y, m);
-      const jStart = g2j(y, m + 1, 1);
-      const jEnd = g2j(y, m + 1, lastDay.getDate());
-      const jalaliStartStr = `${jStart.jy}/${String(jStart.jm).padStart(2,'0')}/${String(jStart.jd).padStart(2,'0')} 00:00`;
-      const jalaliEndStr = `${jEnd.jy}/${String(jEnd.jm).padStart(2,'0')}/${String(jEnd.jd).padStart(2,'0')} 23:59`;
-
-      monthRanges.push({
-        monthIndex: 12 - i,
-        year: y,
-        month: m + 1,
-        jalaliName: monthInfo.jalali,
-        gregorianName: monthInfo.gregorian,
-        startStr,
-        endStr,
-        jalaliStartStr,
-        jalaliEndStr
-      });
-    }
-
-    await executeStepByStepSync(monthRanges, '🗓️ در حال همگام‌سازی ۱۲ ماه گذشته');
-  };
-
-  const handleRangeSync = async () => {
+  // 🚀 Start Date Range Execution (In the same modal)
+  const startRangeExecution = async () => {
     if (!rangeStartJalali || !rangeEndJalali) {
       showToast('لطفاً هر دو تاریخ شروع و پایان را انتخاب فرمایید.', 'error');
       return;
@@ -1025,15 +1047,15 @@ const JiraSettingsPage = () => {
     }
 
     const diffDays = Math.ceil((endDt - startDt) / (1000 * 60 * 60 * 24));
-    
-    // If selected range is within 60 days, do NOT split into months — run directly as 1 single query matching the preview
+    let monthRanges = [];
+
     if (diffDays <= 60) {
       const startStr = `${startG.gy}-${String(startG.gm).padStart(2, '0')}-${String(startG.gd).padStart(2, '0')} 00:00`;
       const endStr = `${endG.gy}-${String(endG.gm).padStart(2, '0')}-${String(endG.gd).padStart(2, '0')} 23:59`;
       const jalaliStartStr = `${rangeStartJalali.jy}/${String(rangeStartJalali.jm).padStart(2, '0')}/${String(rangeStartJalali.jd).padStart(2, '0')} 00:00`;
       const jalaliEndStr = `${rangeEndJalali.jy}/${String(rangeEndJalali.jm).padStart(2, '0')}/${String(rangeEndJalali.jd).padStart(2, '0')} 23:59`;
 
-      const singleRange = [{
+      monthRanges = [{
         monthIndex: 1,
         year: startG.gy,
         month: startG.gm,
@@ -1044,50 +1066,68 @@ const JiraSettingsPage = () => {
         jalaliStartStr,
         jalaliEndStr
       }];
+    } else {
+      let curr = new Date(startDt.getFullYear(), startDt.getMonth(), 1);
+      let stepIndex = 1;
 
-      await executeStepByStepSync(singleRange, '📅 در حال همگام‌سازی مستقیم بازه انتخابی');
-      return;
+      while (curr <= endDt) {
+        const y = curr.getFullYear();
+        const m = curr.getMonth();
+        const lastDayOfMonth = new Date(y, m + 1, 0);
+
+        const chunkStart = (y === startDt.getFullYear() && m === startDt.getMonth()) ? startDt : new Date(y, m, 1);
+        const chunkEnd = (y === endDt.getFullYear() && m === endDt.getMonth()) ? endDt : lastDayOfMonth;
+
+        const startStr = `${chunkStart.getFullYear()}-${String(chunkStart.getMonth() + 1).padStart(2, '0')}-${String(chunkStart.getDate()).padStart(2, '0')} 00:00`;
+        const endStr = `${chunkEnd.getFullYear()}-${String(chunkEnd.getMonth() + 1).padStart(2, '0')}-${String(chunkEnd.getDate()).padStart(2, '0')} 23:59`;
+
+        const startJal = g2j(chunkStart.getFullYear(), chunkStart.getMonth() + 1, chunkStart.getDate());
+        const endJal = g2j(chunkEnd.getFullYear(), chunkEnd.getMonth() + 1, chunkEnd.getDate());
+
+        const jalaliStartStr = `${startJal.jy}/${String(startJal.jm).padStart(2, '0')}/${String(startJal.jd).padStart(2, '0')} 00:00`;
+        const jalaliEndStr = `${endJal.jy}/${String(endJal.jm).padStart(2, '0')}/${String(endJal.jd).padStart(2, '0')} 23:59`;
+
+        const monthInfo = getJalaliMonthLabel(y, m);
+
+        monthRanges.push({
+          monthIndex: stepIndex++,
+          year: y,
+          month: m + 1,
+          jalaliName: monthInfo.jalali,
+          gregorianName: monthInfo.gregorian,
+          startStr,
+          endStr,
+          jalaliStartStr,
+          jalaliEndStr
+        });
+
+        curr = new Date(y, m + 1, 1);
+      }
     }
 
-    const monthRanges = [];
-    let curr = new Date(startDt.getFullYear(), startDt.getMonth(), 1);
-    let stepIndex = 1;
+    setMonthlySyncing(true);
+    setSyncFlowModal(prev => ({
+      ...prev,
+      phase: 'running',
+      stepNum: 0,
+      totalSteps: monthRanges.length,
+      progressPercent: 0,
+      totalTasksSoFar: 0,
+      results: [],
+      error: null
+    }));
 
-    while (curr <= endDt) {
-      const y = curr.getFullYear();
-      const m = curr.getMonth();
-      const lastDayOfMonth = new Date(y, m + 1, 0);
-
-      const chunkStart = (y === startDt.getFullYear() && m === startDt.getMonth()) ? startDt : new Date(y, m, 1);
-      const chunkEnd = (y === endDt.getFullYear() && m === endDt.getMonth()) ? endDt : lastDayOfMonth;
-
-      const startStr = `${chunkStart.getFullYear()}-${String(chunkStart.getMonth() + 1).padStart(2, '0')}-${String(chunkStart.getDate()).padStart(2, '0')} 00:00`;
-      const endStr = `${chunkEnd.getFullYear()}-${String(chunkEnd.getMonth() + 1).padStart(2, '0')}-${String(chunkEnd.getDate()).padStart(2, '0')} 23:59`;
-
-      const startJal = g2j(chunkStart.getFullYear(), chunkStart.getMonth() + 1, chunkStart.getDate());
-      const endJal = g2j(chunkEnd.getFullYear(), chunkEnd.getMonth() + 1, chunkEnd.getDate());
-
-      const jalaliStartStr = `${startJal.jy}/${String(startJal.jm).padStart(2, '0')}/${String(startJal.jd).padStart(2, '0')} 00:00`;
-      const jalaliEndStr = `${endJal.jy}/${String(endJal.jm).padStart(2, '0')}/${String(endJal.jd).padStart(2, '0')} 23:59`;
-
-      const monthInfo = getJalaliMonthLabel(y, m);
-
-      monthRanges.push({
-        monthIndex: stepIndex++,
-        year: y,
-        month: m + 1,
-        jalaliName: monthInfo.jalali,
-        gregorianName: monthInfo.gregorian,
-        startStr,
-        endStr,
-        jalaliStartStr,
-        jalaliEndStr
-      });
-
-      curr = new Date(y, m + 1, 1);
+    try {
+      await executeFlowStepByStep(monthRanges, '📅 در حال استخراج و همگام‌سازی بازه تاریخی');
+    } catch (e) {
+      setSyncFlowModal(prev => ({
+        ...prev,
+        phase: 'error',
+        error: e.message || 'خطا در استخراج بازه زمانی'
+      }));
+    } finally {
+      setMonthlySyncing(false);
     }
-
-    await executeStepByStepSync(monthRanges, '📅 در حال استخراج و همگام‌سازی بازه تاریخی');
   };
 
   const handleDiagnose = async () => {
@@ -1166,65 +1206,6 @@ const JiraSettingsPage = () => {
           >
             {toast.type === 'success' ? <CheckCircle2 size={17} /> : <AlertTriangle size={17} />}
             {toast.msg}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 🚀 Floating Top Sync Progress Banner (Non-Blocking, Transparent Background) */}
-      <AnimatePresence>
-        {syncProgress && syncProgress.isSyncing && (
-          <motion.div
-            initial={{ opacity: 0, y: -40, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -40, scale: 0.95 }}
-            style={{
-              position: 'fixed',
-              top: '25px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 999999,
-              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.98))',
-              border: '1px solid rgba(56, 189, 248, 0.6)',
-              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(56, 189, 248, 0.35)',
-              borderRadius: '20px',
-              padding: '1.1rem 1.8rem',
-              minWidth: '460px',
-              maxWidth: '92vw',
-              color: '#FFFFFF',
-              backdropFilter: 'blur(12px)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.25rem', marginBottom: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                <RefreshCw size={24} className="spin" style={{ color: '#38BDF8' }} />
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '1.02rem', color: '#38BDF8' }}>
-                    {syncProgress.titlePrefix} (ماه {syncProgress.stepNum} از {syncProgress.totalSteps})
-                  </div>
-                  <div style={{ fontSize: '0.83rem', color: '#CBD5E1', marginTop: '0.15rem' }}>
-                    در حال دریافت {syncProgress.monthLabel} ({syncProgress.dateRange})
-                  </div>
-                </div>
-              </div>
-              <div style={{ textAlign: 'left', minWidth: '100px' }}>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10B981', textAlign: 'center' }}>
-                  {syncProgress.totalTasksSoFar}
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#94A3B8', textAlign: 'center' }}>تسک دریافت‌شده</div>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div style={{ width: '100%', background: 'rgba(255, 255, 255, 0.12)', height: '7px', borderRadius: '4px', overflow: 'hidden' }}>
-              <div
-                style={{
-                  width: `${syncProgress.progressPercent}%`,
-                  height: '100%',
-                  background: 'linear-gradient(90deg, #38BDF8, #10B981)',
-                  transition: 'width 0.4s ease'
-                }}
-              />
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1344,9 +1325,9 @@ const JiraSettingsPage = () => {
           <button
             className="jsp-run-diag-btn"
             style={{ background: 'linear-gradient(135deg, #EF4444, #8B5CF6)', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)' }}
-            onClick={handleFullSiteRebuild}
+            onClick={handleOpenRebuildModal}
             disabled={monthlySyncing}
-            title={`بازسازی کامل دیتابیس و سایت بر اساس ${cfg.rebuildMonths || 3} ماه اخیر`}
+            title={`بازسازی کامل دیتابیس و سایت بر اساس ${cfg?.rebuildMonths || 3} ماه اخیر`}
           >
             <RefreshCw size={15} className={monthlySyncing ? 'spin' : ''} />
             <span>{monthlySyncing ? 'در حال بازسازی...' : 'بازسازی دیتابیس'}</span>
@@ -1354,7 +1335,7 @@ const JiraSettingsPage = () => {
           <button
             className="jsp-run-diag-btn"
             style={{ background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.35)' }}
-            onClick={() => setShowRangeModal(true)}
+            onClick={handleOpenRangeModal}
             disabled={monthlySyncing}
             title="استخراج و همگام‌سازی دیتای جیرا در بازه زمانی دلخواه"
           >
@@ -1383,9 +1364,9 @@ const JiraSettingsPage = () => {
         </div>
       </div>
 
-      {/* 📅 POPUP MODAL FOR CUSTOM RANGE JIRA EXTRACTION */}
+      {/* 🔮 UNIFIED SINGLE SYNC FLOW MODAL (Rebuild DB & Date Range Extraction) */}
       <AnimatePresence>
-        {showRangeModal && (
+        {syncFlowModal.isOpen && (
           <div
             style={{
               position: 'fixed',
@@ -1394,185 +1375,484 @@ const JiraSettingsPage = () => {
               right: 0,
               bottom: 0,
               zIndex: 99999,
-              background: 'rgba(15, 23, 42, 0.82)',
-              backdropFilter: 'blur(10px)',
+              background: 'rgba(11, 15, 25, 0.88)',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '1.5rem'
+              padding: '1.5rem',
+              direction: 'rtl'
             }}
-            onClick={() => setShowRangeModal(false)}
+            onClick={() => {
+              if (syncFlowModal.phase !== 'running') {
+                setSyncFlowModal(prev => ({ ...prev, isOpen: false }));
+              }
+            }}
           >
             <motion.div
               style={{
-                background: 'linear-gradient(135deg, #0F172A, #1E293B)',
-                border: '1px solid rgba(16, 185, 129, 0.5)',
+                background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99))',
+                border: syncFlowModal.phase === 'error'
+                  ? '1px solid rgba(239, 68, 68, 0.5)'
+                  : syncFlowModal.phase === 'completed'
+                  ? '1px solid rgba(16, 185, 129, 0.5)'
+                  : syncFlowModal.type === 'rebuild'
+                  ? '1px solid rgba(239, 68, 68, 0.45)'
+                  : '1px solid rgba(16, 185, 129, 0.45)',
                 borderRadius: '24px',
                 padding: '2rem',
-                maxWidth: '650px',
+                maxWidth: syncFlowModal.phase === 'running' || syncFlowModal.phase === 'completed' ? '820px' : '680px',
                 width: '100%',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(16, 185, 129, 0.25)',
-                color: '#FFFFFF'
+                maxHeight: '90vh',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 0, 0, 0.6)',
+                color: '#FFFFFF',
+                direction: 'rtl'
               }}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
               onClick={e => e.stopPropagation()}
             >
-              {/* Modal Header */}
+              {/* Modal Header Bar */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '14px',
+                    background: syncFlowModal.phase === 'completed'
+                      ? 'rgba(16, 185, 129, 0.2)'
+                      : syncFlowModal.phase === 'running'
+                      ? 'rgba(56, 189, 248, 0.2)'
+                      : syncFlowModal.type === 'rebuild'
+                      ? 'rgba(239, 68, 68, 0.2)'
+                      : 'rgba(16, 185, 129, 0.2)',
+                    border: syncFlowModal.phase === 'completed'
+                      ? '1px solid rgba(16, 185, 129, 0.5)'
+                      : syncFlowModal.phase === 'running'
+                      ? '1px solid rgba(56, 189, 248, 0.5)'
+                      : syncFlowModal.type === 'rebuild'
+                      ? '1px solid rgba(239, 68, 68, 0.5)'
+                      : '1px solid rgba(16, 185, 129, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.4rem',
+                    color: syncFlowModal.phase === 'completed' ? '#34D399' : syncFlowModal.phase === 'running' ? '#38BDF8' : '#FFFFFF'
+                  }}>
+                    {syncFlowModal.phase === 'completed' ? (
+                      <CheckCircle2 size={26} />
+                    ) : syncFlowModal.phase === 'running' ? (
+                      <RefreshCw size={24} className="spin" />
+                    ) : syncFlowModal.type === 'rebuild' ? (
+                      '🔥'
+                    ) : (
+                      <Calendar size={24} />
+                    )}
+                  </div>
+
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#F8FAFC' }}>
+                      {syncFlowModal.phase === 'running'
+                        ? 'در حال همگام‌سازی و واکشی ماه به ماه از Jira'
+                        : syncFlowModal.phase === 'completed'
+                        ? 'همگام‌سازی با موفقیت انجام شد'
+                        : syncFlowModal.title}
+                    </h2>
+                    <span style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '0.2rem', display: 'block' }}>
+                      {syncFlowModal.phase === 'running'
+                        ? `مرحله ${syncFlowModal.stepNum} از ${syncFlowModal.totalSteps}: ${syncFlowModal.currentMonthLabel || 'در حال پردازش...'}`
+                        : syncFlowModal.badge ? `📌 بازه زمانی: ${syncFlowModal.badge}` : ''}
+                    </span>
+                  </div>
+                </div>
+
+                {syncFlowModal.phase !== 'running' && (
+                  <button
+                    type="button"
+                    onClick={() => setSyncFlowModal(prev => ({ ...prev, isOpen: false }))}
+                    style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', color: '#94A3B8', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                  >
+                    <X size={20} />
+                  </button>
+                )}
+              </div>
+
+              {/* ── PHASE 1: CONFIRM REBUILD ── */}
+              {syncFlowModal.phase === 'confirm' && (
                 <div>
-                  <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#6EE7B7', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <Calendar size={24} /> همگام‌سازی و استخراج داده‌های جیرا در بازه زمانی دلخواه
-                  </h2>
-                  <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: '#94A3B8' }}>
-                    تاریخ شروع و پایان شمسی را انتخاب نمایید؛ پس از زدن دکمه استخراج، این پاپ‌آپ بسته شده و اطلاعات ماه به ماه دریافت می‌شود.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowRangeModal(false)}
-                  style={{ background: 'rgba(255, 255, 255, 0.08)', border: 'none', color: '#94A3B8', borderRadius: '10px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Quick Presets Pills */}
-              <div style={{ marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 'bold', color: '#CBD5E1', marginBottom: '0.5rem' }}>⚡ میان‌برهای بازه زمانی:</span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-                  <button type="button" onClick={() => applyDatePreset(10, 0)} className="jsp-preset-pill">⚡ ۱۰ روز گذشته</button>
-                  <button type="button" onClick={() => applyDatePreset(30, 0)} className="jsp-preset-pill">⚡ ۳۰ روز گذشته</button>
-                  <button type="button" onClick={() => applyDatePreset(0, 1)} className="jsp-preset-pill purple">🗓️ ۱ ماه اخیر</button>
-                  <button type="button" onClick={() => applyDatePreset(0, 2)} className="jsp-preset-pill purple">🗓️ ۲ ماه اخیر</button>
-                  <button type="button" onClick={() => applyDatePreset(0, 3)} className="jsp-preset-pill purple">🗓️ ۳ ماه اخیر</button>
-                  <button type="button" onClick={() => applyDatePreset(0, 6)} className="jsp-preset-pill green">🗓️ ۶ ماه اخیر</button>
-                  <button type="button" onClick={() => applyDatePreset(0, 12)} className="jsp-preset-pill gold">🗓️ ۱ سال اخیر</button>
-                  <button type="button" onClick={() => applyDatePreset(0, 24)} className="jsp-preset-pill gold" style={{ borderColor: '#F59E0B', color: '#FCD34D' }}>🗓️ ۲ سال اخیر</button>
-                </div>
-              </div>
-
-              {/* Jalali Date Pickers */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.75rem' }}>
-                <JalaliDatePicker
-                  label="🗓️ از تاریخ (شمسی):"
-                  value={rangeStartJalali}
-                  onChange={setRangeStartJalali}
-                />
-                <JalaliDatePicker
-                  label="🗓️ تا تاریخ (شمسی):"
-                  value={rangeEndJalali}
-                  onChange={setRangeEndJalali}
-                />
-              </div>
-
-              {/* Modal Action Buttons */}
-              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.2rem', flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => { setShowRangeModal(false); setJqlPreview(null); setJqlTestResults(null); }}
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#94A3B8', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', cursor: 'pointer' }}>
-                  ✕ بستن
-                </button>
-                <button type="button" onClick={handleTestAllJql} disabled={jqlTestLoading || jqlPreviewLoading}
-                  style={{ background: 'linear-gradient(135deg,#F59E0B,#D97706)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  {jqlTestLoading ? '⏳ در حال تست...' : '⚡ تست کوئری جیرا (کوئری ۳)'}
-                </button>
-                <button type="button" onClick={handleRangeSync} disabled={monthlySyncing}
-                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.3rem', fontSize: '0.9rem', fontWeight: 700, cursor: monthlySyncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(16,185,129,0.35)' }}>
-                  <RefreshCw size={16} className={monthlySyncing ? 'spin' : ''} />
-                  {monthlySyncing ? 'در حال استخراج...' : '🚀 شروع همگام‌سازی'}
-                </button>
-              </div>
-
-              {jqlTestResults && (
-                <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(245,158,11,0.35)', paddingTop: '1rem' }}>
-                  <div style={{ fontSize: '0.77rem', color: '#94A3B8', marginBottom: '0.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                    <span>سرور: <strong style={{ color: '#38BDF8' }}>{jqlTestResults.jiraBaseUrl}</strong></span>
-                    <span>پروژه: <strong style={{ color: '#38BDF8' }}>{jqlTestResults.projectKey}</strong></span>
-                    <span>شمسی: <strong style={{ color: '#10B981' }}>{jqlTestResults.jalaliRange}</strong></span>
-                    <span>میلادی: <strong style={{ color: '#F59E0B' }}>{jqlTestResults.gregorianRange}</strong></span>
-                  </div>
-                  {jqlTestResults.winnerId
-                    ? <div style={{ background:'rgba(16,185,129,0.12)', border:'1px solid rgba(16,185,129,0.4)', borderRadius:'8px', padding:'0.4rem 0.85rem', marginBottom:'0.55rem', fontSize:'0.78rem', color:'#6EE7B7' }}>برنده: <strong>#{jqlTestResults.winnerId}</strong> - این کوئری جواب داد</div>
-                    : <div style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'8px', padding:'0.4rem 0.85rem', marginBottom:'0.55rem', fontSize:'0.78rem', color:'#FCA5A5' }}>هیچ کوئری تسک برنگرداند</div>
-                  }
-                  <div style={{ display:'flex', flexDirection:'column', gap:'0.35rem', maxHeight:'360px', overflowY:'auto' }}>
-                    {jqlTestResults.results.map(r => {
-                      const win = r.id === jqlTestResults.winnerId;
-                      const bg = win ? 'rgba(16,185,129,0.1)' : r.status==='error' ? 'rgba(239,68,68,0.07)' : r.status==='zero' ? 'rgba(245,158,11,0.05)' : 'rgba(255,255,255,0.03)';
-                      const bdr = win ? '1.5px solid rgba(16,185,129,0.5)' : r.status==='error' ? '1px solid rgba(239,68,68,0.22)' : '1px solid rgba(255,255,255,0.07)';
-                      const badgeColor = win ? '#10B981' : r.status==='error' ? '#EF4444' : r.status==='zero' ? '#F59E0B' : '#6366F1';
-                      const badgeText = win ? 'برنده' : r.status==='error' ? 'خطا' : r.status==='zero' ? 'صفر تسک' : '...';
-                      return (
-                        <div key={r.id} style={{ background:bg, border:bdr, borderRadius:'9px', padding:'0.5rem 0.8rem' }}>
-                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'0.3rem', marginBottom:'0.25rem' }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
-                              <span style={{ background:badgeColor, color:'#fff', fontSize:'0.64rem', fontWeight:700, padding:'0.1rem 0.4rem', borderRadius:'20px' }}>{badgeText}</span>
-                              <span style={{ fontSize:'0.75rem', color: win ? '#A7F3D0' : '#94A3B8', fontWeight: win ? 700 : 400 }}>#{r.id} - {r.name}</span>
-                            </div>
-                            <div style={{ fontSize:'0.69rem', color:'#64748B', display:'flex', gap:'0.5rem' }}>
-                              {r.status!=='error' && <span>{r.total} تسک</span>}
-                              {r.status==='error' && <span style={{ color:'#FCA5A5' }}>{r.errorCode}</span>}
-                              <span>{r.ms}ms</span>
-                            </div>
-                          </div>
-                          <code style={{ fontSize:'0.71rem', color: win ? '#6EE7B7' : '#475569', wordBreak:'break-all', fontFamily:'monospace', lineHeight:1.5, display:'block' }}>{r.jql}</code>
-                          {r.status==='error' && r.errorMsg && <div style={{ fontSize:'0.66rem', color:'#FCA5A5', marginTop:'0.2rem' }}>{r.errorMsg}</div>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* ── GRAND TOTAL COUNT FROM JIRA ── */}
-                  {jqlTestResults.totalCountInJira !== null && jqlTestResults.totalCountInJira !== undefined && (
-                    <div style={{
-                      marginTop: '0.85rem',
-                      borderTop: '1px solid rgba(56,189,248,0.25)',
-                      paddingTop: '0.75rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '0.5rem'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ background: 'rgba(56,189,248,0.18)', border: '1px solid rgba(56,189,248,0.45)', color: '#38BDF8', fontSize: '0.68rem', fontWeight: 700, padding: '0.15rem 0.55rem', borderRadius: '20px' }}>🔢 کوئری COUNT کل</span>
-                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>تعداد تسک‌های پروژه در جیرا ({cfg.rebuildMonths || 3} ماه گذشته):</span>
+                  <div style={{
+                    background: 'rgba(15, 23, 42, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '16px',
+                    padding: '1.25rem',
+                    fontSize: '0.88rem',
+                    lineHeight: '1.8',
+                    color: '#CBD5E1',
+                    marginBottom: '1.75rem'
+                  }}>
+                    <p style={{ margin: '0 0 0.5rem', color: '#FCD34D', fontWeight: 800 }}>
+                      ⚠️ توجه: این عملیات دیتابیس جاری را کاملاً خالی کرده و تمامی اطلاعات را مجدداً از Jira دریافت می‌کند.
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      {syncFlowModal.description}
+                    </p>
+                    {selectedProjectKeys.length > 0 && (
+                      <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>پروژه‌های هدف: </span>
+                        <strong style={{ color: '#38BDF8' }}>{selectedProjectKeys.join(', ')}</strong>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
-                        <strong style={{ fontSize: '1.35rem', color: '#38BDF8', fontWeight: 800 }}>{jqlTestResults.totalCountInJira.toLocaleString()}</strong>
-                        <span style={{ fontSize: '0.78rem', color: '#64748B' }}>تسک</span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.85rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setSyncFlowModal(prev => ({ ...prev, isOpen: false }))}
+                      style={{
+                        padding: '0.65rem 1.4rem',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        color: '#94A3B8',
+                        fontSize: '0.88rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      انصراف
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startRebuildExecution}
+                      style={{
+                        padding: '0.65rem 1.6rem',
+                        borderRadius: '12px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                        boxShadow: '0 8px 20px -4px rgba(239, 68, 68, 0.4)',
+                        color: '#FFFFFF',
+                        fontSize: '0.88rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      <RefreshCw size={15} />
+                      <span>🚀 بله، شروع بازسازی دیتابیس</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── PHASE 2: DATE RANGE PICKER ── */}
+              {syncFlowModal.phase === 'picker' && (
+                <div>
+                  {/* Quick Presets Pills */}
+                  <div style={{ marginBottom: '1.25rem', background: 'rgba(255, 255, 255, 0.04)', padding: '0.85rem 1rem', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                    <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 'bold', color: '#CBD5E1', marginBottom: '0.5rem' }}>⚡ میان‌برهای سریع بازه زمانی:</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                      <button type="button" onClick={() => applyDatePreset(10, 0)} className="jsp-preset-pill">⚡ ۱۰ روز گذشته</button>
+                      <button type="button" onClick={() => applyDatePreset(30, 0)} className="jsp-preset-pill">⚡ ۳۰ روز گذشته</button>
+                      <button type="button" onClick={() => applyDatePreset(0, 1)} className="jsp-preset-pill purple">🗓️ ۱ ماه اخیر</button>
+                      <button type="button" onClick={() => applyDatePreset(0, 2)} className="jsp-preset-pill purple">🗓️ ۲ ماه اخیر</button>
+                      <button type="button" onClick={() => applyDatePreset(0, 3)} className="jsp-preset-pill purple">🗓️ ۳ ماه اخیر</button>
+                      <button type="button" onClick={() => applyDatePreset(0, 6)} className="jsp-preset-pill green">🗓️ ۶ ماه اخیر</button>
+                      <button type="button" onClick={() => applyDatePreset(0, 12)} className="jsp-preset-pill gold">🗓️ ۱ سال اخیر</button>
+                      <button type="button" onClick={() => applyDatePreset(0, 24)} className="jsp-preset-pill gold" style={{ borderColor: '#F59E0B', color: '#FCD34D' }}>🗓️ ۲ سال اخیر</button>
+                    </div>
+                  </div>
+
+                  {/* Jalali Date Pickers */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                    <JalaliDatePicker
+                      label="🗓️ از تاریخ (شمسی):"
+                      value={rangeStartJalali}
+                      onChange={setRangeStartJalali}
+                    />
+                    <JalaliDatePicker
+                      label="🗓️ تا تاریخ (شمسی):"
+                      value={rangeEndJalali}
+                      onChange={setRangeEndJalali}
+                    />
+                  </div>
+
+                  {/* Modal Action Buttons */}
+                  <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.2rem', flexWrap: 'wrap' }}>
+                    <button type="button" onClick={() => { setSyncFlowModal(prev => ({ ...prev, isOpen: false })); setJqlPreview(null); setJqlTestResults(null); }}
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#94A3B8', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', cursor: 'pointer' }}>
+                      ✕ بستن
+                    </button>
+                    <button type="button" onClick={handleTestAllJql} disabled={jqlTestLoading || jqlPreviewLoading}
+                      style={{ background: 'linear-gradient(135deg,#F59E0B,#D97706)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.1rem', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      {jqlTestLoading ? '⏳ در حال تست...' : '⚡ تست کوئری جیرا'}
+                    </button>
+                    <button type="button" onClick={startRangeExecution} disabled={monthlySyncing}
+                      style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', border: 'none', borderRadius: '12px', padding: '0.6rem 1.4rem', fontSize: '0.9rem', fontWeight: 800, cursor: monthlySyncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}>
+                      <RefreshCw size={16} />
+                      <span>🚀 شروع همگام‌سازی</span>
+                    </button>
+                  </div>
+
+                  {/* JQL Test Results Box */}
+                  {jqlTestResults && (
+                    <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(245,158,11,0.35)', paddingTop: '1rem' }}>
+                      <div style={{ fontSize: '0.77rem', color: '#94A3B8', marginBottom: '0.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                        <span>سرور: <strong style={{ color: '#38BDF8' }}>{jqlTestResults.jiraBaseUrl}</strong></span>
+                        <span>پروژه: <strong style={{ color: '#38BDF8' }}>{jqlTestResults.projectKey}</strong></span>
+                        <span>شمسی: <strong style={{ color: '#10B981' }}>{jqlTestResults.jalaliRange}</strong></span>
+                        <span>میلادی: <strong style={{ color: '#F59E0B' }}>{jqlTestResults.gregorianRange}</strong></span>
                       </div>
-                      {jqlTestResults.countJql && (
-                        <div style={{ width: '100%', marginTop: '0.3rem' }}>
-                          <code style={{ fontSize: '0.68rem', color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace', background: 'rgba(56,189,248,0.06)', padding: '0.25rem 0.5rem', borderRadius: '6px', display: 'block', border: '1px solid rgba(56,189,248,0.15)' }}>{jqlTestResults.countJql}</code>
-                        </div>
-                      )}
+                      {jqlTestResults.winnerId
+                        ? <div style={{ background:'rgba(16,185,129,0.12)', border:'1px solid rgba(16,185,129,0.4)', borderRadius:'8px', padding:'0.4rem 0.85rem', marginBottom:'0.55rem', fontSize:'0.78rem', color:'#6EE7B7' }}>برنده: <strong>#{jqlTestResults.winnerId}</strong> - این کوئری پاسخ داد</div>
+                        : <div style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'8px', padding:'0.4rem 0.85rem', marginBottom:'0.55rem', fontSize:'0.78rem', color:'#FCA5A5' }}>هیچ کوئری تسک برنگرداند</div>
+                      }
+                      <div style={{ display:'flex', flexDirection:'column', gap:'0.35rem', maxHeight:'240px', overflowY:'auto' }}>
+                        {jqlTestResults.results.map(r => {
+                          const win = r.id === jqlTestResults.winnerId;
+                          const bg = win ? 'rgba(16,185,129,0.1)' : r.status==='error' ? 'rgba(239,68,68,0.07)' : r.status==='zero' ? 'rgba(245,158,11,0.05)' : 'rgba(255,255,255,0.03)';
+                          const bdr = win ? '1.5px solid rgba(16,185,129,0.5)' : r.status==='error' ? '1px solid rgba(239,68,68,0.22)' : '1px solid rgba(255,255,255,0.07)';
+                          return (
+                            <div key={r.id} style={{ background:bg, border:bdr, borderRadius:'9px', padding:'0.5rem 0.8rem' }}>
+                              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'0.3rem', marginBottom:'0.25rem' }}>
+                                <span style={{ fontSize:'0.75rem', color: win ? '#A7F3D0' : '#94A3B8', fontWeight: win ? 700 : 400 }}>#{r.id} - {r.name}</span>
+                                <span style={{ fontSize:'0.69rem', color:'#64748B' }}>{r.total} تسک ({r.ms}ms)</span>
+                              </div>
+                              <code style={{ fontSize:'0.71rem', color: win ? '#6EE7B7' : '#475569', wordBreak:'break-all', fontFamily:'monospace', lineHeight:1.5, display:'block' }}>{r.jql}</code>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* JQL Preview Panel */}
-              {jqlPreview && !jqlTestResults && (
-                <div style={{ marginTop: '1.25rem', borderTop: '1px solid rgba(99,102,241,0.3)', paddingTop: '1rem' }}>
-                  <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.75rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                    <span>🔗 <strong style={{ color: '#38BDF8' }}>سرور جیرا:</strong> {jqlPreview.jiraBaseUrl}</span>
-                    <span>📁 <strong style={{ color: '#38BDF8' }}>پروژه:</strong> {jqlPreview.projectKey}</span>
-                    <span>📅 <strong style={{ color: '#10B981' }}>بازه شمسی:</strong> {jqlPreview.jalaliRange}</span>
-                    <span>📅 <strong style={{ color: '#F59E0B' }}>بازه میلادی:</strong> {jqlPreview.gregorianRange}</span>
+              {/* ── PHASE 3: RUNNING (LIVE STEP-BY-STEP PROGRESS IN SAME MODAL) ── */}
+              {syncFlowModal.phase === 'running' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Progress Header Cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                    <div style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '16px', padding: '1rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.78rem', color: '#94A3B8', display: 'block', marginBottom: '0.3rem' }}>⚡ کل تسک‌های دریافت‌شده تا این لحظه</span>
+                      <strong style={{ fontSize: '1.8rem', color: '#38BDF8', fontWeight: 900 }}>
+                        {syncFlowModal.totalTasksSoFar.toLocaleString()}
+                      </strong>
+                    </div>
+
+                    <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '16px', padding: '1rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.78rem', color: '#94A3B8', display: 'block', marginBottom: '0.3rem' }}>🗓️ مرحله در حال پردازش</span>
+                      <strong style={{ fontSize: '1.15rem', color: '#34D399', fontWeight: 800 }}>
+                        {syncFlowModal.currentMonthLabel || 'در حال آماده‌سازی...'}
+                      </strong>
+                      <span style={{ fontSize: '0.72rem', color: '#6EE7B7', display: 'block', marginTop: '0.2rem' }}>
+                        ماه {syncFlowModal.stepNum} از {syncFlowModal.totalSteps}
+                      </span>
+                    </div>
                   </div>
-                  <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '0 0 0.6rem' }}>کوئری‌های زیر دقیقاً همان‌هایی هستند که به جیرا ارسال می‌شوند. تأیید کنید که فرمت درست است:</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '260px', overflowY: 'auto' }}>
-                    {jqlPreview.queries.map(q => (
-                      <div key={q.id} style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '0.6rem 0.9rem' }}>
-                        <div style={{ fontSize: '0.74rem', color: '#A78BFA', fontWeight: 700, marginBottom: '0.3rem' }}>
-                          #{q.id} — {q.name}
-                        </div>
-                        <code style={{ fontSize: '0.8rem', color: '#6EE7B7', wordBreak: 'break-all', fontFamily: 'monospace', lineHeight: 1.6 }}>
-                          {q.jql}
-                        </code>
-                      </div>
-                    ))}
+
+                  {/* High Visibility Gradient Progress Bar */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem', fontSize: '0.82rem', color: '#CBD5E1' }}>
+                      <span>پیشرفت کلی عملیات:</span>
+                      <strong style={{ color: '#38BDF8', fontWeight: 800 }}>{syncFlowModal.progressPercent}%</strong>
+                    </div>
+                    <div style={{ width: '100%', background: 'rgba(255, 255, 255, 0.1)', height: '10px', borderRadius: '6px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${syncFlowModal.progressPercent}%`,
+                          height: '100%',
+                          background: 'linear-gradient(90deg, #38BDF8, #10B981)',
+                          transition: 'width 0.4s ease'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Live Progress Table */}
+                  <div style={{ maxHeight: '280px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', background: 'rgba(15, 23, 42, 0.5)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'right' }}>
+                      <thead>
+                        <tr style={{ background: '#1E293B', color: '#94A3B8', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', position: 'sticky', top: 0, zIndex: 5 }}>
+                          <th style={{ padding: '0.6rem 0.8rem', width: '70px' }}>ردیف</th>
+                          <th style={{ padding: '0.6rem 0.8rem' }}>دوره / ماه</th>
+                          <th style={{ padding: '0.6rem 0.8rem' }}>بازه میلادی</th>
+                          <th style={{ padding: '0.6rem 0.8rem', width: '100px', textAlign: 'center' }}>وضعیت</th>
+                          <th style={{ padding: '0.6rem 0.8rem', width: '110px', textAlign: 'center' }}>تعداد تسک</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {syncFlowModal.results.map((r, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: r.status === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'transparent' }}>
+                            <td style={{ padding: '0.55rem 0.8rem', color: '#94A3B8', fontFamily: 'monospace' }}>#{r.monthIndex}</td>
+                            <td style={{ padding: '0.55rem 0.8rem', fontWeight: 700, color: '#F8FAFC' }}>{r.jalaliName}</td>
+                            <td style={{ padding: '0.55rem 0.8rem', color: '#CBD5E1', fontSize: '0.74rem', fontFamily: 'monospace' }}>{r.dateRange}</td>
+                            <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center' }}>
+                              <span style={{
+                                padding: '0.12rem 0.5rem',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                background: r.status === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                color: r.status === 'success' ? '#6EE7B7' : '#FCA5A5'
+                              }}>
+                                {r.status === 'success' ? '✅ موفق' : '❌ خطا'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', fontWeight: 800, color: '#38BDF8' }}>
+                              {r.taskCount} تسک
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ── PHASE 4: COMPLETED (SUMMARY & REFRESH) ── */}
+              {syncFlowModal.phase === 'completed' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Summary Metric Cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                    <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '16px', padding: '1.1rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#94A3B8', display: 'block', marginBottom: '0.3rem' }}>📥 مجموع کل تسک‌های ثبت‌شده در دیتابیس</span>
+                      <strong style={{ fontSize: '2rem', color: '#34D399', fontWeight: 900 }}>
+                        {syncFlowModal.totalTasksSoFar.toLocaleString()}
+                      </strong>
+                      <span style={{ fontSize: '0.75rem', color: '#6EE7B7', display: 'block', marginTop: '0.2rem' }}>تسک</span>
+                    </div>
+
+                    <div style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.35)', borderRadius: '16px', padding: '1.1rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#94A3B8', display: 'block', marginBottom: '0.3rem' }}>🗓️ تعداد ماه‌ها / دوره‌های پردازش‌شده</span>
+                      <strong style={{ fontSize: '2rem', color: '#38BDF8', fontWeight: 900 }}>
+                        {syncFlowModal.results.length}
+                      </strong>
+                      <span style={{ fontSize: '0.75rem', color: '#7DD3FC', display: 'block', marginTop: '0.2rem' }}>دوره زمانی</span>
+                    </div>
+                  </div>
+
+                  {/* Summary Table */}
+                  <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', background: 'rgba(15, 23, 42, 0.5)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'right' }}>
+                      <thead>
+                        <tr style={{ background: '#1E293B', color: '#94A3B8', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', position: 'sticky', top: 0 }}>
+                          <th style={{ padding: '0.6rem 0.8rem', width: '70px' }}>ردیف</th>
+                          <th style={{ padding: '0.6rem 0.8rem' }}>دوره / ماه</th>
+                          <th style={{ padding: '0.6rem 0.8rem' }}>بازه میلادی</th>
+                          <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>وضعیت</th>
+                          <th style={{ padding: '0.6rem 0.8rem', textAlign: 'center' }}>تعداد تسک</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {syncFlowModal.results.map((r, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                            <td style={{ padding: '0.55rem 0.8rem', color: '#94A3B8', fontFamily: 'monospace' }}>#{r.monthIndex}</td>
+                            <td style={{ padding: '0.55rem 0.8rem', fontWeight: 700, color: '#F8FAFC' }}>{r.jalaliName}</td>
+                            <td style={{ padding: '0.55rem 0.8rem', color: '#CBD5E1', fontSize: '0.74rem', fontFamily: 'monospace' }}>{r.dateRange}</td>
+                            <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center' }}>
+                              <span style={{ padding: '0.12rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, background: 'rgba(16, 185, 129, 0.2)', color: '#6EE7B7' }}>
+                                ✅ موفق
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.55rem 0.8rem', textAlign: 'center', fontWeight: 800, color: '#38BDF8' }}>
+                              {r.taskCount} تسک
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.85rem', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setSyncFlowModal(prev => ({ ...prev, isOpen: false }))}
+                      style={{
+                        padding: '0.65rem 1.4rem',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        color: '#94A3B8',
+                        fontSize: '0.88rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      متوجه شدم (بستن)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => window.location.reload()}
+                      style={{
+                        padding: '0.65rem 1.6rem',
+                        borderRadius: '12px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #10B981, #059669)',
+                        boxShadow: '0 8px 20px -4px rgba(16, 185, 129, 0.4)',
+                        color: '#FFFFFF',
+                        fontSize: '0.88rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      <RefreshCw size={15} />
+                      <span>به‌روزرسانی صفحه داشبورد</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── PHASE 5: ERROR ── */}
+              {syncFlowModal.phase === 'error' && (
+                <div>
+                  <div style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.35)', borderRadius: '14px', padding: '1.25rem', color: '#FCA5A5', fontSize: '0.88rem', lineHeight: '1.7', marginBottom: '1.5rem' }}>
+                    {syncFlowModal.error}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setSyncFlowModal(prev => ({ ...prev, isOpen: false }))}
+                      style={{
+                        padding: '0.65rem 1.4rem',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        color: '#94A3B8',
+                        fontSize: '0.88rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      بستن
+                    </button>
+                    <button
+                      type="button"
+                      onClick={syncFlowModal.type === 'rebuild' ? startRebuildExecution : startRangeExecution}
+                      style={{
+                        padding: '0.65rem 1.6rem',
+                        borderRadius: '12px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                        boxShadow: '0 8px 20px -4px rgba(239, 68, 68, 0.4)',
+                        color: '#FFFFFF',
+                        fontSize: '0.88rem',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      تلاش مجدد
+                    </button>
                   </div>
                 </div>
               )}
@@ -2551,27 +2831,7 @@ const JiraSettingsPage = () => {
                 type="button"
                 className="jsp-add-mapping-btn" 
                 style={{ background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#38BDF8' }}
-                onClick={() => {
-                  setConfirmModal({
-                    title: '🔄 همگام‌سازی و بازسازی دیتابیس از Jira',
-                    icon: '🌐',
-                    type: 'info',
-                    description: 'آیا مایلید تمام داده‌های دیتابیس بر اساس داده‌های ۱۰۰٪ زنده سرور Jira بازنشانی شوند؟',
-                    confirmText: '⚡ بله، همگام‌سازی انجام شود',
-                    cancelText: 'انصراف',
-                    onConfirm: async () => {
-                      try {
-                        showToast('در حال همگام‌سازی و بازسازی دیتابیس از Jira...');
-                        const res = await api.resetDatabase();
-                        showToast(res.message || 'دیتابیس با داده‌های زنده جیرا همگام شد.', 'success');
-                        fetchDbStats();
-                        fetchJiraCount(false);
-                      } catch (e) {
-                        showToast('خطا در بازسازی دیتابیس', 'error');
-                      }
-                    }
-                  });
-                }}
+                onClick={handleOpenRebuildModal}
               >
                 🔄 همگام‌سازی و بازسازی دیتابیس از Jira
               </button>
