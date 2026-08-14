@@ -73,4 +73,9 @@ export const api = {
   getDbTableData: (tableName, page = 1, search = '', category = 'all', limit = 50) => fetchWithAuth(`/db/data/${tableName}?page=${page}&search=${encodeURIComponent(search)}&category=${category}&limit=${limit}`),
   runDbQuery: (sql) => fetchWithAuth('/db/query', { method: 'POST', body: JSON.stringify({ sql }) }),
   runSystemTests: () => fetchWithAuth('/jira/run-tests', { method: 'POST' }),
+  getBackendLogs: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return fetchWithAuth(`/jira/logs${qs ? '?' + qs : ''}`);
+  },
+  clearBackendLogs: () => fetchWithAuth('/jira/logs/clear', { method: 'POST' }),
 };

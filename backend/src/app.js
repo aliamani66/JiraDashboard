@@ -16,12 +16,16 @@ const databaseManagerRoutes = require('./routes/databaseManager');
 const path = require('path');
 const fs = require('fs');
 
+const logger = require('./utils/logger');
+const { errorHandler, requestLogger } = require('./middleware/errorHandler');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
+app.use(requestLogger);
 
 // Health Check Endpoint for PM2 / Docker / Nginx
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
@@ -47,18 +51,15 @@ if (fs.existsSync(frontendDistPath)) {
 
 // Global Error Handlers to prevent process exit loops on server
 process.on('uncaughtException', (err) => {
-  console.error('CRITICAL: Uncaught Exception in Backend:', err.message, err.stack);
+  logger.error(`CRITICAL Uncaught Exception: ${err.message}`, err);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('CRITICAL: Unhandled Promise Rejection in Backend:', reason);
+  logger.error(`CRITICAL Unhandled Rejection: ${reason instanceof Error ? reason.message : reason}`, reason);
 });
 
-// Error Handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ success: false, message: err.message || 'خطای سرور' });
-});
+// Centralized Global Error Handler
+app.use(errorHandler);
 
 async function start() {
   await initDb();

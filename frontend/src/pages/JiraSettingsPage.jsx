@@ -4,7 +4,7 @@ import {
   Settings, Server, Cpu, GitBranch, Tag, Calendar,
   RefreshCw, Save, CheckCircle2, AlertTriangle, X,
   ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap, Database, Search, Trash2,
-  FlaskConical, Play, CheckCircle, XCircle, Clock
+  FlaskConical, Play, CheckCircle, XCircle, Clock, Terminal, Pause, Download, FileText
 } from 'lucide-react';
 import { api } from '../services/api';
 import JalaliDatePicker from '../components/common/JalaliDatePicker';
@@ -262,6 +262,88 @@ const JiraSettingsPage = () => {
   const [liveMappingSubTab, setLiveMappingSubTab] = useState('errors');
   const [systemTestsResult, setSystemTestsResult] = useState(null);
   const [systemTestsLoading, setSystemTestsLoading] = useState(false);
+
+  // 📜 Backend Logs State & Handlers
+  const [systemLogs, setSystemLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsLiveStream, setLogsLiveStream] = useState(true);
+  const [logsLevelFilter, setLogsLevelFilter] = useState('ALL');
+  const [logsSearchTerm, setLogsSearchTerm] = useState('');
+  const [logsAutoScroll, setLogsAutoScroll] = useState(true);
+  const logsContainerRef = useRef(null);
+  const [expandedLogId, setExpandedLogId] = useState(null);
+
+  const fetchLogs = useCallback(async () => {
+    try {
+      setLogsLoading(true);
+      const res = await api.getBackendLogs({ limit: 300 });
+      if (res && res.logs) {
+        setSystemLogs(res.logs);
+      }
+    } catch (err) {
+      console.error('Failed to fetch logs:', err);
+    } finally {
+      setLogsLoading(false);
+    }
+  }, []);
+
+  const handleClearLogs = async () => {
+    try {
+      showToast('در حال پاک‌سازی لاگ‌ها...', 'info');
+      await api.clearBackendLogs();
+      setSystemLogs([]);
+      showToast('✅ لاگ‌های سیستم با موفقیت پاک‌سازی شدند.', 'success');
+    } catch (err) {
+      showToast('خطا در پاک‌سازی لاگ‌ها: ' + err.message, 'error');
+    }
+  };
+
+  const handleDownloadLogs = () => {
+    const textContent = systemLogs.map(l => `[${l.timestamp}] [${l.level}] [${l.tag}] ${l.message}${l.stack ? '\n' + l.stack : ''}`).join('\n');
+    const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `backend-logs-${new Date().toISOString().split('T')[0]}.log`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // SSE Live streaming
+  useEffect(() => {
+    if (activeTab !== 'system_logs' || !logsLiveStream) return;
+
+    fetchLogs();
+
+    let eventSource;
+    try {
+      eventSource = new EventSource('/api/jira/logs/stream');
+      eventSource.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'INIT' && Array.isArray(data.logs)) {
+            setSystemLogs(data.logs);
+          } else if (data.id && data.message) {
+            setSystemLogs(prev => [...prev.slice(-400), data]);
+          }
+        } catch (_) {}
+      };
+      eventSource.onerror = () => {
+        if (eventSource) eventSource.close();
+      };
+    } catch (_) {}
+
+    return () => {
+      if (eventSource) eventSource.close();
+    };
+  }, [activeTab, logsLiveStream, fetchLogs]);
+
+  // Auto-scroll when logs change
+  useEffect(() => {
+    if (activeTab === 'system_logs' && logsAutoScroll && logsContainerRef.current) {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+    }
+  }, [systemLogs, activeTab, logsAutoScroll]);
 
   const handleRunSystemTests = async () => {
     try {
@@ -1767,6 +1849,46 @@ const JiraSettingsPage = () => {
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#A855F7', boxShadow: '0 0 8px #A855F7', marginRight: '0.4rem' }} />
             )}
           </button>
+
+          {/* Tab 5: 📜 لاگ‌های زنده بک‌اند */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('system_logs')}
+            style={{
+              padding: '0.85rem 1.4rem',
+              borderRadius: '12px 12px 0 0',
+              border: activeTab === 'system_logs' ? '1px solid rgba(6, 182, 212, 0.5)' : '1px solid transparent',
+              borderBottom: activeTab === 'system_logs' ? '2px solid #0F172A' : '1px solid transparent',
+              background: activeTab === 'system_logs' ? 'linear-gradient(180deg, rgba(6, 182, 212, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
+              color: activeTab === 'system_logs' ? '#22D3EE' : '#94A3B8',
+              fontWeight: activeTab === 'system_logs' ? 800 : 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              fontSize: '0.94rem',
+              position: 'relative',
+              marginBottom: '-1px',
+              zIndex: activeTab === 'system_logs' ? 2 : 1,
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          >
+            <div style={{
+              background: activeTab === 'system_logs' ? 'rgba(6, 182, 212, 0.3)' : 'rgba(255, 255, 255, 0.06)',
+              padding: '0.35rem',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: activeTab === 'system_logs' ? '1px solid rgba(6, 182, 212, 0.5)' : '1px solid transparent'
+            }}>
+              <Terminal size={18} color={activeTab === 'system_logs' ? '#22D3EE' : '#94A3B8'} />
+            </div>
+            <span>📜 لاگ‌های زنده بک‌اند</span>
+            {activeTab === 'system_logs' && (
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#06B6D4', boxShadow: '0 0 8px #06B6D4', marginRight: '0.4rem' }} />
+            )}
+          </button>
         </div>
 
         {/* Panel Body Content Container */}
@@ -2940,6 +3062,459 @@ const JiraSettingsPage = () => {
                       </button>
                     </div>
                   )}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'system_logs' && (
+              <motion.div
+                key="system_logs"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+              >
+                {/* 📜 LOGS PANEL HEADER & CONTROLS */}
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.75)',
+                  border: '1px solid rgba(6, 182, 212, 0.3)',
+                  borderRadius: '16px',
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem',
+                  boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4)'
+                }}>
+                  {/* Top Row: Title, Live Status Badge, and Action Buttons */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.9rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{
+                        background: 'rgba(6, 182, 212, 0.2)',
+                        border: '1px solid #06B6D4',
+                        color: '#22D3EE',
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Terminal size={22} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#F1F5F9' }}>
+                            لاگ‌های زنده بک‌اند (Live Stream)
+                          </h3>
+                          {logsLiveStream ? (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              background: 'rgba(16, 185, 129, 0.2)',
+                              color: '#34D399',
+                              padding: '0.2rem 0.6rem',
+                              borderRadius: '20px',
+                              border: '1px solid rgba(16, 185, 129, 0.4)',
+                              fontSize: '0.74rem',
+                              fontWeight: 700
+                            }}>
+                              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981', animation: 'pulse 1.5s infinite' }} />
+                              tail -f زنده فعال
+                            </span>
+                          ) : (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              background: 'rgba(148, 163, 184, 0.15)',
+                              color: '#94A3B8',
+                              padding: '0.2rem 0.6rem',
+                              borderRadius: '20px',
+                              border: '1px solid rgba(148, 163, 184, 0.3)',
+                              fontSize: '0.74rem',
+                              fontWeight: 600
+                            }}>
+                              ⏸️ استریم متوقف
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: '#94A3B8' }}>
+                          پایش زنده کلیه لاگ‌های درخواست‌های HTTP، خطاهای هندل‌شده سرور و عملیات همگام‌سازی جیرا.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Toolbar Actions */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => setLogsLiveStream(!logsLiveStream)}
+                        style={{
+                          background: logsLiveStream ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                          border: `1px solid ${logsLiveStream ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.15)'}`,
+                          color: logsLiveStream ? '#34D399' : '#94A3B8',
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: '8px',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        {logsLiveStream ? <Pause size={14} /> : <Play size={14} />}
+                        <span>{logsLiveStream ? 'توقف استریم' : 'شروع استریم'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setLogsAutoScroll(!logsAutoScroll)}
+                        style={{
+                          background: logsAutoScroll ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                          border: `1px solid ${logsAutoScroll ? 'rgba(6, 182, 212, 0.4)' : 'rgba(255, 255, 255, 0.15)'}`,
+                          color: logsAutoScroll ? '#22D3EE' : '#94A3B8',
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: '8px',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                        title="اسکرول خودکار به آخرین لاگ دریافتی"
+                      >
+                        <ChevronDown size={14} />
+                        <span>اسکرول خودکار: {logsAutoScroll ? 'روشن' : 'خاموش'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={fetchLogs}
+                        disabled={logsLoading}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          color: '#F1F5F9',
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: '8px',
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                        title="بارگذاری مجدد لاگ‌ها از سرور"
+                      >
+                        <RefreshCw size={14} className={logsLoading ? 'spin' : ''} />
+                        <span>بروزرسانی</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDownloadLogs}
+                        disabled={systemLogs.length === 0}
+                        style={{
+                          background: 'rgba(56, 189, 248, 0.15)',
+                          border: '1px solid rgba(56, 189, 248, 0.35)',
+                          color: '#38BDF8',
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: '8px',
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                        title="دانلود لاگ‌های سرور در قالب فایل log"
+                      >
+                        <Download size={14} />
+                        <span>دانلود لاگ</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleClearLogs}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          border: '1px solid rgba(239, 68, 68, 0.35)',
+                          color: '#F87171',
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: '8px',
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                        title="پاک‌سازی بافر لاگ‌های فعلی سرور"
+                      >
+                        <Trash2 size={14} />
+                        <span>پاک‌سازی</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filter Row: Level Filter Pills and Search Input */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    {/* Level Pills */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#94A3B8', marginLeft: '0.3rem' }}>فیلتر سطح:</span>
+                      {[
+                        { key: 'ALL', label: 'همه', color: '#94A3B8' },
+                        { key: 'ERROR', label: '🔴 ERROR', color: '#EF4444' },
+                        { key: 'WARN', label: '🟡 WARN', color: '#F59E0B' },
+                        { key: 'INFO', label: '🔵 INFO', color: '#38BDF8' },
+                        { key: 'HTTP', label: '🟣 HTTP', color: '#A855F7' }
+                      ].map(lvl => (
+                        <button
+                          key={lvl.key}
+                          type="button"
+                          onClick={() => setLogsLevelFilter(lvl.key)}
+                          style={{
+                            padding: '0.25rem 0.7rem',
+                            borderRadius: '20px',
+                            border: `1px solid ${logsLevelFilter === lvl.key ? lvl.color : 'rgba(255, 255, 255, 0.1)'}`,
+                            background: logsLevelFilter === lvl.key ? `${lvl.color}25` : 'rgba(255, 255, 255, 0.03)',
+                            color: logsLevelFilter === lvl.key ? (lvl.key === 'ALL' ? '#FFFFFF' : lvl.color) : '#94A3B8',
+                            fontSize: '0.76rem',
+                            fontWeight: logsLevelFilter === lvl.key ? 800 : 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {lvl.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Search Input */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '260px', flex: 1, maxWidth: '400px' }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        borderRadius: '8px',
+                        padding: '0.35rem 0.75rem',
+                        width: '100%'
+                      }}>
+                        <Search size={14} color="#64748B" />
+                        <input
+                          type="text"
+                          value={logsSearchTerm}
+                          onChange={e => setLogsSearchTerm(e.target.value)}
+                          placeholder="جستجو در پیام، کامپوننت یا خطا..."
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            outline: 'none',
+                            color: '#F8FAFC',
+                            fontSize: '0.82rem',
+                            width: '100%',
+                            fontFamily: 'inherit'
+                          }}
+                        />
+                        {logsSearchTerm && (
+                          <button
+                            type="button"
+                            onClick={() => setLogsSearchTerm('')}
+                            style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 0 }}
+                          >
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 🖥️ RETRO-MODERN MONOSPACE TERMINAL CONSOLE */}
+                <div style={{
+                  background: '#070B13',
+                  border: '1px solid rgba(6, 182, 212, 0.35)',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  boxShadow: '0 12px 35px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(6, 182, 212, 0.05)'
+                }}>
+                  {/* Terminal Window Header Bar */}
+                  <div style={{
+                    background: '#0F172A',
+                    padding: '0.6rem 1rem',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} />
+                      <span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#F59E0B', display: 'inline-block' }} />
+                      <span style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
+                      <span style={{ fontSize: '0.78rem', color: '#64748B', fontFamily: 'monospace', marginLeft: '0.75rem' }}>
+                        backend@server: tail -f logs/app.log
+                      </span>
+                    </div>
+
+                    <span style={{ fontSize: '0.75rem', color: '#06B6D4', fontFamily: 'monospace' }}>
+                      {(() => {
+                        const filtered = systemLogs.filter(l => {
+                          if (logsLevelFilter !== 'ALL' && l.level !== logsLevelFilter) return false;
+                          if (logsSearchTerm) {
+                            const q = logsSearchTerm.toLowerCase();
+                            return l.message?.toLowerCase().includes(q) || l.tag?.toLowerCase().includes(q) || l.stack?.toLowerCase().includes(q);
+                          }
+                          return true;
+                        });
+                        return `${filtered.length} از ${systemLogs.length} لاگ`;
+                      })()}
+                    </span>
+                  </div>
+
+                  {/* Terminal Log Stream Area */}
+                  <div
+                    ref={logsContainerRef}
+                    style={{
+                      height: '520px',
+                      overflowY: 'auto',
+                      padding: '1rem',
+                      fontFamily: '"Fira Code", "Cascadia Code", "Courier New", monospace',
+                      fontSize: '0.82rem',
+                      lineHeight: 1.6,
+                      direction: 'ltr',
+                      textAlign: 'left'
+                    }}
+                  >
+                    {(() => {
+                      const filtered = systemLogs.filter(l => {
+                        if (logsLevelFilter !== 'ALL' && l.level !== logsLevelFilter) return false;
+                        if (logsSearchTerm) {
+                          const q = logsSearchTerm.toLowerCase();
+                          return l.message?.toLowerCase().includes(q) || l.tag?.toLowerCase().includes(q) || l.stack?.toLowerCase().includes(q);
+                        }
+                        return true;
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#475569' }}>
+                            <FileText size={36} style={{ opacity: 0.4, marginBottom: '0.6rem' }} />
+                            <p style={{ margin: 0, fontSize: '0.9rem' }}>هیچ لاگی با فیلترهای انتخابی یافت نشد.</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          {filtered.map(l => {
+                            const isError = l.level === 'ERROR';
+                            const isWarn = l.level === 'WARN';
+                            const isHttp = l.level === 'HTTP';
+                            const isExpanded = expandedLogId === l.id;
+
+                            const levelColor = isError ? '#EF4444' : isWarn ? '#F59E0B' : isHttp ? '#C084FC' : '#38BDF8';
+                            const levelBg = isError ? 'rgba(239, 68, 68, 0.18)' : isWarn ? 'rgba(245, 158, 11, 0.18)' : isHttp ? 'rgba(192, 132, 252, 0.18)' : 'rgba(56, 189, 248, 0.18)';
+
+                            return (
+                              <div
+                                key={l.id}
+                                style={{
+                                  padding: '0.35rem 0.5rem',
+                                  borderRadius: '6px',
+                                  background: isError ? 'rgba(239, 68, 68, 0.06)' : 'transparent',
+                                  borderLeft: isError ? '3px solid #EF4444' : isWarn ? '3px solid #F59E0B' : '3px solid transparent',
+                                  transition: 'background 0.15s'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', flexWrap: 'wrap' }}>
+                                  {/* Timestamp */}
+                                  <span style={{ color: '#64748B', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                                    {l.timestamp}
+                                  </span>
+
+                                  {/* Level Badge */}
+                                  <span style={{
+                                    background: levelBg,
+                                    color: levelColor,
+                                    padding: '0.08rem 0.45rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 800,
+                                    border: `1px solid ${levelColor}40`,
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {l.level}
+                                  </span>
+
+                                  {/* Tag Pill */}
+                                  {l.tag && (
+                                    <span style={{
+                                      background: 'rgba(255, 255, 255, 0.06)',
+                                      color: '#CBD5E1',
+                                      padding: '0.08rem 0.4rem',
+                                      borderRadius: '4px',
+                                      fontSize: '0.72rem',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      [{l.tag}]
+                                    </span>
+                                  )}
+
+                                  {/* Message */}
+                                  <span style={{
+                                    color: isError ? '#FCA5A5' : isWarn ? '#FDE68A' : isHttp ? '#E9D5FF' : '#E2E8F0',
+                                    wordBreak: 'break-all',
+                                    flex: 1
+                                  }}>
+                                    {l.message}
+                                  </span>
+
+                                  {/* Stack trace toggle if available */}
+                                  {l.stack && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedLogId(isExpanded ? null : l.id)}
+                                      style={{
+                                        background: 'rgba(239, 68, 68, 0.2)',
+                                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                                        color: '#F87171',
+                                        borderRadius: '4px',
+                                        padding: '0.1rem 0.4rem',
+                                        fontSize: '0.7rem',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      {isExpanded ? 'بستن استک' : '🔍 Stack'}
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Expanded Stack Trace */}
+                                {isExpanded && l.stack && (
+                                  <pre style={{
+                                    margin: '0.4rem 0 0.2rem 2rem',
+                                    padding: '0.6rem 0.8rem',
+                                    background: 'rgba(0, 0, 0, 0.5)',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    borderRadius: '6px',
+                                    color: '#F87171',
+                                    fontSize: '0.74rem',
+                                    overflowX: 'auto',
+                                    whiteSpace: 'pre-wrap'
+                                  }}>
+                                    {l.stack}
+                                  </pre>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </motion.div>
             )}

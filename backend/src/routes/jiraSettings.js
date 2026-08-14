@@ -1902,4 +1902,52 @@ router.post('/run-tests', async (req, res) => {
   }
 });
 
+// GET /api/jira/logs - Fetch recent logs with filters
+router.get('/logs', (req, res) => {
+  try {
+    const logger = require('../utils/logger');
+    const { limit, level, search, tag } = req.query;
+    const logs = logger.getLogs({
+      limit: parseInt(limit, 10) || 200,
+      level,
+      search,
+      tag
+    });
+    res.json({ success: true, count: logs.length, logs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در دریافت لاگ‌ها: ' + err.message });
+  }
+});
+
+// GET /api/jira/logs/stream - Real-time SSE stream (tail -f)
+router.get('/logs/stream', (req, res) => {
+  const logger = require('../utils/logger');
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  });
+
+  const clientId = Date.now() + Math.random().toString(36).substring(2);
+  const initialLogs = logger.getLogs({ limit: 50 });
+  res.write(`data: ${JSON.stringify({ type: 'INIT', logs: initialLogs })}\n\n`);
+
+  const removeClient = logger.addSseClient(clientId, res);
+
+  req.on('close', () => {
+    removeClient();
+  });
+});
+
+// POST /api/jira/logs/clear - Clear logs buffer
+router.post('/logs/clear', (req, res) => {
+  try {
+    const logger = require('../utils/logger');
+    logger.clearLogs();
+    res.json({ success: true, message: 'لاگ‌های سیستم با موفقیت پاک‌سازی شدند.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطا در پاک‌سازی لاگ‌ها: ' + err.message });
+  }
+});
+
 module.exports = router;
