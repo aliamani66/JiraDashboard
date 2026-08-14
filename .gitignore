@@ -1,4 +1,4 @@
-# Environment & secrets (هرگز در گیت پاش نشوند)
+# Environment & secrets
 .env
 .env.*
 *.env
@@ -14,7 +14,6 @@ docker-compose.local.yml
 docker-compose.prod.yml
 *.local.json
 *.local.js
-backend/src/services/mockJiraService.js
 *.local.yml
 *.local.yaml
 config.local.*
@@ -28,19 +27,16 @@ frontend/node_modules/
 frontend/build/
 
 # Database & logs
-backend/database.sqlite
-*.sqlite
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Allow default database.sqlite with test seed
+!backend/database.sqlite
 
 # IDE & OS
 .vscode/
 # Deployment Archives
 *.zip
 *.tar.gz
-JiraDashboard.zip
-JiraDashboard.tar.gz
-jiradashboard.zip
-jiradashboar.zip
