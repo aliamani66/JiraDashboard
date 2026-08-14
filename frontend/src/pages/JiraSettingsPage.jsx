@@ -284,6 +284,7 @@ const JiraSettingsPage = () => {
   const [systemLogs, setSystemLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsLiveStream, setLogsLiveStream] = useState(true);
+  const [logsStreamStatus, setLogsStreamStatus] = useState('connecting'); // 'connected' | 'connecting' | 'paused' | 'error'
   const [logsLevelFilter, setLogsLevelFilter] = useState('ALL');
   const [logsSearchTerm, setLogsSearchTerm] = useState('');
   const [logsAutoScroll, setLogsAutoScroll] = useState(true);
@@ -293,7 +294,7 @@ const JiraSettingsPage = () => {
   const fetchLogs = useCallback(async () => {
     try {
       setLogsLoading(true);
-      const res = await api.getBackendLogs({ limit: 300 });
+      const res = await api.getBackendLogs({ limit: 1000 });
       if (res && res.logs) {
         setSystemLogs(res.logs);
       }
@@ -316,7 +317,7 @@ const JiraSettingsPage = () => {
   };
 
   const handleDownloadLogs = () => {
-    const textContent = systemLogs.map(l => `[${l.timestamp}] [${l.level}] [${l.tag}] ${l.message}${l.stack ? '\n' + l.stack : ''}`).join('\n');
+    const textContent = systemLogs.map(l => `[${l.timestamp}] [${l.level}] [${l.tag || 'SYSTEM'}] ${l.message}${l.stack ? '\n' + l.stack : ''}`).join('\n');
     const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -326,36 +327,69 @@ const JiraSettingsPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  // SSE Live streaming
+  // 📡 Live SSE Stream with Auth Token & Automatic Fallback Polling
   useEffect(() => {
-    if (activeTab !== 'system_logs' || !logsLiveStream) return;
+    if (activeTab !== 'system_logs') return;
 
+    if (!logsLiveStream) {
+      setLogsStreamStatus('paused');
+      return;
+    }
+
+    // Initial fetch to load all current logs
     fetchLogs();
 
-    let eventSource;
+    setLogsStreamStatus('connecting');
+    let eventSource = null;
+    let fallbackPollTimer = null;
+
     try {
-      eventSource = new EventSource('/api/jira/logs/stream');
+      const streamUrl = api.getLogsStreamUrl();
+      eventSource = new EventSource(streamUrl);
+
+      eventSource.onopen = () => {
+        setLogsStreamStatus('connected');
+      };
+
       eventSource.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
           if (data.type === 'INIT' && Array.isArray(data.logs)) {
             setSystemLogs(data.logs);
+            setLogsStreamStatus('connected');
           } else if (data.id && data.message) {
-            setSystemLogs(prev => [...prev.slice(-400), data]);
+            setLogsStreamStatus('connected');
+            setSystemLogs(prev => {
+              if (prev.some(l => l.id === data.id)) return prev;
+              return [...prev.slice(-2000), data];
+            });
           }
         } catch (_) {}
       };
+
       eventSource.onerror = () => {
-        if (eventSource) eventSource.close();
+        setLogsStreamStatus('connecting');
+        // If SSE has any temporary hiccup, start smooth polling fallback
+        if (!fallbackPollTimer) {
+          fallbackPollTimer = setInterval(fetchLogs, 4000);
+        }
       };
-    } catch (_) {}
+    } catch (_) {
+      setLogsStreamStatus('error');
+      fallbackPollTimer = setInterval(fetchLogs, 4000);
+    }
 
     return () => {
-      if (eventSource) eventSource.close();
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (fallbackPollTimer) {
+        clearInterval(fallbackPollTimer);
+      }
     };
   }, [activeTab, logsLiveStream, fetchLogs]);
 
-  // Auto-scroll when logs change
+  // 📜 Instant Auto-scroll on new log entries
   useEffect(() => {
     if (activeTab === 'system_logs' && logsAutoScroll && logsContainerRef.current) {
       logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
@@ -3371,17 +3405,24 @@ const JiraSettingsPage = () => {
                             <span style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '0.35rem',
-                              background: 'rgba(16, 185, 129, 0.2)',
-                              color: '#34D399',
-                              padding: '0.2rem 0.6rem',
+                              gap: '0.45rem',
+                              background: logsStreamStatus === 'connected' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                              color: logsStreamStatus === 'connected' ? '#34D399' : '#FCD34D',
+                              padding: '0.22rem 0.75rem',
                               borderRadius: '20px',
-                              border: '1px solid rgba(16, 185, 129, 0.4)',
-                              fontSize: '0.74rem',
-                              fontWeight: 700
+                              border: logsStreamStatus === 'connected' ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(245, 158, 11, 0.5)',
+                              fontSize: '0.76rem',
+                              fontWeight: 800
                             }}>
-                              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981', animation: 'pulse 1.5s infinite' }} />
-                              tail -f زنده فعال
+                              <span style={{
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                background: logsStreamStatus === 'connected' ? '#10B981' : '#F59E0B',
+                                boxShadow: logsStreamStatus === 'connected' ? '0 0 10px #10B981' : '0 0 10px #F59E0B',
+                                display: 'inline-block'
+                              }} />
+                              {logsStreamStatus === 'connected' ? 'استریم زنده متصل (tail -f)' : 'در حال اتصال به سرور...'}
                             </span>
                           ) : (
                             <span style={{
@@ -3390,13 +3431,13 @@ const JiraSettingsPage = () => {
                               gap: '0.35rem',
                               background: 'rgba(148, 163, 184, 0.15)',
                               color: '#94A3B8',
-                              padding: '0.2rem 0.6rem',
+                              padding: '0.22rem 0.75rem',
                               borderRadius: '20px',
                               border: '1px solid rgba(148, 163, 184, 0.3)',
-                              fontSize: '0.74rem',
-                              fontWeight: 600
+                              fontSize: '0.76rem',
+                              fontWeight: 700
                             }}>
-                              ⏸️ استریم متوقف
+                              ⏸️ استریم متوقف‌شده
                             </span>
                           )}
                         </div>
@@ -3412,20 +3453,23 @@ const JiraSettingsPage = () => {
                         type="button"
                         onClick={() => setLogsLiveStream(!logsLiveStream)}
                         style={{
-                          background: logsLiveStream ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                          border: `1px solid ${logsLiveStream ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.15)'}`,
-                          color: logsLiveStream ? '#34D399' : '#94A3B8',
-                          padding: '0.45rem 0.85rem',
-                          borderRadius: '8px',
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
+                          background: logsLiveStream ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.35))' : 'rgba(255, 255, 255, 0.08)',
+                          border: `1px solid ${logsLiveStream ? 'rgba(16, 185, 129, 0.6)' : 'rgba(255, 255, 255, 0.2)'}`,
+                          color: logsLiveStream ? '#34D399' : '#FFFFFF',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '10px',
+                          fontSize: '0.84rem',
+                          fontWeight: 800,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.4rem'
+                          gap: '0.45rem',
+                          boxShadow: logsLiveStream ? '0 0 15px rgba(16, 185, 129, 0.25)' : 'none',
+                          transition: 'all 0.2s ease'
                         }}
+                        title={logsLiveStream ? 'توقف دریافت زنده لاگ‌ها' : 'شروع دریافت زنده لاگ‌ها (tail -f)'}
                       >
-                        {logsLiveStream ? <Pause size={14} /> : <Play size={14} />}
+                        {logsLiveStream ? <Pause size={15} /> : <Play size={15} />}
                         <span>{logsLiveStream ? 'توقف استریم' : 'شروع استریم'}</span>
                       </button>
 
@@ -3433,21 +3477,22 @@ const JiraSettingsPage = () => {
                         type="button"
                         onClick={() => setLogsAutoScroll(!logsAutoScroll)}
                         style={{
-                          background: logsAutoScroll ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                          border: `1px solid ${logsAutoScroll ? 'rgba(6, 182, 212, 0.4)' : 'rgba(255, 255, 255, 0.15)'}`,
+                          background: logsAutoScroll ? 'rgba(6, 182, 212, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                          border: `1px solid ${logsAutoScroll ? 'rgba(6, 182, 212, 0.5)' : 'rgba(255, 255, 255, 0.15)'}`,
                           color: logsAutoScroll ? '#22D3EE' : '#94A3B8',
-                          padding: '0.45rem 0.85rem',
-                          borderRadius: '8px',
+                          padding: '0.5rem 0.9rem',
+                          borderRadius: '10px',
                           fontSize: '0.82rem',
                           fontWeight: 700,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.4rem'
+                          gap: '0.4rem',
+                          transition: 'all 0.2s ease'
                         }}
                         title="اسکرول خودکار به آخرین لاگ دریافتی"
                       >
-                        <ChevronDown size={14} />
+                        <ChevronDown size={15} />
                         <span>اسکرول خودکار: {logsAutoScroll ? 'روشن' : 'خاموش'}</span>
                       </button>
 
@@ -3456,11 +3501,11 @@ const JiraSettingsPage = () => {
                         onClick={fetchLogs}
                         disabled={logsLoading}
                         style={{
-                          background: 'rgba(255, 255, 255, 0.05)',
+                          background: 'rgba(255, 255, 255, 0.06)',
                           border: '1px solid rgba(255, 255, 255, 0.15)',
                           color: '#F1F5F9',
-                          padding: '0.45rem 0.85rem',
-                          borderRadius: '8px',
+                          padding: '0.5rem 0.9rem',
+                          borderRadius: '10px',
                           fontSize: '0.82rem',
                           cursor: 'pointer',
                           display: 'flex',
@@ -3481,8 +3526,8 @@ const JiraSettingsPage = () => {
                           background: 'rgba(56, 189, 248, 0.15)',
                           border: '1px solid rgba(56, 189, 248, 0.35)',
                           color: '#38BDF8',
-                          padding: '0.45rem 0.85rem',
-                          borderRadius: '8px',
+                          padding: '0.5rem 0.9rem',
+                          borderRadius: '10px',
                           fontSize: '0.82rem',
                           cursor: 'pointer',
                           display: 'flex',
@@ -3502,8 +3547,8 @@ const JiraSettingsPage = () => {
                           background: 'rgba(239, 68, 68, 0.15)',
                           border: '1px solid rgba(239, 68, 68, 0.35)',
                           color: '#F87171',
-                          padding: '0.45rem 0.85rem',
-                          borderRadius: '8px',
+                          padding: '0.5rem 0.9rem',
+                          borderRadius: '10px',
                           fontSize: '0.82rem',
                           cursor: 'pointer',
                           display: 'flex',
@@ -3524,11 +3569,12 @@ const JiraSettingsPage = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '0.8rem', color: '#94A3B8', marginLeft: '0.3rem' }}>فیلتر سطح:</span>
                       {[
-                        { key: 'ALL', label: 'همه', color: '#94A3B8' },
+                        { key: 'ALL', label: 'همه لاگ‌ها', color: '#94A3B8' },
                         { key: 'ERROR', label: '🔴 ERROR', color: '#EF4444' },
                         { key: 'WARN', label: '🟡 WARN', color: '#F59E0B' },
                         { key: 'INFO', label: '🔵 INFO', color: '#38BDF8' },
-                        { key: 'HTTP', label: '🟣 HTTP', color: '#A855F7' }
+                        { key: 'HTTP', label: '🟣 HTTP', color: '#A855F7' },
+                        { key: 'DEBUG', label: '⚙️ DEBUG', color: '#10B981' }
                       ].map(lvl => (
                         <button
                           key={lvl.key}

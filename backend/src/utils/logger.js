@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const MAX_LOG_BUFFER_SIZE = 1000;
+const MAX_LOG_BUFFER_SIZE = 3000;
 const logBuffer = [];
 const sseClients = new Set();
 
@@ -15,10 +15,43 @@ function formatTimestamp(d = new Date()) {
   return d.toISOString().replace('T', ' ').substring(0, 23);
 }
 
+// Preload recent logs from disk if available
+try {
+  if (fs.existsSync(logFilePath)) {
+    const rawContent = fs.readFileSync(logFilePath, 'utf8');
+    const rawLines = rawContent.split('\n').filter(l => l.trim());
+    const recentLines = rawLines.slice(-300);
+    recentLines.forEach((line, idx) => {
+      // Line format: [2026-08-15 00:00:00.000] [LEVEL] [TAG] message
+      const match = line.match(/^\[(.*?)\]\s+\[([A-Z]+)\]\s+\[(.*?)\]\s+(.*)$/);
+      if (match) {
+        logBuffer.push({
+          id: `disk-${idx}-${Date.now()}`,
+          timestamp: match[1],
+          level: match[2],
+          tag: match[3],
+          message: match[4]
+        });
+      } else {
+        logBuffer.push({
+          id: `disk-${idx}-${Date.now()}`,
+          timestamp: formatTimestamp(),
+          level: 'INFO',
+          tag: 'SYSTEM',
+          message: line
+        });
+      }
+    });
+  }
+} catch (_) {}
+
 function broadcastLog(entry) {
   for (const client of sseClients) {
     try {
       client.res.write(`data: ${JSON.stringify(entry)}\n\n`);
+      if (typeof client.res.flush === 'function') {
+        client.res.flush();
+      }
     } catch (_) {
       sseClients.delete(client);
     }
@@ -39,7 +72,7 @@ function addLog(level, message, meta = null) {
     if (meta.stack) stack = meta.stack;
   }
 
-  // Detect tag/category from prefix e.g. [SYNC], [JIRA], [AUTH], [DB], [TEST]
+  // Detect tag/category from prefix e.g. [SYNC], [JIRA], [AUTH], [DB], [TEST], [HTTP]
   let tag = 'SYSTEM';
   const tagMatch = formattedMsg.match(/^\[([A-Z0-9_\-]+)\]/);
   if (tagMatch) {
@@ -90,7 +123,7 @@ const logger = {
     addLog('HTTP', msg, meta);
   },
   getLogs: (options = {}) => {
-    const { limit = 200, level, search, tag } = options;
+    const { limit = 500, level, search, tag } = options;
     let list = [...logBuffer];
 
     if (level && level !== 'ALL') {
@@ -108,7 +141,7 @@ const logger = {
       );
     }
 
-    return list.slice(-Math.min(limit, 1000));
+    return list.slice(-Math.min(limit, MAX_LOG_BUFFER_SIZE));
   },
   clearLogs: () => {
     logBuffer.length = 0;

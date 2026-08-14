@@ -1908,7 +1908,7 @@ router.get('/logs', (req, res) => {
     const logger = require('../utils/logger');
     const { limit, level, search, tag } = req.query;
     const logs = logger.getLogs({
-      limit: parseInt(limit, 10) || 200,
+      limit: parseInt(limit, 10) || 1000,
       level,
       search,
       tag
@@ -1924,17 +1924,30 @@ router.get('/logs/stream', (req, res) => {
   const logger = require('../utils/logger');
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive'
+    'Cache-Control': 'no-cache, no-transform',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+    'Access-Control-Allow-Origin': '*'
   });
 
   const clientId = Date.now() + Math.random().toString(36).substring(2);
-  const initialLogs = logger.getLogs({ limit: 50 });
+  const initialLogs = logger.getLogs({ limit: 500 });
   res.write(`data: ${JSON.stringify({ type: 'INIT', logs: initialLogs })}\n\n`);
+  if (typeof res.flush === 'function') res.flush();
 
   const removeClient = logger.addSseClient(clientId, res);
 
+  const keepAliveTimer = setInterval(() => {
+    try {
+      res.write(': keepalive\n\n');
+      if (typeof res.flush === 'function') res.flush();
+    } catch (_) {
+      clearInterval(keepAliveTimer);
+    }
+  }, 10000);
+
   req.on('close', () => {
+    clearInterval(keepAliveTimer);
     removeClient();
   });
 });

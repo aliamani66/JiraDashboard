@@ -74,8 +74,14 @@ export const api = {
   runDbQuery: (sql) => fetchWithAuth('/db/query', { method: 'POST', body: JSON.stringify({ sql }) }),
   runSystemTests: () => fetchWithAuth('/jira/run-tests', { method: 'POST' }),
   getBackendLogs: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
+    const fullParams = { limit: 1000, ...params };
+    const qs = new URLSearchParams(fullParams).toString();
     return fetchWithAuth(`/jira/logs${qs ? '?' + qs : ''}`);
+  },
+  getLogsStreamUrl: () => {
+    const token = localStorage.getItem('token') || '';
+    const base = import.meta.env.VITE_API_BASE || '/api';
+    return `${base}/jira/logs/stream?token=${encodeURIComponent(token)}`;
   },
   clearBackendLogs: () => fetchWithAuth('/jira/logs/clear', { method: 'POST' }),
 };
