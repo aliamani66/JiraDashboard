@@ -6,9 +6,14 @@
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
-  padding: 1.25rem 1.5rem;
+  padding: 1.35rem 1.6rem;
   margin-bottom: 1.5rem;
-  border-right: 4px solid var(--accent-cyan);
+  border-right: 4px solid var(--accent-cyan) !important;
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass) !important;
 }
 
 .sprint-header-main-row {
@@ -27,7 +32,8 @@
 
 .sprint-title h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.3rem;
+  font-weight: 800;
 }
 
 .current-sprint-badge-glow {
@@ -36,10 +42,12 @@
   gap: 0.35rem;
   color: #FACC15;
   font-weight: 700;
-  background: rgba(250, 204, 21, 0.12);
-  padding: 2px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(250, 204, 21, 0.3);
+  background: rgba(250, 204, 21, 0.15);
+  backdrop-filter: blur(8px);
+  padding: 3px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.2);
 }
 
 .multi-sprint-pill {
@@ -47,12 +55,12 @@
   align-items: center;
   gap: 0.25rem;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #E9D5FF;
   background: rgba(168, 85, 247, 0.2);
   border: 1px solid rgba(168, 85, 247, 0.4);
-  padding: 1px 6px;
-  border-radius: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
 }
 
 .text-accent-cyan {
@@ -66,15 +74,16 @@
   color: var(--accent-cyan);
   text-decoration: none;
   transition: all 0.2s ease;
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: rgba(6, 182, 212, 0.1);
-  border: 1px solid rgba(6, 182, 212, 0.25);
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: rgba(6, 182, 212, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(6, 182, 212, 0.35);
 }
 
 .sprint-jira-link:hover {
-  background: rgba(6, 182, 212, 0.25);
-  box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+  background: rgba(6, 182, 212, 0.3);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.45);
   color: #FFFFFF;
   transform: translateY(-1px);
 }
@@ -110,22 +119,23 @@
 }
 
 .sprint-dropdown {
-  background: rgba(15, 23, 42, 0.85);
-  color: #FFFFFF;
-  border: 1px solid rgba(6, 182, 212, 0.4);
-  padding: 0.35rem 2.2rem 0.35rem 0.85rem;
-  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.7) !important;
+  backdrop-filter: blur(12px) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(6, 182, 212, 0.4) !important;
+  padding: 0.42rem 2.2rem 0.42rem 0.95rem;
+  border-radius: 10px;
   font-size: 0.85rem;
   font-family: inherit;
   cursor: pointer;
   outline: none;
   transition: all 0.2s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .sprint-dropdown:hover, .sprint-dropdown:focus {
-  background: rgba(15, 23, 42, 0.95);
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 12px rgba(6, 182, 212, 0.3);
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.35) !important;
 }
 
 .sprint-dropdown option {
@@ -146,10 +156,11 @@
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  padding: 0.65rem 1rem;
-  background: rgba(0, 0, 0, 0.25);
+  padding: 0.75rem 1.1rem;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: 12px;
   flex-wrap: wrap;
 }
 
@@ -170,10 +181,11 @@
 }
 
 .sstat-item.remaining-highlight {
-  background: rgba(249, 115, 22, 0.15);
-  border: 1px solid rgba(249, 115, 22, 0.35);
-  padding: 0.3rem 0.75rem;
+  background: rgba(249, 115, 22, 0.18);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  padding: 0.3rem 0.8rem;
   border-radius: 8px;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.2);
 }
 
 .sstat-value.remaining-num {
@@ -183,9 +195,9 @@
 }
 
 .sstat-item.waiting-highlight {
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  padding: 0.3rem 0.75rem;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 0.3rem 0.8rem;
   border-radius: 8px;
 }
 
@@ -211,24 +223,27 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
 }
 
 .reset-assignee-filter-btn {
   background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   color: var(--accent-cyan);
-  padding: 0.15rem 0.5rem;
-  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+  border-radius: 8px;
   font-size: 0.75rem;
+  font-weight: 700;
   cursor: pointer;
   margin-right: auto;
   transition: all 0.2s;
 }
 
 .reset-assignee-filter-btn:hover {
-  background: rgba(6, 182, 212, 0.2);
+  background: rgba(6, 182, 212, 0.25);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
 }
 
 .sab-cards-row {
@@ -241,56 +256,59 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.35rem 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  padding: 0.38rem 0.85rem;
   border-radius: 20px;
   font-size: 0.82rem;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
   color: var(--text-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .assignee-workload-chip:hover {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+  background: rgba(56, 189, 248, 0.15);
   border-color: var(--accent-cyan);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 0 12px rgba(56, 189, 248, 0.3);
 }
 
 .assignee-workload-chip.active-filter {
-  background: rgba(59, 130, 246, 0.25) !important;
+  background: rgba(56, 189, 248, 0.25) !important;
   border-color: #38BDF8 !important;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
 }
 
 .assignee-workload-chip.has-remaining {
-  border-color: rgba(249, 115, 22, 0.3);
+  border-color: rgba(249, 115, 22, 0.35);
 }
 
 .awc-name {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .awc-remaining-badge {
-  background: rgba(249, 115, 22, 0.2);
+  background: rgba(249, 115, 22, 0.22);
   color: #FB923C;
-  padding: 0.15rem 0.5rem;
+  padding: 0.18rem 0.55rem;
   border-radius: 12px;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .awc-done-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  background: rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.22);
   color: #34D399;
-  padding: 0.15rem 0.55rem;
+  padding: 0.18rem 0.6rem;
   border-radius: 12px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Tasks Grid */
@@ -305,15 +323,22 @@
 }
 
 .sprint-task-card {
-  padding: 1rem;
+  padding: 1.15rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  transition: transform 0.2s;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-glass) !important;
 }
 
 .sprint-task-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), 0 0 16px rgba(56, 189, 248, 0.2) !important;
 }
 
 .stc-header {
@@ -325,7 +350,7 @@
 .stc-title {
   margin: 0;
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 700;
   line-height: 1.4;
 }
 
@@ -339,10 +364,12 @@
 }
 
 .assignee-tag {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
   font-size: 0.8rem;
+  border: 1px solid var(--glass-border);
 }
 
 .unassigned-tag {

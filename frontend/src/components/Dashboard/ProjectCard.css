@@ -13,20 +13,38 @@
   justify-content: space-between;
   height: 100%;
   position: relative;
-  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease, border-color 0.25s ease;
-  border-radius: 16px;
+  transition: transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.28s ease, border-color 0.28s ease;
+  border-radius: var(--radius-lg);
   box-sizing: border-box;
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-glass) !important;
+  overflow: hidden;
+}
+
+.project-card-v2::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.25) 50%, transparent 100%);
+  pointer-events: none;
 }
 
 .project-card-v2:hover {
-  transform: translateY(-4px);
-  border-color: rgba(6, 182, 212, 0.4);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba(6, 182, 212, 0.15);
+  transform: translateY(-5px);
+  background: var(--bg-card-hover) !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(56, 189, 248, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
 }
 
 /* Full Stoppage Highlight */
 .project-card-v2.pc-stopped {
-  border-color: rgba(249, 115, 22, 0.6);
+  border-color: rgba(249, 115, 22, 0.6) !important;
   animation: pulseCardBorder 3s infinite ease-in-out;
 }
 
@@ -38,16 +56,18 @@
 
 .pc-stoppage-banner {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(249, 115, 22, 0.2) 100%);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(239, 68, 68, 0.4);
   color: #FCA5A5;
   padding: 0.45rem 0.85rem;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.78rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   gap: 0.4rem;
   margin-bottom: 0.85rem;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
 }
 
 .pulse-icon {
@@ -79,17 +99,18 @@
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--accent-cyan);
-  background: rgba(6, 182, 212, 0.15);
+  background: rgba(6, 182, 212, 0.18);
   padding: 3px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(6, 182, 212, 0.3);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   letter-spacing: 0.5px;
 }
 
 /* Title */
 .pc-title {
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
   line-height: 1.4;
   margin: 0 0 0.35rem 0;
@@ -135,10 +156,11 @@
 .pc-quarter-pill {
   font-size: 0.76rem;
   font-weight: 700;
-  padding: 0.2rem 0.6rem;
+  padding: 0.2rem 0.65rem;
   border-radius: 12px;
-  background: rgba(6, 182, 212, 0.12);
-  border: 1px solid rgba(6, 182, 212, 0.3);
+  background: rgba(6, 182, 212, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(6, 182, 212, 0.35);
   color: var(--accent-cyan);
   letter-spacing: 0.5px;
   direction: ltr;
@@ -153,10 +175,12 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0.85rem 1rem;
-  border-radius: 14px;
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .pc-text-stats {
@@ -175,7 +199,7 @@
 
 .pc-task-count strong {
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
 }
 
@@ -186,7 +210,7 @@
 
 .pc-progress-pct strong {
   color: var(--accent-cyan);
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .pc-waiting-count {
@@ -195,7 +219,7 @@
   gap: 0.35rem;
   font-size: 0.78rem;
   color: var(--accent-orange);
-  font-weight: 600;
+  font-weight: 700;
   margin-top: 0.15rem;
 }
 
@@ -225,7 +249,7 @@
   stroke: var(--accent-cyan);
   stroke-linecap: round;
   transition: stroke-dashoffset 0.8s ease;
-  filter: drop-shadow(0 0 6px rgba(6, 182, 212, 0.5));
+  filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.6));
 }
 
 /* Component Summary Mini Badges on Main Dashboard */
@@ -241,18 +265,20 @@
 
 .pc-comp-pill {
   font-size: 0.74rem;
-  font-weight: 600;
-  padding: 0.18rem 0.55rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
   border-radius: 10px;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   transition: transform 0.2s ease;
 }
 
 .pc-comp-pill:hover {
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
 /* Task Status Breakdown Row */
@@ -266,44 +292,46 @@
 .pc-status-chip {
   font-size: 0.75rem;
   font-weight: 700;
-  padding: 0.2rem 0.55rem;
-  border-radius: 8px;
+  padding: 0.22rem 0.6rem;
+  border-radius: 10px;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+  backdrop-filter: blur(8px);
   border: 1px solid transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .pc-status-chip.chip-done {
-  background: rgba(16, 185, 129, 0.14);
-  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(16, 185, 129, 0.4);
   color: #34D399;
 }
 
 .pc-status-chip.chip-active {
-  background: rgba(59, 130, 246, 0.14);
-  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.4);
   color: #60A5FA;
 }
 
 .pc-status-chip.chip-todo {
-  background: rgba(167, 139, 250, 0.16);
-  border-color: rgba(167, 139, 250, 0.4);
+  background: rgba(168, 85, 247, 0.18);
+  border-color: rgba(168, 85, 247, 0.45);
   color: #C084FC;
-  box-shadow: 0 0 8px rgba(192, 132, 252, 0.25);
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.25);
 }
 
 .pc-status-chip.chip-waiting {
-  background: rgba(249, 115, 22, 0.14);
-  border-color: rgba(249, 115, 22, 0.35);
+  background: rgba(249, 115, 22, 0.16);
+  border-color: rgba(249, 115, 22, 0.4);
   color: #FDBA74;
 }
 
 /* Dotted Line Divider */
 .pc-dotted-divider {
   width: 100%;
-  border-top: 2px dotted rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   margin-top: auto;
   margin-bottom: 0.85rem;
 }

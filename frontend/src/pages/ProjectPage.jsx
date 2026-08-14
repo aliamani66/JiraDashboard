@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { ArrowLeft } from 'lucide-react';
 import { useProjectDetail } from '../hooks/useProjects';
 import ProjectHeader from '../components/ProjectDetail/ProjectHeader';
 import ComponentBreakdown from '../components/ProjectDetail/ComponentBreakdown';
@@ -14,7 +15,7 @@ import './ProjectPage.css';
 const ProjectPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { project, blocked, gantt, loading, error } = useProjectDetail(id);
+  const { project, blocked, gantt, loading, error, refetch } = useProjectDetail(id);
 
   if (loading) return <div className="loading-state">در حال دریافت اطلاعات پروژه...</div>;
   if (error || !project) return <div className="error-state">خطا در دریافت اطلاعات پروژه</div>;
@@ -55,13 +56,14 @@ const ProjectPage = () => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <button className="back-btn" onClick={() => navigate('/')}>
-        &rarr; بازگشت به داشبورد
+      <button className="back-btn" onClick={() => navigate('/')} title="بازگشت به داشبورد">
+        <ArrowLeft size={16} />
+        <span>داشبورد</span>
       </button>
 
       {/* 1. Top Tiles Grid: Project Header (Right 2.2fr) & Component Breakdown (Left 1fr - Equal Height!) */}
       <div className="project-top-tiles-grid">
-        <ProjectHeader project={project} capabilities={capabilities} />
+        <ProjectHeader project={project} capabilities={capabilities} onSync={refetch} />
         <ComponentBreakdown tasks={tasks} />
       </div>
 

@@ -10,9 +10,15 @@ import './OverallTimelinePage.css';
 const OverallTimelinePage = () => {
   const navigate = useNavigate();
   const { projects, loading, error } = useProjects();
-  const [jiraProjectFilter, setJiraProjectFilter] = useState('all');
+  const [selectedProjectKeys, setSelectedProjectKeys] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [configuredProjects, setConfiguredProjects] = useState([]);
+
+  const toggleProjectKey = (key) => {
+    setSelectedProjectKeys(prev => 
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
 
   useEffect(() => {
     api.getJiraConfig().then(cfg => {
@@ -43,7 +49,7 @@ const OverallTimelinePage = () => {
   // Filter projects by Jira Project Key and search query
   const filteredProjects = projects.filter(p => {
     const jKey = (p.project_key || (p.id ? p.id.split('-')[0] : '')).toUpperCase();
-    if (jiraProjectFilter !== 'all' && jKey !== jiraProjectFilter.toUpperCase()) return false;
+    if (selectedProjectKeys.length > 0 && !selectedProjectKeys.includes(jKey)) return false;
 
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase().trim();
@@ -96,82 +102,57 @@ const OverallTimelinePage = () => {
       transition={{ duration: 0.4 }}
     >
       <div className="ot-top-bar">
-        <button className="back-btn" onClick={() => navigate('/')}>
+        <button className="back-btn" onClick={() => navigate('/')} title="بازگشت به داشبورد">
           <ArrowLeft size={18} />
-          <span>بازگشت به داشبورد</span>
+          <span>داشبورد</span>
         </button>
         <h1 className="ot-page-title">
-          <TrendingUp size={28} className="text-accent-purple" />
-          تایم‌لاین پیشرفت و سیر تکامل کل پروژه‌های R&D
+          <TrendingUp size={24} className="text-accent-purple" />
+          <span>تایم‌لاین پیشرفت کل</span>
         </h1>
       </div>
 
       {/* Jira Project Filter & Search Bar */}
-      <div className="glass-card" style={{ padding: '0.85rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', borderRadius: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <FolderGit2 size={18} style={{ color: '#C084FC' }} />
-          <strong style={{ fontSize: '0.9rem', color: '#E9D5FF' }}>فیلتر بر اساس پروژه Jira:</strong>
+      <div className="glass-card" style={{ padding: '0.85rem 1.1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.85rem', borderRadius: '16px' }}>
+        <div className="jira-filter-pills-bar">
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+            <FolderGit2 size={16} style={{ color: '#38BDF8' }} /> فیلتر پروژه جیرا:
+          </span>
           
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-            <button
-              onClick={() => setJiraProjectFilter('all')}
-              style={{
-                padding: '0.35rem 0.85rem',
-                borderRadius: '16px',
-                border: jiraProjectFilter === 'all' ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.15)',
-                background: jiraProjectFilter === 'all' ? 'rgba(14,165,233,0.3)' : 'rgba(255,255,255,0.05)',
-                color: '#FFFFFF',
-                fontSize: '0.82rem',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-            >
-              🌐 همه پروژه‌های Jira ({jiraProjectsList.length})
-            </button>
-
-            {jiraProjectsList.map(pKey => {
-              const isSel = jiraProjectFilter === pKey;
+          <div className="jira-pills-wrap">
+            {jiraProjectsList.map(key => {
+              const isSel = selectedProjectKeys.includes(key);
               return (
                 <button
-                  key={pKey}
-                  onClick={() => setJiraProjectFilter(pKey)}
-                  style={{
-                    padding: '0.35rem 0.85rem',
-                    borderRadius: '16px',
-                    border: isSel ? '1px solid #C084FC' : '1px solid rgba(255,255,255,0.15)',
-                    background: isSel ? 'linear-gradient(135deg, rgba(168,85,247,0.35), rgba(192,132,252,0.35))' : 'rgba(255,255,255,0.05)',
-                    color: '#FFFFFF',
-                    fontSize: '0.82rem',
-                    fontWeight: isSel ? '800' : '500',
-                    cursor: 'pointer'
-                  }}
+                  key={key}
+                  type="button"
+                  className={`jira-pill-btn ${isSel ? 'active' : ''}`}
+                  onClick={() => toggleProjectKey(key)}
                 >
-                  📂 پروژه {pKey}
+                  {isSel ? '✅' : '➕'} پروژه {key}
                 </button>
               );
             })}
+            {selectedProjectKeys.length > 0 && (
+              <button className="jira-pills-clear-btn" onClick={() => setSelectedProjectKeys([])}>
+                پاک‌سازی ({selectedProjectKeys.length})
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Quick Search */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Search size={15} style={{ position: 'absolute', right: '0.85rem', color: '#38BDF8', pointerEvents: 'none' }} />
+        {/* Quick Universal Search Box */}
+        <div className="universal-search-box">
+          <Search size={15} />
           <input
             type="text"
             placeholder="جستجوی نام یا کد پروژه..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(255, 255, 255, 0.16)',
-              borderRadius: '20px',
-              padding: '0.4rem 2.2rem 0.4rem 1rem',
-              color: '#FFFFFF',
-              fontSize: '0.84rem',
-              outline: 'none',
-              width: '240px'
-            }}
           />
+          {searchQuery && (
+            <button className="universal-search-clear" onClick={() => setSearchQuery('')}>×</button>
+          )}
         </div>
       </div>
 
@@ -334,9 +315,10 @@ const OverallTimelinePage = () => {
                       <button 
                         className="ot-view-detail-btn"
                         onClick={() => navigate(`/project/${proj.id}`)}
+                        title="مشاهده جزئیات پروژه"
                       >
-                        <span>مشاهده جزئیات</span>
-                        <ExternalLink size={14} />
+                        <span>جزئیات</span>
+                        <ExternalLink size={13} />
                       </button>
                     </td>
                   </tr>

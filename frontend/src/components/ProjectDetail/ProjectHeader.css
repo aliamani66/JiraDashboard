@@ -3,6 +3,11 @@
   justify-content: space-between;
   align-items: center;
   padding: 2rem;
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-glass) !important;
 }
 
 .ph-info {
@@ -27,20 +32,22 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: rgba(139, 92, 246, 0.2);
+  background: rgba(168, 85, 247, 0.2);
+  backdrop-filter: blur(8px);
   color: var(--accent-purple);
-  padding: 0.3rem 0.8rem;
+  padding: 0.35rem 0.9rem;
   border-radius: 20px;
   font-size: 0.82rem;
-  font-weight: 600;
-  border: 1px solid rgba(139, 92, 246, 0.4);
+  font-weight: 700;
+  border: 1px solid rgba(168, 85, 247, 0.4);
   transition: all 0.2s ease;
   font-family: monospace;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .ph-epic-link:hover .ph-epic-badge {
-  background: rgba(139, 92, 246, 0.35);
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+  background: rgba(168, 85, 247, 0.35);
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   color: #FFFFFF;
   transform: translateY(-1px);
 }
@@ -56,18 +63,22 @@
 }
 
 .ph-category {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 0.25rem 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  padding: 0.25rem 0.8rem;
   border-radius: 20px;
   font-size: 0.8rem;
+  font-weight: 600;
   color: var(--text-primary);
+  border: 1px solid var(--glass-border);
 }
 
 .ph-quarter-badge {
-  background: rgba(34, 211, 238, 0.15);
-  border: 1px solid rgba(34, 211, 238, 0.4);
-  color: var(--accent-cyan, #22d3ee);
-  padding: 0.25rem 0.75rem;
+  background: rgba(6, 182, 212, 0.18);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: var(--accent-cyan);
+  padding: 0.25rem 0.8rem;
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 700;
@@ -79,12 +90,12 @@
 }
 
 .ph-title {
-  font-size: 2rem;
+  font-size: 2.1rem;
   color: var(--text-primary);
   margin: 0;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
 }
 
 .ph-description-box {
@@ -145,10 +156,11 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.18);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(56, 189, 248, 0.45);
   color: #38BDF8;
-  padding: 0.35rem 0.85rem;
+  padding: 0.4rem 0.95rem;
   border-radius: 20px;
   font-size: 0.82rem;
   font-weight: 700;
@@ -156,11 +168,12 @@
   cursor: pointer;
   margin-right: auto;
   transition: all 0.25s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .ph-export-btn:hover {
-  background: rgba(56, 189, 248, 0.3);
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
+  background: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
   color: #FFFFFF;
   transform: translateY(-1px);
 }
@@ -189,10 +202,11 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background: rgba(16, 185, 129, 0.12);
+  background: rgba(16, 185, 129, 0.15);
+  backdrop-filter: blur(8px);
   color: #34D399;
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  padding: 0.2rem 0.65rem;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  padding: 0.22rem 0.7rem;
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -209,10 +223,12 @@
 
 .ph-hours-item {
   color: #F8FAFC;
-  background: rgba(6, 182, 212, 0.12);
-  padding: 0.25rem 0.7rem;
-  border-radius: 6px;
-  border: 1px solid rgba(6, 182, 212, 0.3);
+  background: rgba(6, 182, 212, 0.15);
+  backdrop-filter: blur(8px);
+  padding: 0.3rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .ph-hours-item strong {
@@ -229,22 +245,24 @@
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  background: rgba(56, 189, 248, 0.12);
+  background: rgba(56, 189, 248, 0.15);
+  backdrop-filter: blur(8px);
   color: #38BDF8;
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  padding: 0.5rem 1.1rem;
-  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  padding: 0.55rem 1.2rem;
+  border-radius: 10px;
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none;
   transition: all 0.25s ease;
   align-self: flex-start;
   margin-top: 0.3rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .ph-confluence-btn:hover {
-  background: rgba(56, 189, 248, 0.25);
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
   color: #FFFFFF;
   transform: translateY(-2px);
 }
@@ -276,7 +294,7 @@
 
 .circular-bg {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.1);
+  stroke: rgba(255, 255, 255, 0.08);
 }
 
 .circular-progress {
@@ -285,13 +303,13 @@
   transition: stroke-dashoffset 1.5s ease-in-out;
   transform: rotate(-90deg);
   transform-origin: 50% 50%;
-  filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.5));
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
 }
 
 .percentage {
   fill: var(--text-primary);
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 @media (max-width: 1024px) {

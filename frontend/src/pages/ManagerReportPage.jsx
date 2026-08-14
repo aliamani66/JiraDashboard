@@ -173,20 +173,16 @@ const ManagerReportPage = () => {
       <div className="mr-header glass-card">
         <div className="mr-header-main">
           <div className="mr-header-icon-wrap">
-            <BarChart3 size={26} className="text-accent-cyan" />
+            <BarChart3 size={24} className="text-accent-cyan" />
           </div>
           <div>
-            <h1 className="mr-title">گزارش ممیزی مدیر (Executive Audit Report)</h1>
-            <p className="mr-subtitle">
-              پایش کیفیت ثبت اطلاعات، تغییرات استیمیت، تسک‌های خارج از اسپرینت، فاقد تخمین/سررسید و تسک‌های خارج از اپیک به همراه مجموع ساعت کارکرد
-            </p>
+            <h1 className="mr-title">گزارش مدیر</h1>
           </div>
         </div>
 
         <div className="mr-header-actions">
-          <button className="mr-print-btn" onClick={handlePrint} title="چاپ یا ذخیره گزارش مدیریتی به عنوان PDF">
-            <Printer size={16} />
-            <span>چاپ و خروجی PDF</span>
+          <button className="mr-print-btn icon-only-btn" onClick={handlePrint} title="چاپ و خروجی PDF گزارش مدیر">
+            <Printer size={18} />
           </button>
         </div>
       </div>
@@ -368,7 +364,7 @@ const ManagerReportPage = () => {
         <div className="mr-rc-header">
           <h3>
             <FileText size={18} className="text-accent-cyan" />
-            فهرست تسک‌های استخراج‌شده بر اساس فیلترهای ممیزی
+            فهرست تسک‌ها
           </h3>
         </div>
 

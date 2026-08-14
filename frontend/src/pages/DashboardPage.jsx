@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Printer } from 'lucide-react';
 import { useProjects, useQuarters } from '../hooks/useProjects';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -34,12 +33,19 @@ const DashboardPage = () => {
 
   const activeProjects = projects.filter(p => p.status !== 'Done');
   const doneProjects = projects.filter(p => p.status === 'Done');
+  const stoppedProjects = projects.filter(p => {
+    const total = p.total_tasks || 0;
+    const comp = p.completed_tasks || 0;
+    const waiting = p.waiting_tasks || 0;
+    const active = total - comp;
+    return (total > 0 && active > 0 && waiting >= active) || p.status === 'OnHolding' || p.status === 'Waiting' || p.status === 'Blocked';
+  });
 
-  const displayStats = stats && (stats.totalProjects || stats.total) ? stats : {
+  const displayStats = {
     totalProjects: projects.length,
     activeProjects: activeProjects.length,
+    stoppedProjects: stoppedProjects.length,
     completedProjects: doneProjects.length,
-    avgProgress: projects.length > 0 ? Math.round(projects.reduce((s, p) => s + (p.progress || 0), 0) / projects.length) : 0,
     waitingTasks: projects.reduce((s, p) => s + (p.waiting_tasks || 0), 0)
   };
 
@@ -136,26 +142,11 @@ const DashboardPage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="dashboard-header">
-        <div>
-          <h1>نمای کلی پروژه‌ها</h1>
-          <p>وضعیت لحظه‌ای پروژه‌های تیم تحقیق و توسعه عملیات ({projects.length} پروژه)</p>
-        </div>
-
-        <button 
-          className="db-export-btn"
-          onClick={handleExportOverallReport}
-          title="دانلود و چاپ گزارش جامع پروژه‌های انتخابی به همراه تایم‌لاین و گانت چارت"
-        >
-          <Printer size={16} />
-          <span>چاپ / خروجی PDF پروژه‌ها ({filteredProjects.length} پروژه)</span>
-        </button>
-      </div>
-
-      {/* Top 4 KPI Summary Stat Cards */}
+      {/* Top 4 KPI Summary Stat Cards with Inline Print Button */}
       <StatsCards 
         stats={displayStats} 
         projects={projects} 
+        onExport={handleExportOverallReport}
       />
 
       {/* Unified Full-Width Glass Filter Tile */}

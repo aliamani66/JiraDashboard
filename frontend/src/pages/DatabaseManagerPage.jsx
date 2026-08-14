@@ -212,14 +212,11 @@ ORDER BY p.id ASC`
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Database size={28} color="#C084FC" />
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#F8FAFC', margin: 0 }}>
-              مدیریت و کنسول دیتابیس سیستم (SQLite Database Manager)
+            <Database size={24} color="#C084FC" />
+            <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#F8FAFC', margin: 0 }}>
+              مدیریت دیتابیس
             </h1>
           </div>
-          <p style={{ color: '#94A3B8', fontSize: '0.82rem', margin: '0.3rem 0 0 0' }}>
-            مشاهده مستقیم تمام جداول دیتابیس، اجرای سریع کوئری‌های SQL و بررسی دقیق ستون‌های ذخیره‌شده
-          </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

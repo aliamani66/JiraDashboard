@@ -96,10 +96,10 @@ const Sidebar = ({ isOpen, toggle }) => {
             <NavLink 
               to="/jira-settings" 
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              title="تنظیمات و پایش جیرا"
+              title="تنظیمات"
             >
               <Settings size={20} className="nav-icon" />
-              <span className="nav-text">تنظیمات و پایش جیرا</span>
+              <span className="nav-text">تنظیمات</span>
             </NavLink>
           )}
 
@@ -107,10 +107,10 @@ const Sidebar = ({ isOpen, toggle }) => {
             <NavLink 
               to="/database-manager" 
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-              title="کنسول و مدیریت دیتابیس سیستم"
+              title="مدیریت دیتابیس"
             >
               <Database size={20} className="nav-icon" />
-              <span className="nav-text">دیتابیس سیستم</span>
+              <span className="nav-text">مدیریت دیتابیس</span>
             </NavLink>
           )}
         </nav>

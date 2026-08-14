@@ -129,10 +129,10 @@ const DashboardFilterPanel = ({
       {/* Tile Header: Title + Result Counter + Reset All Button */}
       <div className="mft-header">
         <div className="mft-header-right">
-          <Filter size={20} className="text-accent-cyan" />
-          <h2 className="mft-title">مرکز جستجو و فیلترهای پیشرفته پروژه‌ها</h2>
+          <Filter size={18} className="text-accent-cyan" />
+          <h2 className="mft-title">جستجو و فیلترها</h2>
           <span className="mft-count-badge">
-            نمایش <strong>{filteredCount}</strong> از <strong>{totalProjectsCount}</strong> پروژه
+            <strong>{filteredCount}</strong> / <strong>{totalProjectsCount}</strong>
           </span>
         </div>
 
@@ -142,7 +142,7 @@ const DashboardFilterPanel = ({
             <Search size={15} className="mft-search-icon" />
             <input 
               type="text"
-              placeholder="جستجوی نام یا شناسه پروژه..."
+              placeholder="جستجو..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="mft-search-input"
@@ -153,9 +153,9 @@ const DashboardFilterPanel = ({
           </div>
 
           {hasActiveFilters && (
-            <button className="mft-reset-btn" onClick={onResetAll} title="پاک‌سازی تمامی فیلترهای انتخاب‌شده">
+            <button className="mft-reset-btn" onClick={onResetAll} title="پاک‌سازی فیلترها">
               <RotateCcw size={14} />
-              <span>پاک‌سازی فیلترها</span>
+              <span>پاک‌سازی</span>
             </button>
           )}
         </div>
@@ -167,9 +167,9 @@ const DashboardFilterPanel = ({
         {/* ─── Sub-Tile 1: Status Filter ──────────────────────────────────── */}
         <div className="mft-subcard">
           <div className="mft-subcard-header">
-            <Activity size={16} className="text-accent-blue" />
-            <span>۱. وضعیت اجرای پروژه</span>
-            {statusFilters.length > 0 && <span className="sub-count-pill">{statusFilters.length} انتخابی</span>}
+            <Activity size={15} className="text-accent-blue" />
+            <span>وضعیت</span>
+            {statusFilters.length > 0 && <span className="sub-count-pill">{statusFilters.length}</span>}
           </div>
 
           <div className="mft-pills-wrap">
@@ -177,12 +177,13 @@ const DashboardFilterPanel = ({
               className={`mft-pill ${statusFilters.length === 0 ? 'active-all' : ''}`}
               onClick={() => setStatusFilters([])}
             >
-              🌐 همه وضعیت‌ها
+              همه
             </button>
 
             <button
               className={`mft-pill status-active-pill ${statusFilters.includes('active') ? 'active' : ''}`}
               onClick={() => toggleSelection('active', statusFilters, setStatusFilters)}
+              title="پروژه‌های در حال اجرا"
             >
               ⚡ در حال اجرا
             </button>
@@ -191,6 +192,7 @@ const DashboardFilterPanel = ({
               className={`mft-pill ${statusFilters.includes('todo') ? 'active' : ''}`}
               onClick={() => toggleSelection('todo', statusFilters, setStatusFilters)}
               style={statusFilters.includes('todo') ? { background: 'linear-gradient(135deg, rgba(168,85,247,0.35), rgba(192,132,252,0.35))', borderColor: '#C084FC', color: '#FFFFFF', boxShadow: '0 0 12px rgba(192,132,252,0.35)' } : {}}
+              title="پروژه‌های برای انجام"
             >
               📋 برای انجام
             </button>
@@ -198,6 +200,7 @@ const DashboardFilterPanel = ({
             <button
               className={`mft-pill status-done-pill ${statusFilters.includes('done') ? 'active' : ''}`}
               onClick={() => toggleSelection('done', statusFilters, setStatusFilters)}
+              title="پروژه‌های انجام‌شده"
             >
               ✅ انجام‌شده
             </button>
@@ -205,8 +208,9 @@ const DashboardFilterPanel = ({
             <button
               className={`mft-pill status-critical-pill ${statusFilters.includes('critical') ? 'active' : ''}`}
               onClick={() => toggleSelection('critical', statusFilters, setStatusFilters)}
+              title="پروژه‌های متوقف یا کریتیکال"
             >
-              🚨 کریتیکال / متوقف
+              🚨 کریتیکال
             </button>
           </div>
         </div>
@@ -214,9 +218,9 @@ const DashboardFilterPanel = ({
         {/* ─── Sub-Tile 2: Quarter Filter (Multi-select) ──────────────────── */}
         <div className="mft-subcard">
           <div className="mft-subcard-header">
-            <Calendar size={16} className="text-accent-cyan" />
-            <span>۲. فصل‌های زمان‌بندی (انتخاب چندتایی)</span>
-            {quarterFilters.length > 0 && <span className="sub-count-pill">{quarterFilters.length} انتخابی</span>}
+            <Calendar size={15} className="text-accent-cyan" />
+            <span>فصل (Quarter)</span>
+            {quarterFilters.length > 0 && <span className="sub-count-pill">{quarterFilters.length}</span>}
           </div>
 
           {/* Quick Quarter Filter Input if > 6 quarters */}
@@ -224,7 +228,7 @@ const DashboardFilterPanel = ({
             <div className="mft-mini-search">
               <input
                 type="text"
-                placeholder="🔍 فیلتر سریع فصل‌ها (مثال: 1404 یا Q1)..."
+                placeholder="جستجوی فصل..."
                 value={quarterSearch}
                 onChange={e => setQuarterSearch(e.target.value)}
                 className="mft-mini-input"
@@ -240,7 +244,7 @@ const DashboardFilterPanel = ({
               className={`mft-pill ${quarterFilters.length === 0 ? 'active-all' : ''}`}
               onClick={() => setQuarterFilters([])}
             >
-              🌐 همه فصل‌ها
+              همه
             </button>
 
             {visibleQuarters.map(q => {
@@ -261,7 +265,7 @@ const DashboardFilterPanel = ({
                 className="mft-expand-btn"
                 onClick={() => setShowAllQuarters(true)}
               >
-                + {hiddenQuartersCount} فصل دیگر...
+                + {hiddenQuartersCount} بیشتر...
               </button>
             )}
 
@@ -279,9 +283,9 @@ const DashboardFilterPanel = ({
         {/* ─── Sub-Tile 3: Component Filter (Multi-select) ────────────────── */}
         <div className="mft-subcard">
           <div className="mft-subcard-header">
-            <Layers size={16} className="text-accent-purple" />
-            <span>۳. کامپوننت‌ها و لیبل‌ها</span>
-            {componentFilters.length > 0 && <span className="sub-count-pill">{componentFilters.length} انتخابی</span>}
+            <Layers size={15} className="text-accent-purple" />
+            <span>کامپوننت‌ها</span>
+            {componentFilters.length > 0 && <span className="sub-count-pill">{componentFilters.length}</span>}
           </div>
 
           {/* Quick Label Filter Input if > 6 components */}
@@ -289,7 +293,7 @@ const DashboardFilterPanel = ({
             <div className="mft-mini-search">
               <input
                 type="text"
-                placeholder="🔍 فیلتر سریع لیبل‌ها..."
+                placeholder="جستجوی کامپوننت..."
                 value={compSearch}
                 onChange={e => setCompSearch(e.target.value)}
                 className="mft-mini-input"
@@ -305,7 +309,7 @@ const DashboardFilterPanel = ({
               className={`mft-pill ${componentFilters.length === 0 ? 'active-all' : ''}`}
               onClick={() => setComponentFilters([])}
             >
-              🌐 همه لیبل‌ها
+              همه
             </button>
 
             {visibleComponents.map(key => {
@@ -327,7 +331,7 @@ const DashboardFilterPanel = ({
                 className="mft-expand-btn"
                 onClick={() => setShowAllComps(true)}
               >
-                + {hiddenCount} لیبل دیگر...
+                + {hiddenCount} بیشتر...
               </button>
             )}
 
@@ -346,9 +350,9 @@ const DashboardFilterPanel = ({
         {availableProjects && availableProjects.length > 0 && (
           <div className="mft-subcard">
             <div className="mft-subcard-header">
-              <FolderGit2 size={16} className="text-accent-purple" style={{ color: '#C084FC' }} />
-              <span>۴. پروژه‌های عملیاتی (انتخاب چندتایی)</span>
-              {projectFilters.length > 0 && <span className="sub-count-pill" style={{ background: 'rgba(192, 132, 252, 0.25)', color: '#E9D5FF', border: '1px solid rgba(192, 132, 252, 0.4)' }}>{projectFilters.length} انتخابی</span>}
+              <FolderGit2 size={15} className="text-accent-purple" style={{ color: '#C084FC' }} />
+              <span>پروژه‌ها</span>
+              {projectFilters.length > 0 && <span className="sub-count-pill" style={{ background: 'rgba(192, 132, 252, 0.25)', color: '#E9D5FF', border: '1px solid rgba(192, 132, 252, 0.4)' }}>{projectFilters.length}</span>}
             </div>
 
             {/* Quick Project Search Input */}
@@ -356,7 +360,7 @@ const DashboardFilterPanel = ({
               <div className="mft-mini-search">
                 <input
                   type="text"
-                  placeholder="🔍 فیلتر سریع پروژه‌ها (نام یا شناسه)..."
+                  placeholder="جستجوی پروژه..."
                   value={projectSearch}
                   onChange={e => setProjectSearch(e.target.value)}
                   className="mft-mini-input"
@@ -372,7 +376,7 @@ const DashboardFilterPanel = ({
                 className={`mft-pill ${projectFilters.length === 0 ? 'active-all' : ''}`}
                 onClick={() => setProjectFilters([])}
               >
-                🌐 همه پروژه‌ها
+                همه
               </button>
 
               {visibleProjects.map(p => {

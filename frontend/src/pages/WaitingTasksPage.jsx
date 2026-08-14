@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, Clock, ClipboardList, AlertCircle, Calendar, Flag, ExternalLink, Printer, Search, FolderGit2 } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronUp, Clock, ClipboardList, AlertCircle, Calendar, Flag, ExternalLink, Printer, Search, FolderGit2 } from 'lucide-react';
 import { useWaitingTasks } from '../hooks/useProjects';
 import { api } from '../services/api';
 import './WaitingTasksPage.css';
@@ -17,9 +17,23 @@ const priorityMap = {
 
 const WaitingTasksPage = () => {
   const { data, loading } = useWaitingTasks();
-  const [jiraProjectFilter, setJiraProjectFilter] = useState('all');
+  const [selectedProjectKeys, setSelectedProjectKeys] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [configuredProjects, setConfiguredProjects] = useState([]);
+  const [expandedProjects, setExpandedProjects] = useState({}); // Default closed for all
+
+  const toggleProject = (pId) => {
+    setExpandedProjects(prev => ({
+      ...prev,
+      [pId]: !prev[pId]
+    }));
+  };
+
+  const toggleProjectKey = (key) => {
+    setSelectedProjectKeys(prev => 
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
 
   useEffect(() => {
     api.getJiraConfig().then(cfg => {
@@ -62,21 +76,23 @@ const WaitingTasksPage = () => {
     const hasMatchingTask = (project.tasks || []).some(t => {
       const tId = t.task_id || t.id || '';
       const tKey = tId ? tId.split('-')[0].toUpperCase() : '';
-      return tKey === jiraProjectFilter.toUpperCase();
+      return selectedProjectKeys.length === 0 || selectedProjectKeys.includes(tKey);
     });
 
-    if (jiraProjectFilter !== 'all' && jKey !== jiraProjectFilter.toUpperCase() && !hasMatchingTask) return false;
+    if (selectedProjectKeys.length > 0 && !selectedProjectKeys.includes(jKey) && !hasMatchingTask) return false;
 
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase().trim();
-      const matchId = pId.toLowerCase().includes(q);
-      const matchTitle = pTitle.toLowerCase().includes(q);
-      const matchTask = (project.tasks || []).some(t =>
-        (t.task_id || t.id || '').toLowerCase().includes(q) ||
-        (t.title || '').toLowerCase().includes(q) ||
-        (t.waiting_for_team || '').toLowerCase().includes(q)
-      );
-      if (!matchId && !matchTitle && !matchTask) return false;
+      const matchPTitle = pTitle.toLowerCase().includes(q);
+      const matchPId = pId.toLowerCase().includes(q);
+      const matchTasks = (project.tasks || []).some(t => {
+        const title = (t.title || '').toLowerCase();
+        const tid = (t.task_id || t.id || '').toLowerCase();
+        const team = (t.waiting_for_team || t.blocked_by_team || '').toLowerCase();
+        const reason = (t.waiting_reason || '').toLowerCase();
+        return title.includes(q) || tid.includes(q) || team.includes(q) || reason.includes(q);
+      });
+      if (!matchPTitle && !matchPId && !matchTasks) return false;
     }
 
     return true;
@@ -85,96 +101,70 @@ const WaitingTasksPage = () => {
   return (
     <motion.div 
       className="waiting-tasks-page"
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
       <div className="page-header">
-        <Link to="/" className="back-link">
-          <ChevronLeft size={20} />
-          بازگشت به داشبورد
+        <Link to="/" className="back-link" title="بازگشت به داشبورد">
+          <ChevronLeft size={18} />
+          <span>داشبورد</span>
         </Link>
         <h1 className="page-title">
-          <Clock size={28} className="text-accent-orange" />
-          تسک‌های منتظر و آن‌هولد تیم‌های دیگر ({totalWaiting} تسک)
+          <Clock size={22} className="text-accent-orange" />
+          <span>تسک‌های منتظر</span>
         </h1>
 
         <button 
-          className="wt-export-btn"
+          className="wt-export-btn icon-only-btn"
           onClick={() => window.open(`/api/reports/waiting-html?token=${localStorage.getItem('token')}`, '_blank')}
-          title="دانلود و چاپ خروجی گزارش تسک‌های منتظر و آن‌هولد"
+          title="دانلود و چاپ گزارش تسک‌های منتظر"
         >
           <Printer size={16} />
-          <span>چاپ / خروجی PDF تسک‌های منتظر</span>
         </button>
       </div>
 
       {/* Jira Project Filter & Search Bar */}
-      <div className="glass-card" style={{ padding: '0.85rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', borderRadius: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <FolderGit2 size={18} style={{ color: '#C084FC' }} />
-          <strong style={{ fontSize: '0.9rem', color: '#E9D5FF' }}>فیلتر بر اساس پروژه Jira:</strong>
+      <div className="glass-card" style={{ padding: '0.85rem 1.1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.85rem', borderRadius: '16px' }}>
+        <div className="jira-filter-pills-bar">
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+            <FolderGit2 size={16} style={{ color: '#38BDF8' }} /> فیلتر پروژه جیرا:
+          </span>
           
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-            <button
-              onClick={() => setJiraProjectFilter('all')}
-              style={{
-                padding: '0.35rem 0.85rem',
-                borderRadius: '16px',
-                border: jiraProjectFilter === 'all' ? '1px solid #38BDF8' : '1px solid rgba(255,255,255,0.15)',
-                background: jiraProjectFilter === 'all' ? 'rgba(14,165,233,0.3)' : 'rgba(255,255,255,0.05)',
-                color: '#FFFFFF',
-                fontSize: '0.82rem',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-            >
-              🌐 همه پروژه‌های Jira ({jiraProjectsList.length})
-            </button>
-
-            {jiraProjectsList.map(pKey => {
-              const isSel = jiraProjectFilter === pKey;
+          <div className="jira-pills-wrap">
+            {jiraProjectsList.map(key => {
+              const isSel = selectedProjectKeys.includes(key);
               return (
                 <button
-                  key={pKey}
-                  onClick={() => setJiraProjectFilter(pKey)}
-                  style={{
-                    padding: '0.35rem 0.85rem',
-                    borderRadius: '16px',
-                    border: isSel ? '1px solid #C084FC' : '1px solid rgba(255,255,255,0.15)',
-                    background: isSel ? 'linear-gradient(135deg, rgba(168,85,247,0.35), rgba(192,132,252,0.35))' : 'rgba(255,255,255,0.05)',
-                    color: '#FFFFFF',
-                    fontSize: '0.82rem',
-                    fontWeight: isSel ? '800' : '500',
-                    cursor: 'pointer'
-                  }}
+                  key={key}
+                  type="button"
+                  className={`jira-pill-btn ${isSel ? 'active' : ''}`}
+                  onClick={() => toggleProjectKey(key)}
                 >
-                  📂 پروژه {pKey}
+                  {isSel ? '✅' : '➕'} پروژه {key}
                 </button>
               );
             })}
+            {selectedProjectKeys.length > 0 && (
+              <button className="jira-pills-clear-btn" onClick={() => setSelectedProjectKeys([])}>
+                پاک‌سازی ({selectedProjectKeys.length})
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Quick Search */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Search size={15} style={{ position: 'absolute', right: '0.85rem', color: '#38BDF8', pointerEvents: 'none' }} />
+        {/* Quick Universal Search Box */}
+        <div className="universal-search-box">
+          <Search size={15} />
           <input
             type="text"
-            placeholder="جستجوی عنوان تسک یا تیم وابسته..."
+            placeholder="جستجوی عنوان تسک، مسئول، تیم منتظر..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(255, 255, 255, 0.16)',
-              borderRadius: '20px',
-              padding: '0.4rem 2.2rem 0.4rem 1rem',
-              color: '#FFFFFF',
-              fontSize: '0.84rem',
-              outline: 'none',
-              width: '240px'
-            }}
           />
+          {searchQuery && (
+            <button className="universal-search-clear" onClick={() => setSearchQuery('')}>×</button>
+          )}
         </div>
       </div>
 
@@ -187,82 +177,119 @@ const WaitingTasksPage = () => {
           filteredByProject.map((project, idx) => {
             const pId = project.projectId || project.project_id || `proj-${idx}`;
             const pTitle = project.projectTitle || project.project_name || pId || 'پروژه عملیاتی';
+            const isExpanded = !!expandedProjects[pId];
 
             return (
               <div key={pId} className="glass-card project-group-card">
-                <div className="project-group-header">
-                  <h2 className="project-group-title">
-                    <ClipboardList size={22} className="text-accent-cyan" />
-                    <Link to={`/project/${pId}`} className="project-group-link" title="مشاهده جزئیات پروژه">
-                      <span>{pTitle}</span>
-                      <span className="project-id-badge">({pId})</span>
-                      <ExternalLink size={16} className="link-icon" />
-                    </Link>
-                  </h2>
-                  <span className="waiting-count-tag">{project.tasks?.length || 0} تسک منتظر</span>
+                <div 
+                  className="project-group-header" 
+                  onClick={() => toggleProject(pId)}
+                  style={{ 
+                    cursor: 'pointer',
+                    marginBottom: isExpanded ? '1rem' : '0',
+                    paddingBottom: isExpanded ? '1rem' : '0',
+                    borderBottom: isExpanded ? '1px solid rgba(255, 255, 255, 0.1)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <button 
+                      type="button"
+                      className="accordion-toggle-btn"
+                      style={{ 
+                        background: 'rgba(255,255,255,0.08)', 
+                        border: '1px solid var(--glass-border)', 
+                        color: 'var(--text-secondary)', 
+                        width: '28px', 
+                        height: '28px', 
+                        borderRadius: '8px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                      title={isExpanded ? 'بستن' : 'باز کردن'}
+                    >
+                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+
+                    <h2 className="project-group-title">
+                      <ClipboardList size={20} className="text-accent-cyan" />
+                      <Link to={`/project/${pId}`} className="project-group-link" title="مشاهده جزئیات پروژه" onClick={e => e.stopPropagation()}>
+                        <span>{pTitle}</span>
+                        <span className="project-id-badge">({pId})</span>
+                        <ExternalLink size={14} className="link-icon" />
+                      </Link>
+                    </h2>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <span className="waiting-count-tag">{project.tasks?.length || 0} تسک منتظر</span>
+                  </div>
                 </div>
                 
-                <div className="tasks-grid">
-                  {(project.tasks || []).map(task => {
-                    const pri = priorityMap[task.priority] || { label: task.priority || 'متوسط', className: 'normal' };
-                    const taskIdStr = task.task_id || task.id;
-                    const teamName = task.waiting_for_team || task.blocked_by_team || 'تیم وابسته';
-                    const jiraUrl = `${JIRA_BASE_URL}/browse/${taskIdStr}`;
-                    
-                    return (
-                      <div key={task.id} className="waiting-task-card">
-                        <div className="task-header">
-                          <a 
-                            href={jiraUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="task-jira-link"
-                            title={`مشاهده تسک ${taskIdStr} در جیرا`}
-                          >
-                            <span className="task-id-badge">
-                              {taskIdStr}
-                              <ExternalLink size={12} className="jira-link-icon" />
-                            </span>
-                          </a>
-                          
-                          <h3 className="task-title">
-                            <a href={jiraUrl} target="_blank" rel="noopener noreferrer" className="task-title-link">
-                              {task.title}
-                            </a>
-                          </h3>
-                        </div>
-                        
-                        <div className="task-details">
-                          <div className="detail-item text-accent-orange">
-                            <Clock size={16} />
-                            <span>منتظر: <strong>{teamName}</strong></span>
-                          </div>
-                          
-                          {task.waiting_reason && (
-                            <div className="detail-item">
-                              <AlertCircle size={16} />
-                              <span>دلیل توقف: {task.waiting_reason}</span>
-                            </div>
-                          )}
-                          
-                          <div className="task-meta">
-                            <span className={`priority-tag ${pri.className}`}>
-                              <Flag size={14} />
-                              اولویت: {pri.label}
-                            </span>
-                            
-                            {task.due_date && (
-                              <span className="due-date-tag">
-                                <Calendar size={14} />
-                                سررسید: {task.due_date}
+                {isExpanded && (
+                  <div className="tasks-grid scrollable-tasks-grid">
+                    {(project.tasks || []).map(task => {
+                      const pri = priorityMap[task.priority] || { label: task.priority || 'متوسط', className: 'normal' };
+                      const taskIdStr = task.task_id || task.id;
+                      const teamName = task.waiting_for_team || task.blocked_by_team || 'تیم وابسته';
+                      const jiraUrl = `${JIRA_BASE_URL}/browse/${taskIdStr}`;
+                      
+                      return (
+                        <div key={task.id} className="waiting-task-card">
+                          <div className="task-header">
+                            <a 
+                              href={jiraUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="task-jira-link"
+                              title={`مشاهده تسک ${taskIdStr} در جیرا`}
+                            >
+                              <span className="task-id-badge">
+                                {taskIdStr}
+                                <ExternalLink size={12} className="jira-link-icon" />
                               </span>
+                            </a>
+                            
+                            <h3 className="task-title">
+                              <a href={jiraUrl} target="_blank" rel="noopener noreferrer" className="task-title-link">
+                                {task.title}
+                              </a>
+                            </h3>
+                          </div>
+                          
+                          <div className="task-details">
+                            <div className="detail-item text-accent-orange">
+                              <Clock size={15} />
+                              <span>منتظر: <strong>{teamName}</strong></span>
+                            </div>
+                            
+                            {task.waiting_reason && (
+                              <div className="detail-item">
+                                <AlertCircle size={15} />
+                                <span>دلیل توقف: {task.waiting_reason}</span>
+                              </div>
                             )}
+                            
+                            <div className="task-meta">
+                              <span className={`priority-tag ${pri.className}`}>
+                                <Flag size={13} />
+                                {pri.label}
+                              </span>
+                              
+                              {task.due_date && (
+                                <span className="due-date-tag">
+                                  <Calendar size={13} />
+                                  {task.due_date}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })

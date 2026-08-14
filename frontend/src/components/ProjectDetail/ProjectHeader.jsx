@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, ExternalLink, Zap, Clock, CheckCircle2, Printer } from 'lucide-react';
+import { Calendar, ExternalLink, Zap, Clock, CheckCircle2, Printer, RefreshCw } from 'lucide-react';
 import StatusBadge from '../common/StatusBadge';
+import { api } from '../../services/api';
 import './ProjectHeader.css';
 
 const JIRA_BASE_URL = 'https://10.100.71.140:8443';
@@ -25,9 +26,24 @@ const formatDate = (dateStr) => {
   }
 };
 
-const ProjectHeader = ({ project, capabilities = [] }) => {
+const ProjectHeader = ({ project, capabilities = [], onSync }) => {
   const [animatedProgress, setAnimatedProgress] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
   const progress = Math.round(project.progress || 0);
+
+  const handleSyncEpic = async () => {
+    if (isSyncing || !project?.id) return;
+    try {
+      setIsSyncing(true);
+      await api.syncEpicTasks(project.id);
+      if (onSync) onSync();
+      else window.location.reload();
+    } catch (err) {
+      alert('خطا در همگام‌سازی اپیک: ' + err.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -66,7 +82,7 @@ const ProjectHeader = ({ project, capabilities = [] }) => {
           >
             <span className="ph-epic-badge">
               <Zap size={14} className="text-accent-yellow" />
-              اپیک جیرا: {project.id}
+              {project.id}
               <ExternalLink size={13} className="ph-link-icon" />
             </span>
           </a>
@@ -81,11 +97,21 @@ const ProjectHeader = ({ project, capabilities = [] }) => {
 
           <button 
             className="ph-export-btn"
-            onClick={() => window.open(`/api/reports/project-html/${project.id}?token=${localStorage.getItem('token')}`, '_blank')}
-            title="دانلود / چاپ گزارش رسمی و نمودار گانت پروژه"
+            onClick={handleSyncEpic}
+            disabled={isSyncing}
+            style={{ background: 'rgba(56, 189, 248, 0.15)', borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38BDF8' }}
+            title="همگام‌سازی ایشوهای متصل به این اپیک از جیرا"
           >
-            <Printer size={14} />
-            <span>چاپ / خروجی PDF پروژه</span>
+            <RefreshCw size={14} className={isSyncing ? 'spin' : ''} />
+            <span>{isSyncing ? 'در حال دریافت...' : 'همگام‌سازی'}</span>
+          </button>
+
+          <button 
+            className="ph-export-btn icon-only-btn"
+            onClick={() => window.open(`/api/reports/project-html/${project.id}?token=${localStorage.getItem('token')}`, '_blank')}
+            title="چاپ و خروجی PDF پروژه"
+          >
+            <Printer size={15} />
           </button>
         </div>
 
@@ -101,7 +127,7 @@ const ProjectHeader = ({ project, capabilities = [] }) => {
                 className="ph-toggle-desc-btn" 
                 onClick={() => setIsDescExpanded(!isDescExpanded)}
               >
-                {isDescExpanded ? 'بستن توضیحات ▴' : 'مشاهده کامل توضیحات اپیک ▾'}
+                {isDescExpanded ? 'کمتر ▴' : 'بیشتر ▾'}
               </button>
             )}
           </div>

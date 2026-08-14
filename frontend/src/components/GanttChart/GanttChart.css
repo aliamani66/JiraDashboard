@@ -5,6 +5,11 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-glass) !important;
 }
 
 /* 100% Monitor Viewport Fullscreen Overlay Mode */
@@ -18,7 +23,8 @@
   height: 100vh !important;
   z-index: 99999 !important;
   border-radius: 0 !important;
-  background: #060913 !important;
+  background: rgba(8, 12, 22, 0.95) !important;
+  backdrop-filter: blur(30px) saturate(200%) !important;
   padding: 1.5rem 2rem !important;
   overflow: hidden !important;
   display: flex !important;
@@ -55,22 +61,24 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: rgba(139, 92, 246, 0.18);
-  border: 1px solid rgba(139, 92, 246, 0.4);
+  background: rgba(168, 85, 247, 0.18);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(168, 85, 247, 0.4);
   color: #C084FC;
-  padding: 0.35rem 0.85rem;
-  border-radius: 8px;
+  padding: 0.4rem 0.95rem;
+  border-radius: 10px;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .gantt-fullscreen-btn:hover {
-  background: rgba(139, 92, 246, 0.35);
+  background: rgba(168, 85, 247, 0.35);
   color: #FFFFFF;
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
   transform: translateY(-1px);
 }
 
@@ -89,8 +97,9 @@
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  background: rgba(0, 0, 0, 0.25);
-  padding: 0.4rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  padding: 0.45rem 1.1rem;
   border-radius: 20px;
   border: 1px solid var(--glass-border);
   font-size: 0.8rem;
@@ -111,27 +120,29 @@
 }
 
 .legend-dot.green { background-color: #10B981; color: #10B981; }
-.legend-dot.blue { background-color: #3B82F6; color: #3B82F6; }
+.legend-dot.blue { background-color: #38BDF8; color: #38BDF8; }
 .legend-dot.orange { background-color: #F97316; color: #F97316; }
-.legend-dot.purple { background-color: #8B5CF6; color: #8B5CF6; }
+.legend-dot.purple { background-color: #A855F7; color: #A855F7; }
 
 .gantt-container {
   margin-top: 1rem;
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   overflow-x: auto;
   width: 100%;
   max-width: 100%;
   min-width: 100%;
   box-sizing: border-box;
-  background: rgba(10, 15, 30, 0.4);
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
+  background: rgba(10, 15, 30, 0.5);
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 
 .gantt-header {
   display: flex;
   border-bottom: 1px solid var(--glass-border);
-  background: #0B1120;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
   position: sticky;
   top: 0;
   z-index: 40;
@@ -141,14 +152,14 @@
   width: 250px;
   flex-shrink: 0;
   padding: 0.85rem 1rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
   font-size: 0.85rem;
   border-left: 1px solid var(--glass-border);
   position: sticky;
   right: 0;
   z-index: 45;
-  background: #0B1120;
+  background: rgba(15, 23, 42, 0.95);
   box-shadow: -4px 0 15px rgba(0, 0, 0, 0.6);
 }
 
@@ -164,10 +175,10 @@
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.78rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--accent-cyan);
   padding: 0.2rem 0.6rem;
-  border-right: 1px dashed rgba(59, 130, 246, 0.25);
+  border-right: 1px dashed rgba(56, 189, 248, 0.3);
   white-space: nowrap;
 }
 
@@ -178,7 +189,7 @@
   max-height: 480px;
   overflow-y: auto;
   scrollbar-width: auto;
-  scrollbar-color: rgba(139, 92, 246, 0.6) rgba(10, 15, 30, 0.6);
+  scrollbar-color: rgba(56, 189, 248, 0.6) rgba(10, 15, 30, 0.6);
 }
 
 /* Glowing Today Line */
@@ -188,7 +199,7 @@
   bottom: 0;
   width: 2px;
   background: linear-gradient(to bottom, #EF4444, #F59E0B);
-  box-shadow: 0 0 10px #EF4444;
+  box-shadow: 0 0 12px #EF4444;
   z-index: 15;
   pointer-events: none;
 }
@@ -198,23 +209,23 @@
   top: -4px;
   right: 6px;
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #FFFFFF;
   background: #EF4444;
   padding: 2px 8px;
   border-radius: 10px;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.6);
 }
 
 .gantt-row {
   display: flex;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   transition: background-color 0.2s ease;
 }
 
 .gantt-row:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.06);
 }
 
 .gantt-row:last-child {
@@ -229,35 +240,37 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.82rem;
+  font-weight: 600;
   color: var(--text-primary);
   border-left: 1px solid var(--glass-border);
   overflow: hidden;
   position: sticky;
   right: 0;
   z-index: 30;
-  background: #0B1120;
+  background: rgba(15, 23, 42, 0.95);
   box-shadow: -4px 0 15px rgba(0, 0, 0, 0.6);
 }
 
 .task-id-tag {
   font-family: monospace;
   font-size: 0.72rem;
+  font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--accent-cyan);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   flex-shrink: 0;
 }
 
 .gantt-sprint-badge {
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--accent-cyan);
-  background: rgba(6, 182, 212, 0.12);
+  background: rgba(6, 182, 212, 0.15);
   padding: 1px 6px;
   border-radius: 4px;
-  border: 1px solid rgba(6, 182, 212, 0.3);
+  border: 1px solid rgba(6, 182, 212, 0.35);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -280,7 +293,7 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  border-right: 1px dashed rgba(255, 255, 255, 0.05);
+  border-right: 1px dashed rgba(255, 255, 255, 0.06);
   pointer-events: none;
 }
 
@@ -298,6 +311,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .gantt-bar-gloss {
@@ -306,7 +320,7 @@
   left: 0;
   right: 0;
   height: 50%;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.25), transparent);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
   border-radius: 12px 12px 0 0;
   pointer-events: none;
 }
@@ -316,7 +330,7 @@
   top: 0;
   left: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.28);
   border-radius: 12px 0 0 12px;
   pointer-events: none;
 }
@@ -325,16 +339,17 @@
   position: relative;
   z-index: 2;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 800;
   color: #FFFFFF;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   padding: 0 6px;
 }
 
 .gantt-bar:hover {
-  transform: translateY(-50%) scale(1.03);
+  transform: translateY(-50%) scale(1.04);
   filter: brightness(1.2);
   z-index: 25;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
 }
 
 /* Pulsing effect for Waiting bars */
@@ -356,12 +371,12 @@
   transform: translateX(-50%);
   min-width: 220px;
   background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   padding: 0.85rem;
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
   pointer-events: none;
   z-index: 50;
   display: flex;
@@ -383,7 +398,7 @@
 
 .tooltip-id {
   font-family: monospace;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--accent-cyan);
   font-size: 0.82rem;
 }
@@ -392,12 +407,12 @@
   font-size: 0.7rem;
   padding: 2px 8px;
   border-radius: 10px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .tooltip-title {
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
   line-height: 1.4;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);

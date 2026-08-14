@@ -134,21 +134,20 @@ const UserManagementPage = () => {
       <div className="ump-header">
         <div>
           <h1 className="ump-title">
-            <Users size={28} className="text-accent-blue" />
-            مدیریت کاربران و سطوح دسترسی منوها
+            <Users size={24} className="text-accent-blue" />
+            <span>مدیریت کاربران</span>
           </h1>
-          <p className="ump-subtitle">ایجاد کاربر جدید، تعیین نقش و تخصیص دسترسی‌های اختصاصی منوهای داشبورد</p>
         </div>
 
-        <div className="ump-header-btns" style={{ display: 'flex', gap: '0.6rem' }}>
+        <div className="ump-header-btns" style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="ump-refresh-btn" onClick={fetchUsers} title="به‌روزرسانی لیست کاربران">
-            <RefreshCw size={17} className={loading ? 'spin' : ''} />
+            <RefreshCw size={15} className={loading ? 'spin' : ''} />
             <span>بروزرسانی</span>
           </button>
           
-          <button className="ump-add-user-btn" onClick={() => setShowCreateModal(true)}>
-            <UserPlus size={18} />
-            <span>افزودن کاربر جدید</span>
+          <button className="ump-add-user-btn" onClick={() => setShowCreateModal(true)} title="افزودن کاربر جدید به سامانه">
+            <UserPlus size={16} />
+            <span>کاربر جدید</span>
           </button>
         </div>
       </div>

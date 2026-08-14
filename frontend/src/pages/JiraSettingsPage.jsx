@@ -1231,36 +1231,47 @@ const JiraSettingsPage = () => {
       {/* Header */}
       <div className="jsp-header">
         <div>
-          <h1 className="jsp-title"><Settings size={26} className="text-accent-cyan" />تنظیمات کامل اتصال و مپینگ Jira API</h1>
-          <p className="jsp-subtitle">مدیریت کامل تمام مپینگ‌ها، فیلدهای کاستوم، وضعیت‌ها، برچسب‌ها و استخراج پیشرفته اطلاعات جیرا</p>
+          <h1 className="jsp-title"><Settings size={22} className="text-accent-cyan" />تنظیمات</h1>
         </div>
-        <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           <button
             className="jsp-run-diag-btn"
             style={{ background: 'linear-gradient(135deg, #EF4444, #8B5CF6)', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)' }}
             onClick={handleFullSiteRebuild}
             disabled={monthlySyncing}
+            title={`بازسازی کامل دیتابیس و سایت بر اساس ${cfg.rebuildMonths || 3} ماه اخیر`}
           >
-            <RefreshCw size={16} className={monthlySyncing ? 'spin' : ''} />
-            {monthlySyncing ? 'در حال بازسازی...' : `🔥 بازسازی کامل دیتابیس و سایت (${cfg.rebuildMonths || 3} ماه)`}
+            <RefreshCw size={15} className={monthlySyncing ? 'spin' : ''} />
+            <span>{monthlySyncing ? 'در حال بازسازی...' : 'بازسازی دیتابیس'}</span>
           </button>
           <button
             className="jsp-run-diag-btn"
             style={{ background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.35)' }}
             onClick={() => setShowRangeModal(true)}
             disabled={monthlySyncing}
+            title="استخراج و همگام‌سازی دیتای جیرا در بازه زمانی دلخواه"
           >
-            <Calendar size={16} />
-            {monthlySyncing ? 'در حال استخراج...' : 'استخراج دیتای جیرا در بازه دلخواه'}
+            <Calendar size={15} />
+            <span>{monthlySyncing ? 'در حال استخراج...' : 'استخراج بازه زمانی'}</span>
           </button>
-          <button className="jsp-run-diag-btn secondary" onClick={handleDiagnose} disabled={diagLoading}>
-            <Zap size={16} className={diagLoading ? 'spin' : ''} />
-            {diagLoading ? 'در حال پایش...' : 'پایش زنده API'}
+          <button 
+            className="jsp-run-diag-btn secondary" 
+            onClick={handleDiagnose} 
+            disabled={diagLoading}
+            title="پایش زنده ارتباط API جیرا"
+          >
+            <Zap size={15} className={diagLoading ? 'spin' : ''} />
+            <span>{diagLoading ? 'در حال پایش...' : 'پایش API'}</span>
           </button>
 
-          <button className="jsp-run-diag-btn" onClick={handleSave} disabled={saving}>
-            <Save size={16} className={saving ? 'spin' : ''} />
-            {saving ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}
+          <button 
+            className="jsp-run-diag-btn" 
+            onClick={handleSave} 
+            disabled={saving}
+            title="ذخیره تمام تنظیمات و مپینگ‌ها"
+          >
+            <Save size={15} className={saving ? 'spin' : ''} />
+            <span>{saving ? 'در حال ذخیره...' : 'ذخیره'}</span>
           </button>
         </div>
       </div>
@@ -1597,7 +1608,7 @@ const JiraSettingsPage = () => {
             }}>
               <Database size={18} color={activeTab === 'database' ? '#6EE7B7' : '#94A3B8'} />
             </div>
-            <span>📊 پایش دیتابیس و استخراج داده‌ها</span>
+            <span>📊 پایش دیتابیس</span>
             {activeTab === 'database' && (
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981', marginRight: '0.4rem' }} />
             )}
@@ -1640,7 +1651,7 @@ const JiraSettingsPage = () => {
             }}>
               <Server size={18} color={activeTab === 'connection' ? '#38BDF8' : '#94A3B8'} />
             </div>
-            <span>🔌 اتصال و آدرس‌های API جیرا</span>
+            <span>🔌 تنظیمات جیرا</span>
             {activeTab === 'connection' && (
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38BDF8', boxShadow: '0 0 8px #38BDF8', marginRight: '0.4rem' }} />
             )}
@@ -1840,31 +1851,91 @@ const JiraSettingsPage = () => {
           marginBottom: '1.5rem',
           boxShadow: '0 10px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(16, 185, 129, 0.15)'
         }}>
-          {/* 📊 DATABASE STATS HEADER & DB SIZE BADGE */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+          {/* 📊 DATABASE STATS HEADER & ACTION BUTTONS */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.65rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10B981', color: '#6EE7B7', width: '38px', height: '38px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Database size={20} />
+              <div style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10B981', color: '#6EE7B7', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Database size={18} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#6EE7B7' }}>📊 پایش و آمار زنده دیتابیس سیستم (SQLite)</h3>
-                <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>مقایسه زنده و تطبیقی تمام شاخص‌های جیرا و دیتابیس در یک نگاه</span>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#6EE7B7' }}>پایش آمار دیتابیس</h3>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ background: 'rgba(14, 165, 233, 0.12)', border: '1px solid rgba(14, 165, 233, 0.35)', borderRadius: '10px', padding: '0.35rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <span style={{ fontSize: '0.76rem', color: '#94A3B8' }}>💾 حجم دیتابیس:</span>
-                <strong style={{ fontSize: '0.95rem', color: '#38BDF8', fontWeight: 800 }}>{dbStats?.dbSizeMb ?? '0.00'} MB</strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ background: 'rgba(14, 165, 233, 0.12)', border: '1px solid rgba(14, 165, 233, 0.35)', borderRadius: '8px', padding: '0.3rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>حجم:</span>
+                <strong style={{ fontSize: '0.85rem', color: '#38BDF8', fontWeight: 800 }}>{dbStats?.dbSizeMb ?? '0.00'} MB</strong>
               </div>
+
               <button
                 type="button"
                 onClick={fetchDbStats}
                 disabled={dbStatsLoading}
-                style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#38BDF8', padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                title="به‌روزرسانی ستون دیتابیس لوکال"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#38BDF8',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '8px',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
               >
-                <RefreshCw size={14} className={dbStatsLoading ? 'spin' : ''} />
-                {dbStatsLoading ? 'در حال به‌روزرسانی...' : '🔄 به‌روزرسانی ستون دیتابیس'}
+                <RefreshCw size={13} className={dbStatsLoading ? 'spin' : ''} />
+                <span>{dbStatsLoading ? 'در حال بروزرسانی...' : 'بروزرسانی DB'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fetchJiraCount(true)}
+                disabled={jiraCountLoading}
+                title="استخراج آمار زنده از سرور جیرا"
+                style={{
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                  color: '#38BDF8',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '8px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                <RefreshCw size={13} className={jiraCountLoading ? 'spin' : ''} />
+                <span>{jiraCountLoading ? 'در حال دریافت...' : 'آمار جیرا'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => openMismatchDiagnosticModal('totalTasks')}
+                disabled={mismatchLoading}
+                title="بررسی و استخراج موارد اختلاف بین جیرا و دیتابیس"
+                style={{
+                  background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  padding: '0.35rem 0.85rem',
+                  borderRadius: '8px',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)'
+                }}
+              >
+                <Search size={13} />
+                <span>بررسی اختلاف</span>
               </button>
             </div>
           </div>
@@ -1872,62 +1943,14 @@ const JiraSettingsPage = () => {
           {/* ⚖️ UNIFIED COMPREHENSIVE JIRA VS DATABASE COMPARISON TABLE */}
           <div style={{ marginTop: '0.5rem', marginBottom: '1.25rem' }}>
             <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#38BDF8', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem' }}>
-                <span>⚖️ جدول جامع مقایسه زنده آمار و شاخص‌ها (سرور جیرا vs دیتابیس SQLite)</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#38BDF8', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem' }}>
+                <span>جدول مقایسه شاخص‌ها (جیرا vs دیتابیس)</span>
                 {Array.isArray(dbStats?.projectTaskCounts) && dbStats.projectTaskCounts.length > 0 && (
                   <span style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.35)', color: '#FCD34D', padding: '0.12rem 0.55rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>
                     {dbStats.projectTaskCounts.map(p => `پروژه ${p.id}: ${p.epicCount || 0} اپیک کل — ${p.taskCount || 0} تسک`).join(' | ')}
                   </span>
                 )}
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => openMismatchDiagnosticModal('totalTasks')}
-                  disabled={mismatchLoading}
-                  style={{
-                    background: 'linear-gradient(135deg, #F59E0B, #D97706)',
-                    border: 'none',
-                    color: '#FFFFFF',
-                    padding: '0.4rem 1rem',
-                    borderRadius: '10px',
-                    fontSize: '0.8rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                    boxShadow: '0 3px 10px rgba(245, 158, 11, 0.35)',
-                    transition: 'all 0.2s ease'
-                  }}
-                  title="استخراج و بررسی دقیق لیست موارد اختلاف بین کوئری‌های جیرا و دیتابیس لوکال"
-                >
-                  <Search size={14} />
-                  <span>🔍 بررسی و ذخیره موارد اختلاف (Jira vs DB)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fetchJiraCount(true)}
-                  disabled={jiraCountLoading}
-                  style={{
-                    background: 'rgba(56, 189, 248, 0.15)',
-                    border: '1px solid rgba(56, 189, 248, 0.4)',
-                    color: '#38BDF8',
-                    padding: '0.35rem 0.85rem',
-                    borderRadius: '9px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <RefreshCw size={13} className={jiraCountLoading ? 'spin' : ''} />
-                  {jiraCountLoading ? 'در حال دریافت از جیرا...' : '🌐 استخراج آمار زنده Jira'}
-                </button>
-              </div>
             </div>
 
             {jiraCountError && (
@@ -2371,7 +2394,7 @@ const JiraSettingsPage = () => {
 
             {activeTab === 'connection' && (
               <motion.div key="connection" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-<Section defaultOpen={true} icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
+<Section defaultOpen={false} icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
         <div className="jsp-grid-2">
           <Field label="آدرس پایه Jira (Base URL)" hint="مثال: https://10.100.71.140:8443 یا https://jira.company.com">
             <Input value={cfg.connection?.baseUrl} onChange={v => set('connection', 'baseUrl', v)} placeholder="https://10.100.71.140:8443" />
@@ -2530,7 +2553,7 @@ const JiraSettingsPage = () => {
         </div>
       </Section>
 
-<Section defaultOpen={true} icon={Cpu} title="نسخه و مسیرهای API جیرا (API Version & Custom Endpoints)" color="#6366F1">
+<Section defaultOpen={false} icon={Cpu} title="نسخه و مسیرهای API جیرا (API Version & Custom Endpoints)" color="#6366F1">
         <p className="jsp-section-desc">اگر جیرای سازمان شما نسخه Server / Data Center یا دارای آدرس‌های اختصاصی API است، می‌توانید نسخه و مسیرها را تعیین فرمایید.</p>
         <div className="jsp-grid-2">
           <Field label="نوع و نسخه Jira API" hint="تعیین نوع ساختار متدهای API">
@@ -2553,7 +2576,7 @@ const JiraSettingsPage = () => {
         </div>
       </Section>
 
-<Section icon={GitBranch} title="اتصال به Confluence (مستندات)" color="#A78BFA" defaultOpen={true}>
+<Section icon={GitBranch} title="اتصال به Confluence (مستندات)" color="#A78BFA" defaultOpen={false}>
         <div className="jsp-grid-2">
           <Field label="آدرس Confluence Base URL">
             <Input value={cfg.confluence?.baseUrl} onChange={v => set('confluence', 'baseUrl', v)} placeholder="https://10.100.71.140:8443/wiki" />
@@ -2571,7 +2594,7 @@ const JiraSettingsPage = () => {
 
             {activeTab === 'mapping' && (
               <motion.div key="motion_mapping" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-<Section defaultOpen={true} icon={Cpu} title="فیلدهای کاستوم Jira (Custom Fields Mapping)" color="#EC4899">
+<Section defaultOpen={false} icon={Cpu} title="فیلدهای کاستوم Jira (Custom Fields Mapping)" color="#EC4899">
         <p className="jsp-section-desc">شماره کاستوم‌فیلدهای اختصاصی جیرای سازمان را وارد کنید. پس از اجرای پایش زنده، شناسه‌های دقیق نمایش داده می‌شوند.</p>
         <div className="jsp-grid-2">
           <Field label="فیلد لینک به اپیک (Epic Link)" hint="شناسه فیلد ارتباط تسک با اپیک در جیرای شما (customfield_10006)">
@@ -2598,7 +2621,7 @@ const JiraSettingsPage = () => {
         </div>
       </Section>
 
-<Section defaultOpen={true} icon={Tag} title="نگاشت وضعیت‌های Jira به داشبورد (Status Mapping)" color="#10B981">
+<Section defaultOpen={false} icon={Tag} title="نگاشت وضعیت‌های Jira به داشبورد (Status Mapping)" color="#10B981">
         <p className="jsp-section-desc">هر وضعیت اصلی جیرا را به وضعیت داشبورد نگاشت کنید. وضعیت‌های داشبورد: Done، In Progress، Waiting، To Do</p>
         <StatusMappingEditor
           mapping={cfg.statusMapping || {}}
@@ -2606,7 +2629,7 @@ const JiraSettingsPage = () => {
         />
       </Section>
 
-<Section defaultOpen={true} icon={AlertTriangle} title="وضعیت‌های «منتظر» (Waiting Status List)" color="#FBBF24">
+<Section defaultOpen={false} icon={AlertTriangle} title="وضعیت‌های «منتظر» (Waiting Status List)" color="#FBBF24">
         <p className="jsp-section-desc">وضعیت‌های جیرا که باید به‌عنوان «منتظر تیم‌های دیگر» شناسایی شوند. هر وضعیت را وارد کرده و Enter بزنید.</p>
         <TagList
           items={cfg.waitingStatuses || []}
@@ -2615,7 +2638,7 @@ const JiraSettingsPage = () => {
         />
       </Section>
 
-<Section icon={Calendar} title="نگاشت فیلدهای تاریخ (Date Field Mapping)" color="#06B6D4" defaultOpen={true}>
+<Section icon={Calendar} title="نگاشت فیلدهای تاریخ (Date Field Mapping)" color="#06B6D4" defaultOpen={false}>
         <div className="jsp-grid-2">
           <Field label="فیلد تاریخ شروع اپیک" hint="معمولاً created یا customfield_XXXXX">
             <Input value={cfg.dateMapping?.epicStartDateField} onChange={v => set('dateMapping', 'epicStartDateField', v)} placeholder="created" mono />
@@ -2632,7 +2655,7 @@ const JiraSettingsPage = () => {
         </div>
       </Section>
 
-<Section icon={Tag} title="پیشوندهای لیبل‌های جیرا (Label Prefixes)" color="#F97316" defaultOpen={true}>
+<Section icon={Tag} title="پیشوندهای لیبل‌های جیرا (Label Prefixes)" color="#F97316" defaultOpen={false}>
         <p className="jsp-section-desc">برچسب‌هایی که برای تشخیص تیم منتظر، دلیل انتظار و قابلیت‌ها از لیبل‌های Jira استفاده می‌شوند.</p>
         <div className="jsp-grid-2">
           <Field label="پیشوند تیم منتظر" hint="مثال: wait: → لیبل: wait:infra-team">
@@ -2647,7 +2670,7 @@ const JiraSettingsPage = () => {
         </div>
       </Section>
 
-<Section icon={Cpu} title="کامپوننت‌های برجسته داشبورد (Featured Components)" color="#8B5CF6" defaultOpen={true}>
+<Section icon={Cpu} title="کامپوننت‌های برجسته داشبورد (Featured Components)" color="#8B5CF6" defaultOpen={false}>
         <p className="jsp-section-desc">کامپوننت‌هایی که به‌عنوان دکمه فیلتر سریع در صفحه داشبورد نمایش داده می‌شوند.</p>
         <TagList
           items={cfg.featuredComponents || []}

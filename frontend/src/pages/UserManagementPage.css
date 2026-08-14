@@ -16,13 +16,14 @@
 }
 
 .ump-title {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 0.75rem;
   margin: 0 0 0.35rem 0;
+  letter-spacing: -0.3px;
 }
 
 .ump-subtitle {
@@ -38,14 +39,20 @@
   background: var(--gradient-primary);
   color: #FFFFFF;
   border: none;
-  padding: 0.65rem 1.25rem;
-  border-radius: 10px;
+  padding: 0.65rem 1.35rem;
+  border-radius: 12px;
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: var(--shadow-glow-blue);
-  transition: all 0.25s ease;
+  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.ump-add-user-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(56, 189, 248, 0.6);
+  filter: brightness(1.1);
 }
 
 .ump-refresh-btn {
@@ -53,20 +60,23 @@
   align-items: center;
   gap: 0.4rem;
   background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
-  padding: 0.65rem 1rem;
-  border-radius: 10px;
+  padding: 0.65rem 1.1rem;
+  border-radius: 12px;
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .ump-refresh-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
   color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .spin {
@@ -78,12 +88,6 @@
   to { transform: rotate(360deg); }
 }
 
-.ump-add-user-btn:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.15);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
-}
-
 .ump-toast {
   position: fixed;
   top: 85px;
@@ -93,26 +97,34 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1.6rem;
   border-radius: 30px;
   font-size: 0.9rem;
-  font-weight: 600;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  font-weight: 700;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   animation: toastSlide 0.3s ease-out;
 }
 
 .ump-toast.success {
-  background: rgba(16, 185, 129, 0.95);
+  background: rgba(16, 185, 129, 0.92);
   color: #FFFFFF;
+  border: 1px solid #34D399;
 }
 
 .ump-toast.error {
-  background: rgba(239, 68, 68, 0.95);
+  background: rgba(239, 68, 68, 0.92);
   color: #FFFFFF;
+  border: 1px solid #F87171;
 }
 
 .ump-table-card {
   padding: 1.75rem;
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass) !important;
 }
 
 .ump-table-wrapper {
@@ -130,12 +142,12 @@
   padding: 0.85rem 1rem;
   color: var(--text-muted);
   border-bottom: 1px solid var(--glass-border);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .ump-table td {
   padding: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .ump-user-cell {
@@ -145,59 +157,64 @@
 }
 
 .ump-avatar {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: var(--gradient-primary);
   display: flex;
   justify-content: center;
   align-items: center;
-  font-weight: 700;
+  font-weight: 800;
   color: #FFFFFF;
   font-size: 0.95rem;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .ump-display-name {
   font-size: 0.95rem;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
 .ump-username-tag {
   font-family: monospace;
   color: var(--accent-cyan);
-  background: rgba(6, 182, 212, 0.12);
-  padding: 0.2rem 0.6rem;
+  background: rgba(6, 182, 212, 0.15);
+  backdrop-filter: blur(8px);
+  padding: 0.22rem 0.65rem;
   border-radius: 6px;
-  border: 1px solid rgba(6, 182, 212, 0.3);
+  border: 1px solid rgba(6, 182, 212, 0.35);
   font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .ump-role-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.2rem 0.65rem;
+  padding: 0.22rem 0.7rem;
   border-radius: 12px;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
 }
 
 .ump-role-badge.admin {
-  background: rgba(236, 72, 153, 0.15);
+  background: rgba(236, 72, 153, 0.18);
   color: #F472B6;
-  border: 1px solid rgba(244, 114, 182, 0.3);
+  border: 1px solid rgba(244, 114, 182, 0.35);
 }
 
 .ump-role-badge.manager {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(56, 189, 248, 0.18);
   color: #38BDF8;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid rgba(56, 189, 248, 0.35);
 }
 
 .ump-role-badge.viewer {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(16, 185, 129, 0.18);
   color: #34D399;
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid rgba(52, 211, 153, 0.35);
 }
 
 .ump-perms-list {
@@ -208,9 +225,11 @@
 
 .ump-perm-pill {
   font-size: 0.76rem;
+  font-weight: 600;
   background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
-  padding: 0.2rem 0.55rem;
+  padding: 0.22rem 0.6rem;
   border-radius: 8px;
   color: var(--text-secondary);
 }
@@ -225,36 +244,39 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
+  padding: 0.38rem 0.85rem;
+  border-radius: 8px;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   border: none;
   transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
 }
 
 .ump-action-btn.edit {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(56, 189, 248, 0.18);
   color: #38BDF8;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid rgba(56, 189, 248, 0.35);
 }
 
 .ump-action-btn.edit:hover {
-  background: rgba(59, 130, 246, 0.3);
+  background: rgba(56, 189, 248, 0.35);
   color: #FFFFFF;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
 }
 
 .ump-action-btn.delete {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.18);
   color: #FCA5A5;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
 .ump-action-btn.delete:hover {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.35);
   color: #FFFFFF;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.45);
 }
 
 /* Modal Overlay & Card */
@@ -265,7 +287,8 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   z-index: 999;
   display: flex;
   justify-content: center;
@@ -276,10 +299,12 @@
 .ump-modal-content {
   width: 100%;
   max-width: 600px;
-  padding: 1.75rem;
-  background: #0B1120;
-  border: 1px solid var(--accent-blue);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+  padding: 1.85rem;
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(30px) saturate(200%) !important;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .ump-modal-header {
@@ -294,6 +319,7 @@
 .ump-modal-header h3 {
   margin: 0;
   font-size: 1.15rem;
+  font-weight: 800;
   color: var(--text-primary);
   display: flex;
   align-items: center;
@@ -333,15 +359,16 @@
 .ump-input-group label {
   font-size: 0.82rem;
   color: var(--text-secondary);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .ump-input-group input, .ump-input-group select {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(10px);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
   padding: 0.55rem 0.85rem;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.88rem;
   font-family: inherit;
   outline: none;
@@ -350,7 +377,7 @@
 
 .ump-input-group input:focus, .ump-input-group select:focus {
   border-color: var(--accent-blue);
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
 }
 
 .ump-perms-section {
@@ -361,7 +388,7 @@
 
 .ump-perms-title {
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--accent-cyan);
 }
 
@@ -375,17 +402,19 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
-  padding: 0.6rem 0.85rem;
-  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .ump-checkbox-card.active {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(56, 189, 248, 0.18);
   border-color: var(--accent-blue);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
 }
 
 .ump-checkbox-card input[type="checkbox"] {
@@ -394,7 +423,7 @@
 }
 
 .cb-icon { font-size: 1rem; }
-.cb-label { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); }
+.cb-label { font-size: 0.82rem; font-weight: 700; color: var(--text-primary); }
 
 .ump-modal-footer {
   display: flex;
@@ -409,22 +438,28 @@
   background: transparent;
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
-  padding: 0.5rem 1.1rem;
-  border-radius: 8px;
+  padding: 0.55rem 1.2rem;
+  border-radius: 10px;
   font-size: 0.85rem;
   font-family: inherit;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ump-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
 }
 
 .ump-submit-btn {
   background: var(--gradient-primary);
   border: none;
   color: #FFFFFF;
-  padding: 0.5rem 1.25rem;
-  border-radius: 8px;
+  padding: 0.55rem 1.35rem;
+  border-radius: 10px;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: var(--shadow-glow-blue);
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
