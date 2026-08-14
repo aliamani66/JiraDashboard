@@ -37,7 +37,7 @@ const Sidebar = ({ isOpen, toggle }) => {
             </NavLink>
           )}
 
-          {(hasPerm('sprints') || hasPerm('overall_timeline')) && (
+          {hasPerm('sprints') && (
             <NavLink 
               to="/sprints" 
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
