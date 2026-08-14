@@ -1,7 +1,18 @@
 .sprints-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  height: calc(100vh - 56px - 2.5rem);
+  max-height: calc(100vh - 56px - 2.5rem);
+  overflow: hidden;
+  gap: 0.75rem;
+}
+
+.sp-header-fixed-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 .sp-top-bar {
@@ -387,15 +398,22 @@
   width: 300px;
 }
 
-/* Project Groups & Task Cards */
+/* Project Groups & Task Cards (Main Scroll Area) */
 .sp-project-groups-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-left: 0.4rem;
+  padding-right: 0.2rem;
+  padding-bottom: 2rem;
+  scroll-behavior: smooth;
 }
 
 .sp-project-group-card {
-  padding: 1.6rem;
+  padding: 1.4rem;
   border-radius: var(--radius-lg);
   background: var(--bg-card) !important;
   backdrop-filter: blur(28px) saturate(200%) !important;
@@ -403,13 +421,14 @@
   box-shadow: var(--shadow-glass) !important;
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 1.1rem;
   transition: all 0.25s ease;
+  flex-shrink: 0;
 }
 
 .sp-project-group-card.collapsed {
   gap: 0;
-  padding: 1.1rem 1.4rem;
+  padding: 1rem 1.35rem;
 }
 
 .sp-project-group-card.collapsed .sp-group-header {
@@ -422,7 +441,7 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
 }
 
 .sp-group-header.clickable {
@@ -455,9 +474,8 @@
 }
 
 .sp-tasks-scroll-container {
-  max-height: 520px;
-  overflow-y: auto;
-  padding-right: 0.25rem;
+  overflow: visible;
+  padding-right: 0.15rem;
 }
 
 .sp-group-title-wrap {

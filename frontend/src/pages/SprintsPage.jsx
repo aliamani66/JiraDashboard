@@ -307,204 +307,207 @@ const SprintsPage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      {/* Top Header Bar */}
-      <div className="sp-top-bar">
-        <button className="back-btn" onClick={() => navigate('/')} title="بازگشت به داشبورد">
-          <ArrowLeft size={18} />
-          <span>داشبورد</span>
-        </button>
-        <div className="sp-title-area">
-          <h1 className="sp-page-title">
-            <Flame size={24} className="text-accent-orange" />
-            جلسات اسپرینت
-          </h1>
-        </div>
-        <div className="sp-export-btns-group">
-          <button 
-            className="sp-export-btn icon-only-btn" 
-            onClick={() => window.open(`/api/reports/sprints-html?sprint=${encodeURIComponent(selectedSprint)}${token ? `&token=${token}` : ''}`, '_blank')} 
-            title={`چاپ گزارش اسپرینت ${selectedSprint}`}
-          >
-            <Printer size={16} />
+      {/* 📌 Fixed / Pinned Top Header Section */}
+      <div className="sp-header-fixed-wrap">
+        {/* Top Header Bar */}
+        <div className="sp-top-bar">
+          <button className="back-btn" onClick={() => navigate('/')} title="بازگشت به داشبورد">
+            <ArrowLeft size={18} />
+            <span>داشبورد</span>
           </button>
-
-          {selectedSprint !== 'all' && (
+          <div className="sp-title-area">
+            <h1 className="sp-page-title">
+              <Flame size={24} className="text-accent-orange" />
+              جلسات اسپرینت
+            </h1>
+          </div>
+          <div className="sp-export-btns-group">
             <button 
-              className="sp-export-btn secondary" 
-              onClick={() => window.open(`/api/reports/sprints-html?sprint=all${token ? `&token=${token}` : ''}`, '_blank')} 
-              title="خروجی و چاپ گزارش تمام اسپرینت‌ها"
+              className="sp-export-btn icon-only-btn" 
+              onClick={() => window.open(`/api/reports/sprints-html?sprint=${encodeURIComponent(selectedSprint)}${token ? `&token=${token}` : ''}`, '_blank')} 
+              title={`چاپ گزارش اسپرینت ${selectedSprint}`}
             >
-              <FileText size={15} />
-              <span>گزارش کل</span>
+              <Printer size={16} />
             </button>
-          )}
-        </div>
-      </div>
 
-      {/* Sprint Summary KPI Cards */}
-      <div className="sp-kpi-grid">
-        <div className="glass-card sp-kpi-card orange">
-          <div className="sp-kpi-icon"><Flame size={24} /></div>
-          <div className="sp-kpi-info">
-            <span className="sp-kpi-title">مجموع کل تسک‌های اسپرینت</span>
-            <h2 className="sp-kpi-value">{totalSprintTasks} <small>تسک</small></h2>
-          </div>
-        </div>
-
-        <div className="glass-card sp-kpi-card status-breakdown-card">
-          <div className="sp-status-grid-mini">
-            <div className="sp-mini-chip done" title="تسک‌هایی که کامل انجام شده‌اند">
-              <span className="dot green"></span>
-              <span className="lbl">✅ انجام‌شده:</span>
-              <strong>{doneCount}</strong>
-            </div>
-            <div className="sp-mini-chip active" title="تسک‌های در حال اجرا">
-              <span className="dot blue"></span>
-              <span className="lbl">⚡ در حال انجام:</span>
-              <strong>{activeCount}</strong>
-            </div>
-            <div className="sp-mini-chip waiting" title="تسک‌های منتظر / آن‌هولد">
-              <span className="dot orange"></span>
-              <span className="lbl">⏳ منتظر:</span>
-              <strong>{waitingCount}</strong>
-            </div>
-            <div className="sp-mini-chip todo" title="تسک‌های در صف شروع">
-              <span className="dot purple"></span>
-              <span className="lbl">📋 برای انجام:</span>
-              <strong>{todoCount}</strong>
-            </div>
-          </div>
-          <div className="sp-sum-verify-badge">
-            مجموع ({doneCount} + {activeCount} + {waitingCount} + {todoCount}) = {totalSprintTasks} تسک
-          </div>
-        </div>
-
-        <div className="glass-card sp-kpi-card cyan">
-          <div className="sp-kpi-icon"><Clock size={24} /></div>
-          <div className="sp-kpi-info">
-            <span className="sp-kpi-title">کارکرد / تخمین اسپرینت</span>
-            <h2 className="sp-kpi-value">{totalSpentHours}h <small>({totalEstHours}h تخمین)</small></h2>
-          </div>
-        </div>
-
-        <div className="glass-card sp-kpi-card purple">
-          <div className="sp-kpi-icon"><Layers size={24} /></div>
-          <div className="sp-kpi-info">
-            <span className="sp-kpi-title">پیشرفت اسپرینت</span>
-            <h2 className="sp-kpi-value">%{sprintProgress}</h2>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter & Search Bar */}
-      <div className="glass-card sp-filter-bar" style={{ padding: '0.9rem 1.2rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-          {/* Controls: Sprint, Assignee, Status */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
-            {/* Sprint Filter Dropdown */}
-            <div className="sp-filter-item">
-              <Flame size={16} className="text-accent-orange" />
-              <span className="sp-filter-label">انتخاب اسپرینت:</span>
-              <select 
-                value={selectedSprint} 
-                onChange={(e) => setSelectedSprint(e.target.value)}
-                className="sp-select sp-filter-sprint-dropdown"
+            {selectedSprint !== 'all' && (
+              <button 
+                className="sp-export-btn secondary" 
+                onClick={() => window.open(`/api/reports/sprints-html?sprint=all${token ? `&token=${token}` : ''}`, '_blank')} 
+                title="خروجی و چاپ گزارش تمام اسپرینت‌ها"
               >
-                <option value="all">🌐 همه اسپرینت‌ها ({allSprintNames.length})</option>
-                {allSprintNames.map(s => (
-                  <option key={s} value={s}>🔥 {s}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Assignee / Person Filter */}
-            <div className="sp-filter-item">
-              <User size={16} className="text-accent-blue" />
-              <span className="sp-filter-label">مسئول تسک:</span>
-              <select 
-                value={assigneeFilter} 
-                onChange={(e) => setAssigneeFilter(e.target.value)}
-                className="sp-select"
-              >
-                <option value="all">همه افراد ({assigneeOptions.length})</option>
-                {assigneeOptions.map(person => (
-                  <option key={person} value={person}>👤 {person}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <div className="sp-filter-item">
-              <span className="sp-filter-label">وضعیت:</span>
-              <select 
-                value={statusFilter} 
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="sp-select"
-              >
-                <option value="all">همه وضعیت‌ها</option>
-                <option value="active">⚡ در حال انجام</option>
-                <option value="done">✅ انجام‌شده</option>
-                <option value="waiting">⏳ منتظر / آن‌هولد</option>
-                <option value="todo">📋 برای انجام</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Quick Universal Search Box */}
-          <div className="universal-search-box">
-            <Search size={15} />
-            <input 
-              type="text"
-              placeholder="جستجوی عنوان، کد تسک، اپیک..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button className="universal-search-clear" onClick={() => setSearchQuery('')}>×</button>
+                <FileText size={15} />
+                <span>گزارش کل</span>
+              </button>
             )}
           </div>
         </div>
 
-        {/* Jira Project Filter Pills Bar */}
-        {jiraProjectOptions.length > 0 && (
-          <div className="jira-filter-pills-bar" style={{ paddingTop: '0.4rem', borderTop: '1px solid rgba(255, 255, 255, 0.07)' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-              <FolderGit2 size={16} style={{ color: '#38BDF8' }} /> فیلتر پروژه جیرا:
-            </span>
-            
-            <div className="jira-pills-wrap">
-              {jiraProjectOptions.map(key => {
-                const isSel = selectedProjectKeys.includes(key);
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`jira-pill-btn ${isSel ? 'active' : ''}`}
-                    onClick={() => toggleProjectKey(key)}
-                  >
-                    {isSel ? '✅' : '➕'} پروژه {key}
-                  </button>
-                );
-              })}
-              {selectedProjectKeys.length > 0 && (
-                <button className="jira-pills-clear-btn" onClick={() => setSelectedProjectKeys([])}>
-                  پاک‌سازی ({selectedProjectKeys.length})
-                </button>
+        {/* Sprint Summary KPI Cards */}
+        <div className="sp-kpi-grid">
+          <div className="glass-card sp-kpi-card orange">
+            <div className="sp-kpi-icon"><Flame size={24} /></div>
+            <div className="sp-kpi-info">
+              <span className="sp-kpi-title">مجموع کل تسک‌های اسپرینت</span>
+              <h2 className="sp-kpi-value">{totalSprintTasks} <small>تسک</small></h2>
+            </div>
+          </div>
+
+          <div className="glass-card sp-kpi-card status-breakdown-card">
+            <div className="sp-status-grid-mini">
+              <div className="sp-mini-chip done" title="تسک‌هایی که کامل انجام شده‌اند">
+                <span className="dot green"></span>
+                <span className="lbl">✅ انجام‌شده:</span>
+                <strong>{doneCount}</strong>
+              </div>
+              <div className="sp-mini-chip active" title="تسک‌های در حال اجرا">
+                <span className="dot blue"></span>
+                <span className="lbl">⚡ در حال انجام:</span>
+                <strong>{activeCount}</strong>
+              </div>
+              <div className="sp-mini-chip waiting" title="تسک‌های منتظر / آن‌هولد">
+                <span className="dot orange"></span>
+                <span className="lbl">⏳ منتظر:</span>
+                <strong>{waitingCount}</strong>
+              </div>
+              <div className="sp-mini-chip todo" title="تسک‌های در صف شروع">
+                <span className="dot purple"></span>
+                <span className="lbl">📋 برای انجام:</span>
+                <strong>{todoCount}</strong>
+              </div>
+            </div>
+            <div className="sp-sum-verify-badge">
+              مجموع ({doneCount} + {activeCount} + {waitingCount} + {todoCount}) = {totalSprintTasks} تسک
+            </div>
+          </div>
+
+          <div className="glass-card sp-kpi-card cyan">
+            <div className="sp-kpi-icon"><Clock size={24} /></div>
+            <div className="sp-kpi-info">
+              <span className="sp-kpi-title">کارکرد / تخمین اسپرینت</span>
+              <h2 className="sp-kpi-value">{totalSpentHours}h <small>({totalEstHours}h تخمین)</small></h2>
+            </div>
+          </div>
+
+          <div className="glass-card sp-kpi-card purple">
+            <div className="sp-kpi-icon"><Layers size={24} /></div>
+            <div className="sp-kpi-info">
+              <span className="sp-kpi-title">پیشرفت اسپرینت</span>
+              <h2 className="sp-kpi-value">%{sprintProgress}</h2>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter & Search Bar */}
+        <div className="glass-card sp-filter-bar" style={{ padding: '0.8rem 1.2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+            {/* Controls: Sprint, Assignee, Status */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+              {/* Sprint Filter Dropdown */}
+              <div className="sp-filter-item">
+                <Flame size={16} className="text-accent-orange" />
+                <span className="sp-filter-label">انتخاب اسپرینت:</span>
+                <select 
+                  value={selectedSprint} 
+                  onChange={(e) => setSelectedSprint(e.target.value)}
+                  className="sp-select sp-filter-sprint-dropdown"
+                >
+                  <option value="all">🌐 همه اسپرینت‌ها ({allSprintNames.length})</option>
+                  {allSprintNames.map(s => (
+                    <option key={s} value={s}>🔥 {s}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Assignee / Person Filter */}
+              <div className="sp-filter-item">
+                <User size={16} className="text-accent-blue" />
+                <span className="sp-filter-label">مسئول تسک:</span>
+                <select 
+                  value={assigneeFilter} 
+                  onChange={(e) => setAssigneeFilter(e.target.value)}
+                  className="sp-select"
+                >
+                  <option value="all">همه افراد ({assigneeOptions.length})</option>
+                  {assigneeOptions.map(person => (
+                    <option key={person} value={person}>👤 {person}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div className="sp-filter-item">
+                <span className="sp-filter-label">وضعیت:</span>
+                <select 
+                  value={statusFilter} 
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="sp-select"
+                >
+                  <option value="all">همه وضعیت‌ها</option>
+                  <option value="active">⚡ در حال انجام</option>
+                  <option value="done">✅ انجام‌شده</option>
+                  <option value="waiting">⏳ منتظر / آن‌هولد</option>
+                  <option value="todo">📋 برای انجام</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Quick Universal Search Box */}
+            <div className="universal-search-box">
+              <Search size={15} />
+              <input 
+                type="text"
+                placeholder="جستجوی عنوان، کد تسک، اپیک..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button className="universal-search-clear" onClick={() => setSearchQuery('')}>×</button>
               )}
             </div>
+          </div>
+
+          {/* Jira Project Filter Pills Bar */}
+          {jiraProjectOptions.length > 0 && (
+            <div className="jira-filter-pills-bar" style={{ paddingTop: '0.4rem', borderTop: '1px solid rgba(255, 255, 255, 0.07)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                <FolderGit2 size={16} style={{ color: '#38BDF8' }} /> فیلتر پروژه جیرا:
+              </span>
+              
+              <div className="jira-pills-wrap">
+                {jiraProjectOptions.map(key => {
+                  const isSel = selectedProjectKeys.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`jira-pill-btn ${isSel ? 'active' : ''}`}
+                      onClick={() => toggleProjectKey(key)}
+                    >
+                      {isSel ? '✅' : '➕'} پروژه {key}
+                    </button>
+                  );
+                })}
+                {selectedProjectKeys.length > 0 && (
+                  <button className="jira-pills-clear-btn" onClick={() => setSelectedProjectKeys([])}>
+                    پاک‌سازی ({selectedProjectKeys.length})
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Selected Sprint Date Schedule Tag */}
+        {selectedSprint !== 'all' && (
+          <div className="sp-sprint-dates-banner" style={{ margin: '0 0 0.25rem 0' }}>
+            <Calendar size={15} className="text-accent-cyan" />
+            <span>زمان‌بندی {selectedSprint}: <strong>از {selectedDates.start} تا {selectedDates.due}</strong></span>
           </div>
         )}
       </div>
 
-      {/* Selected Sprint Date Schedule Tag */}
-      {selectedSprint !== 'all' && (
-        <div className="sp-sprint-dates-banner" style={{ margin: '0.85rem 0 1.5rem 0' }}>
-          <Calendar size={15} className="text-accent-cyan" />
-          <span>زمان‌بندی {selectedSprint}: <strong>از {selectedDates.start} تا {selectedDates.due}</strong></span>
-        </div>
-      )}
-
-      {/* Sprint Project Groups & Task Cards View (Collapsible Accordion Tiles) */}
+      {/* 📜 Scrollable Sprint Project Groups & Task Cards View */}
       <div className="sp-project-groups-list">
         {projectGroups.length === 0 ? (
           <div className="glass-card sp-empty-state">
