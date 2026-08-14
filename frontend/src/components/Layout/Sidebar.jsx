@@ -37,7 +37,7 @@ const Sidebar = ({ isOpen, toggle }) => {
             </NavLink>
           )}
 
-          {hasPerm('overall_timeline') && (
+          {(hasPerm('sprints') || hasPerm('overall_timeline')) && (
             <NavLink 
               to="/sprints" 
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -59,7 +59,7 @@ const Sidebar = ({ isOpen, toggle }) => {
             </NavLink>
           )}
 
-          {hasPerm('manager_reports') || user?.role === 'admin' || true ? (
+          {hasPerm('manager_reports') && (
             <NavLink 
               to="/manager-reports" 
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -68,7 +68,7 @@ const Sidebar = ({ isOpen, toggle }) => {
               <BarChart3 size={20} className="nav-icon" />
               <span className="nav-text">گزارش مدیر</span>
             </NavLink>
-          ) : null}
+          )}
           
           {hasPerm('waiting_tasks') && (
             <NavLink 
@@ -103,7 +103,7 @@ const Sidebar = ({ isOpen, toggle }) => {
             </NavLink>
           )}
 
-          {hasPerm('jira_settings') && (
+          {(hasPerm('database_manager') || hasPerm('db_explorer') || hasPerm('db_query')) && (
             <NavLink 
               to="/database-manager" 
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}

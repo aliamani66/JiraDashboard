@@ -146,9 +146,17 @@ router.get('/data/:tableName', (req, res) => {
   }
 });
 
+// Helper: check db_query permission
+function checkDbQueryPerm(req, res, next) {
+  if (req.user && (req.user.role === 'admin' || (Array.isArray(req.user.permissions) && req.user.permissions.includes('db_query')))) {
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'دسترسی غیرمجاز: برای اجرای مستقیم کوئری SQL نیاز به مجوز «کنسول اجرای SQL (db_query)» یا نقش مدیر سیستم دارید.' });
+}
+
 // POST /api/db/query
 // Executes custom read-only SQL queries
-router.post('/query', (req, res) => {
+router.post('/query', checkDbQueryPerm, (req, res) => {
   try {
     const db = getDb();
     const { sql } = req.body;

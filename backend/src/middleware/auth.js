@@ -23,6 +23,12 @@ function authenticate(req, res, next) {
     const db = getDb();
     let user = db.prepare('SELECT id, username, display_name, role, permissions FROM users WHERE id = ?').get(decoded.id);
     
+    const allPermsList = [
+      "dashboard", "sprints", "overall_timeline", "manager_reports", "waiting_tasks", "database_manager", "jira_settings", "user_management",
+      "jira_config", "jira_diagnostics", "jira_mapping", "jira_sync_range", "db_rebuild", "system_tests", "system_logs",
+      "db_explorer", "db_query"
+    ];
+
     if (!user && decoded.username === 'admin') {
       user = db.prepare('SELECT id, username, display_name, role, permissions FROM users WHERE username = ?').get('admin');
       if (!user) {
@@ -31,7 +37,7 @@ function authenticate(req, res, next) {
           username: 'admin',
           display_name: 'مدیر سیستم',
           role: 'admin',
-          permissions: ["dashboard", "overall_timeline", "waiting_tasks", "user_management", "jira_settings"]
+          permissions: allPermsList
         };
       }
     }
@@ -40,8 +46,10 @@ function authenticate(req, res, next) {
       return res.status(401).json({ error: 'Unauthorized: User not found' });
     }
 
-    let perms = ["dashboard", "overall_timeline", "waiting_tasks", "user_management", "jira_settings"];
-    if (user.permissions) {
+    let perms = user.role === 'admin' ? allPermsList : ["dashboard", "overall_timeline", "waiting_tasks"];
+    if (user.role === 'admin') {
+      perms = allPermsList;
+    } else if (user.permissions) {
       try {
         perms = typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions;
       } catch (e) {

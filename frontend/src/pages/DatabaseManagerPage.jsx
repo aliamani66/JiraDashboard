@@ -1,11 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Database, Search, Play, RefreshCw, Layers, CheckCircle2, AlertTriangle, Table, FileText, ChevronLeft, ChevronRight, Copy, Terminal } from 'lucide-react';
+import { Database, Search, Play, RefreshCw, Layers, CheckCircle2, AlertTriangle, Table, FileText, ChevronLeft, ChevronRight, Copy, Terminal, Lock } from 'lucide-react';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import './JiraSettingsPage.css';
 
 const isValidEpicKey = (k) => k && /^[A-Z][A-Z0-9_]*-\d+$/i.test(k);
 
 const DatabaseManagerPage = () => {
+  const { user } = useAuth();
+  const perms = Array.isArray(user?.permissions) ? user.permissions : [];
+  const isAdmin = user?.role === 'admin' || user?.username === 'admin';
+  const canRunQuery = isAdmin || perms.includes('db_query');
+
   const [activeTab, setActiveTab] = useState('browser'); // 'browser' | 'sql'
 
   // Tables list state
@@ -80,6 +86,10 @@ const DatabaseManagerPage = () => {
   };
 
   const handleExecuteQuery = async () => {
+    if (!canRunQuery) {
+      showToast('⚠️ شما مجوز اجرای مستقیم کوئری SQL (db_query) را ندارید.', 'error');
+      return;
+    }
     if (!sqlQuery || !sqlQuery.trim()) {
       showToast('لطفاً یک کوئری SQL وارد کنید.', 'error');
       return;
@@ -301,7 +311,13 @@ ORDER BY p.id ASC`
         </button>
 
         <button
-          onClick={() => setActiveTab('sql')}
+          onClick={() => {
+            if (!canRunQuery) {
+              showToast('⚠️ برای استفاده از کنسول SQL نیاز به مجوز «db_query» یا دسترسی مدیر ارشد سیستم دارید.', 'error');
+              return;
+            }
+            setActiveTab('sql');
+          }}
           style={{
             background: activeTab === 'sql' ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
             border: 'none',
@@ -314,10 +330,12 @@ ORDER BY p.id ASC`
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
+            opacity: canRunQuery ? 1 : 0.65,
             transition: 'all 0.2s ease'
           }}
+          title={canRunQuery ? 'کنسول کوئری‌ساز SQL' : 'نیاز به مجوز اختصاصی اجرای SQL (db_query)'}
         >
-          <Terminal size={16} />
+          {canRunQuery ? <Terminal size={16} /> : <Lock size={16} color="#F87171" />}
           <span>⚡ کنسول کوئری‌ساز SQL</span>
         </button>
       </div>

@@ -665,8 +665,16 @@ router.get('/fetch-jira-projects', async (req, res) => {
   }
 });
 
+// Helper: check db_rebuild permission
+function checkDbRebuildPerm(req, res, next) {
+  if (req.user && (req.user.role === 'admin' || (Array.isArray(req.user.permissions) && req.user.permissions.includes('db_rebuild')))) {
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'دسترسی غیرمجاز: برای بازسازی یا پاک‌سازی دیتابیس نیاز به مجوز «بازسازی دیتابیس (db_rebuild)» یا نقش مدیر سیستم دارید.' });
+}
+
 // POST Clear / Wipe all tasks and projects from SQLite database (LEAVES USERS TABLE UNTOUCHED)
-router.post('/clear-db', async (req, res) => {
+router.post('/clear-db', checkDbRebuildPerm, async (req, res) => {
   try {
     const db = getDb();
     // Only delete task and project data (USERS TABLE IS NEVER TOUCHED)
@@ -683,7 +691,7 @@ router.post('/clear-db', async (req, res) => {
 });
 
 // POST Reset Database directly from Jira live
-router.post('/reset-db', async (req, res) => {
+router.post('/reset-db', checkDbRebuildPerm, async (req, res) => {
   try {
     const syncRes = await cacheService.syncFromJira();
     if (syncRes.success) {

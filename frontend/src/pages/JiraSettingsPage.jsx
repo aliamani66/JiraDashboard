@@ -4,9 +4,10 @@ import {
   Settings, Server, Cpu, GitBranch, Tag, Calendar,
   RefreshCw, Save, CheckCircle2, AlertTriangle, X,
   ChevronDown, ChevronUp, Info, Eye, EyeOff, Zap, Database, Search, Trash2,
-  FlaskConical, Play, CheckCircle, XCircle, Clock, Terminal, Pause, Download, FileText
+  FlaskConical, Play, CheckCircle, XCircle, Clock, Terminal, Pause, Download, FileText, Lock
 } from 'lucide-react';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import JalaliDatePicker from '../components/common/JalaliDatePicker';
 import { g2j, j2g, formatJalali, formatGregorian } from '../utils/jalali';
 import './JiraSettingsPage.css';
@@ -225,9 +226,29 @@ const StatusMappingEditor = ({ mapping, onChange }) => {
 
 // ─────────────────────────── MAIN PAGE ────────────────────────────
 const JiraSettingsPage = () => {
+  const { user } = useAuth();
+  const perms = Array.isArray(user?.permissions) ? user.permissions : [];
+  const isAdmin = user?.role === 'admin' || user?.username === 'admin';
+  const hasPerm = (key) => isAdmin || perms.includes(key);
+
+  const canRebuildDb = hasPerm('db_rebuild');
+  const canSyncRange = hasPerm('jira_sync_range');
+  const canViewDiag = hasPerm('jira_diagnostics');
+  const canConfigJira = hasPerm('jira_config');
+  const canMapping = hasPerm('jira_mapping');
+  const canSystemTests = hasPerm('system_tests');
+  const canSystemLogs = hasPerm('system_logs');
+
   const [cfg, setCfg] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('database');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (isAdmin || perms.includes('jira_diagnostics') || perms.includes('jira_settings')) return 'database';
+    if (perms.includes('jira_config')) return 'connection';
+    if (perms.includes('jira_mapping')) return 'mapping';
+    if (perms.includes('system_tests')) return 'system_tests';
+    if (perms.includes('system_logs')) return 'system_logs';
+    return 'database';
+  });
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [diagLoading, setDiagLoading] = useState(false);
@@ -970,6 +991,10 @@ const JiraSettingsPage = () => {
 
   // 🚀 Open Rebuild Modal (Confirmation Stage)
   const handleOpenRebuildModal = () => {
+    if (!canRebuildDb) {
+      showToast('⚠️ شما مجوز بازسازی دیتابیس (db_rebuild) را ندارید. دسترسی به این بخش فقط برای کاربران دارای مجوز مربوطه امکان‌پذیر است.', 'error');
+      return;
+    }
     const rebuildMonths = parseInt(cfg?.rebuildMonths, 10) || 3;
     setSyncFlowModal({
       isOpen: true,
@@ -1066,6 +1091,10 @@ const JiraSettingsPage = () => {
 
   // 🚀 Open Date Range Modal (Picker Stage)
   const handleOpenRangeModal = () => {
+    if (!canSyncRange) {
+      showToast('⚠️ شما مجوز استخراج بازه زمانی (jira_sync_range) را ندارید.', 'error');
+      return;
+    }
     setSyncFlowModal({
       isOpen: true,
       type: 'range',
@@ -1380,22 +1409,32 @@ const JiraSettingsPage = () => {
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           <button
             className="jsp-run-diag-btn"
-            style={{ background: 'linear-gradient(135deg, #EF4444, #8B5CF6)', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)' }}
+            style={{
+              background: canRebuildDb ? 'linear-gradient(135deg, #EF4444, #8B5CF6)' : 'rgba(255, 255, 255, 0.08)',
+              boxShadow: canRebuildDb ? '0 4px 15px rgba(239, 68, 68, 0.4)' : 'none',
+              cursor: canRebuildDb ? 'pointer' : 'not-allowed',
+              opacity: canRebuildDb ? 1 : 0.65
+            }}
             onClick={handleOpenRebuildModal}
             disabled={monthlySyncing}
-            title={`بازسازی کامل دیتابیس و سایت بر اساس ${cfg?.rebuildMonths || 3} ماه اخیر`}
+            title={canRebuildDb ? `بازسازی کامل دیتابیس و سایت بر اساس ${cfg?.rebuildMonths || 3} ماه اخیر` : 'دسترسی محدود: نیاز به مجوز «بازسازی دیتابیس (db_rebuild)»'}
           >
-            <RefreshCw size={15} className={monthlySyncing ? 'spin' : ''} />
+            {canRebuildDb ? <RefreshCw size={15} className={monthlySyncing ? 'spin' : ''} /> : <Lock size={15} color="#FCA5A5" />}
             <span>{monthlySyncing ? 'در حال بازسازی...' : 'بازسازی دیتابیس'}</span>
           </button>
           <button
             className="jsp-run-diag-btn"
-            style={{ background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.35)' }}
+            style={{
+              background: canSyncRange ? 'linear-gradient(135deg, #10B981, #059669)' : 'rgba(255, 255, 255, 0.08)',
+              boxShadow: canSyncRange ? '0 4px 15px rgba(16, 185, 129, 0.35)' : 'none',
+              cursor: canSyncRange ? 'pointer' : 'not-allowed',
+              opacity: canSyncRange ? 1 : 0.65
+            }}
             onClick={handleOpenRangeModal}
             disabled={monthlySyncing}
-            title="استخراج و همگام‌سازی دیتای جیرا در بازه زمانی دلخواه"
+            title={canSyncRange ? "استخراج و همگام‌سازی دیتای جیرا در بازه زمانی دلخواه" : 'دسترسی محدود: نیاز به مجوز «استخراج بازه زمانی (jira_sync_range)»'}
           >
-            <Calendar size={15} />
+            {canSyncRange ? <Calendar size={15} /> : <Lock size={15} color="#6EE7B7" />}
             <span>{monthlySyncing ? 'در حال استخراج...' : 'استخراج بازه زمانی'}</span>
           </button>
           <button 
@@ -2014,217 +2053,227 @@ const JiraSettingsPage = () => {
           gap: '0.5rem',
           flexWrap: 'wrap'
         }}>
-          {/* Tab 1: Database */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('database')}
-            style={{
-              padding: '0.85rem 1.6rem',
-              borderTopLeftRadius: '14px',
-              borderTopRightRadius: '14px',
-              borderBottomLeftRadius: '0px',
-              borderBottomRightRadius: '0px',
-              border: activeTab === 'database' ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid transparent',
-              borderBottom: activeTab === 'database' ? '2px solid #0F172A' : '1px solid transparent',
-              background: activeTab === 'database' ? 'linear-gradient(180deg, rgba(16, 185, 129, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
-              color: activeTab === 'database' ? '#6EE7B7' : '#94A3B8',
-              fontWeight: activeTab === 'database' ? 800 : 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              fontSize: '0.94rem',
-              position: 'relative',
-              marginBottom: '-1px',
-              zIndex: activeTab === 'database' ? 2 : 1,
-              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
-          >
-            <div style={{
-              background: activeTab === 'database' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.06)',
-              padding: '0.35rem',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: activeTab === 'database' ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid transparent'
-            }}>
-              <Database size={18} color={activeTab === 'database' ? '#6EE7B7' : '#94A3B8'} />
-            </div>
-            <span>📊 پایش دیتابیس</span>
-            {activeTab === 'database' && (
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981', marginRight: '0.4rem' }} />
-            )}
-          </button>
+          {/* Tab 1: Database (Diagnostic & Stats) */}
+          {(isAdmin || canViewDiag || perms.includes('jira_settings')) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('database')}
+              style={{
+                padding: '0.85rem 1.6rem',
+                borderTopLeftRadius: '14px',
+                borderTopRightRadius: '14px',
+                borderBottomLeftRadius: '0px',
+                borderBottomRightRadius: '0px',
+                border: activeTab === 'database' ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid transparent',
+                borderBottom: activeTab === 'database' ? '2px solid #0F172A' : '1px solid transparent',
+                background: activeTab === 'database' ? 'linear-gradient(180deg, rgba(16, 185, 129, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
+                color: activeTab === 'database' ? '#6EE7B7' : '#94A3B8',
+                fontWeight: activeTab === 'database' ? 800 : 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                fontSize: '0.94rem',
+                position: 'relative',
+                marginBottom: '-1px',
+                zIndex: activeTab === 'database' ? 2 : 1,
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              <div style={{
+                background: activeTab === 'database' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.06)',
+                padding: '0.35rem',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: activeTab === 'database' ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid transparent'
+              }}>
+                <Database size={18} color={activeTab === 'database' ? '#6EE7B7' : '#94A3B8'} />
+              </div>
+              <span>📊 پایش دیتابیس</span>
+              {activeTab === 'database' && (
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981', marginRight: '0.4rem' }} />
+              )}
+            </button>
+          )}
 
           {/* Tab 2: Connection */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('connection')}
-            style={{
-              padding: '0.85rem 1.6rem',
-              borderTopLeftRadius: '14px',
-              borderTopRightRadius: '14px',
-              borderBottomLeftRadius: '0px',
-              borderBottomRightRadius: '0px',
-              border: activeTab === 'connection' ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid transparent',
-              borderBottom: activeTab === 'connection' ? '2px solid #0F172A' : '1px solid transparent',
-              background: activeTab === 'connection' ? 'linear-gradient(180deg, rgba(56, 189, 248, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
-              color: activeTab === 'connection' ? '#38BDF8' : '#94A3B8',
-              fontWeight: activeTab === 'connection' ? 800 : 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              fontSize: '0.94rem',
-              position: 'relative',
-              marginBottom: '-1px',
-              zIndex: activeTab === 'connection' ? 2 : 1,
-              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
-          >
-            <div style={{
-              background: activeTab === 'connection' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(255, 255, 255, 0.06)',
-              padding: '0.35rem',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: activeTab === 'connection' ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid transparent'
-            }}>
-              <Server size={18} color={activeTab === 'connection' ? '#38BDF8' : '#94A3B8'} />
-            </div>
-            <span>🔌 تنظیمات جیرا</span>
-            {activeTab === 'connection' && (
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38BDF8', boxShadow: '0 0 8px #38BDF8', marginRight: '0.4rem' }} />
-            )}
-          </button>
+          {(isAdmin || canConfigJira || perms.includes('jira_settings')) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('connection')}
+              style={{
+                padding: '0.85rem 1.6rem',
+                borderTopLeftRadius: '14px',
+                borderTopRightRadius: '14px',
+                borderBottomLeftRadius: '0px',
+                borderBottomRightRadius: '0px',
+                border: activeTab === 'connection' ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid transparent',
+                borderBottom: activeTab === 'connection' ? '2px solid #0F172A' : '1px solid transparent',
+                background: activeTab === 'connection' ? 'linear-gradient(180deg, rgba(56, 189, 248, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
+                color: activeTab === 'connection' ? '#38BDF8' : '#94A3B8',
+                fontWeight: activeTab === 'connection' ? 800 : 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                fontSize: '0.94rem',
+                position: 'relative',
+                marginBottom: '-1px',
+                zIndex: activeTab === 'connection' ? 2 : 1,
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              <div style={{
+                background: activeTab === 'connection' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(255, 255, 255, 0.06)',
+                padding: '0.35rem',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: activeTab === 'connection' ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid transparent'
+              }}>
+                <Server size={18} color={activeTab === 'connection' ? '#38BDF8' : '#94A3B8'} />
+              </div>
+              <span>🔌 تنظیمات جیرا</span>
+              {activeTab === 'connection' && (
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38BDF8', boxShadow: '0 0 8px #38BDF8', marginRight: '0.4rem' }} />
+              )}
+            </button>
+          )}
 
           {/* Tab 3: Mapping */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('mapping')}
-            style={{
-              padding: '0.85rem 1.6rem',
-              borderTopLeftRadius: '14px',
-              borderTopRightRadius: '14px',
-              borderBottomLeftRadius: '0px',
-              borderBottomRightRadius: '0px',
-              border: activeTab === 'mapping' ? '1px solid rgba(236, 72, 153, 0.5)' : '1px solid transparent',
-              borderBottom: activeTab === 'mapping' ? '2px solid #0F172A' : '1px solid transparent',
-              background: activeTab === 'mapping' ? 'linear-gradient(180deg, rgba(236, 72, 153, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
-              color: activeTab === 'mapping' ? '#F472B6' : '#94A3B8',
-              fontWeight: activeTab === 'mapping' ? 800 : 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              fontSize: '0.94rem',
-              position: 'relative',
-              marginBottom: '-1px',
-              zIndex: activeTab === 'mapping' ? 2 : 1,
-              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
-          >
-            <div style={{
-              background: activeTab === 'mapping' ? 'rgba(236, 72, 153, 0.3)' : 'rgba(255, 255, 255, 0.06)',
-              padding: '0.35rem',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: activeTab === 'mapping' ? '1px solid rgba(236, 72, 153, 0.5)' : '1px solid transparent'
-            }}>
-              <Cpu size={18} color={activeTab === 'mapping' ? '#F472B6' : '#94A3B8'} />
-            </div>
-            <span>🛠️ نگاشت فیلدهای کاستوم و وضعیت‌ها</span>
-            {activeTab === 'mapping' && (
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EC4899', boxShadow: '0 0 8px #EC4899', marginRight: '0.4rem' }} />
-            )}
-          </button>
+          {(isAdmin || canMapping || perms.includes('jira_settings')) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('mapping')}
+              style={{
+                padding: '0.85rem 1.6rem',
+                borderTopLeftRadius: '14px',
+                borderTopRightRadius: '14px',
+                borderBottomLeftRadius: '0px',
+                borderBottomRightRadius: '0px',
+                border: activeTab === 'mapping' ? '1px solid rgba(236, 72, 153, 0.5)' : '1px solid transparent',
+                borderBottom: activeTab === 'mapping' ? '2px solid #0F172A' : '1px solid transparent',
+                background: activeTab === 'mapping' ? 'linear-gradient(180deg, rgba(236, 72, 153, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
+                color: activeTab === 'mapping' ? '#F472B6' : '#94A3B8',
+                fontWeight: activeTab === 'mapping' ? 800 : 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                fontSize: '0.94rem',
+                position: 'relative',
+                marginBottom: '-1px',
+                zIndex: activeTab === 'mapping' ? 2 : 1,
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              <div style={{
+                background: activeTab === 'mapping' ? 'rgba(236, 72, 153, 0.3)' : 'rgba(255, 255, 255, 0.06)',
+                padding: '0.35rem',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: activeTab === 'mapping' ? '1px solid rgba(236, 72, 153, 0.5)' : '1px solid transparent'
+              }}>
+                <Cpu size={18} color={activeTab === 'mapping' ? '#F472B6' : '#94A3B8'} />
+              </div>
+              <span>🛠️ نگاشت فیلدهای کاستوم و وضعیت‌ها</span>
+              {activeTab === 'mapping' && (
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EC4899', boxShadow: '0 0 8px #EC4899', marginRight: '0.4rem' }} />
+              )}
+            </button>
+          )}
 
           {/* Tab 4: System Tests */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('system_tests')}
-            style={{
-              padding: '0.85rem 1.6rem',
-              borderTopLeftRadius: '14px',
-              borderTopRightRadius: '14px',
-              borderBottomLeftRadius: '0px',
-              borderBottomRightRadius: '0px',
-              border: activeTab === 'system_tests' ? '1px solid rgba(168, 85, 247, 0.5)' : '1px solid transparent',
-              borderBottom: activeTab === 'system_tests' ? '2px solid #0F172A' : '1px solid transparent',
-              background: activeTab === 'system_tests' ? 'linear-gradient(180deg, rgba(168, 85, 247, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
-              color: activeTab === 'system_tests' ? '#C084FC' : '#94A3B8',
-              fontWeight: activeTab === 'system_tests' ? 800 : 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              fontSize: '0.94rem',
-              position: 'relative',
-              marginBottom: '-1px',
-              zIndex: activeTab === 'system_tests' ? 2 : 1,
-              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
-          >
-            <div style={{
-              background: activeTab === 'system_tests' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(255, 255, 255, 0.06)',
-              padding: '0.35rem',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: activeTab === 'system_tests' ? '1px solid rgba(168, 85, 247, 0.5)' : '1px solid transparent'
-            }}>
-              <FlaskConical size={18} color={activeTab === 'system_tests' ? '#C084FC' : '#94A3B8'} />
-            </div>
-            <span>🧪 آزمون‌های خودکار سیستم</span>
-            {activeTab === 'system_tests' && (
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#A855F7', boxShadow: '0 0 8px #A855F7', marginRight: '0.4rem' }} />
-            )}
-          </button>
+          {(isAdmin || canSystemTests || perms.includes('jira_settings')) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('system_tests')}
+              style={{
+                padding: '0.85rem 1.6rem',
+                borderTopLeftRadius: '14px',
+                borderTopRightRadius: '14px',
+                borderBottomLeftRadius: '0px',
+                borderBottomRightRadius: '0px',
+                border: activeTab === 'system_tests' ? '1px solid rgba(168, 85, 247, 0.5)' : '1px solid transparent',
+                borderBottom: activeTab === 'system_tests' ? '2px solid #0F172A' : '1px solid transparent',
+                background: activeTab === 'system_tests' ? 'linear-gradient(180deg, rgba(168, 85, 247, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
+                color: activeTab === 'system_tests' ? '#C084FC' : '#94A3B8',
+                fontWeight: activeTab === 'system_tests' ? 800 : 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                fontSize: '0.94rem',
+                position: 'relative',
+                marginBottom: '-1px',
+                zIndex: activeTab === 'system_tests' ? 2 : 1,
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              <div style={{
+                background: activeTab === 'system_tests' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(255, 255, 255, 0.06)',
+                padding: '0.35rem',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: activeTab === 'system_tests' ? '1px solid rgba(168, 85, 247, 0.5)' : '1px solid transparent'
+              }}>
+                <FlaskConical size={18} color={activeTab === 'system_tests' ? '#C084FC' : '#94A3B8'} />
+              </div>
+              <span>🧪 آزمون‌های خودکار سیستم</span>
+              {activeTab === 'system_tests' && (
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#A855F7', boxShadow: '0 0 8px #A855F7', marginRight: '0.4rem' }} />
+              )}
+            </button>
+          )}
 
           {/* Tab 5: 📜 لاگ‌های زنده بک‌اند */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('system_logs')}
-            style={{
-              padding: '0.85rem 1.4rem',
-              borderRadius: '12px 12px 0 0',
-              border: activeTab === 'system_logs' ? '1px solid rgba(6, 182, 212, 0.5)' : '1px solid transparent',
-              borderBottom: activeTab === 'system_logs' ? '2px solid #0F172A' : '1px solid transparent',
-              background: activeTab === 'system_logs' ? 'linear-gradient(180deg, rgba(6, 182, 212, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
-              color: activeTab === 'system_logs' ? '#22D3EE' : '#94A3B8',
-              fontWeight: activeTab === 'system_logs' ? 800 : 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              fontSize: '0.94rem',
-              position: 'relative',
-              marginBottom: '-1px',
-              zIndex: activeTab === 'system_logs' ? 2 : 1,
-              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
-          >
-            <div style={{
-              background: activeTab === 'system_logs' ? 'rgba(6, 182, 212, 0.3)' : 'rgba(255, 255, 255, 0.06)',
-              padding: '0.35rem',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: activeTab === 'system_logs' ? '1px solid rgba(6, 182, 212, 0.5)' : '1px solid transparent'
-            }}>
-              <Terminal size={18} color={activeTab === 'system_logs' ? '#22D3EE' : '#94A3B8'} />
-            </div>
-            <span>📜 لاگ‌های زنده بک‌اند</span>
-            {activeTab === 'system_logs' && (
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#06B6D4', boxShadow: '0 0 8px #06B6D4', marginRight: '0.4rem' }} />
-            )}
-          </button>
+          {(isAdmin || canSystemLogs || perms.includes('jira_settings')) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('system_logs')}
+              style={{
+                padding: '0.85rem 1.4rem',
+                borderRadius: '12px 12px 0 0',
+                border: activeTab === 'system_logs' ? '1px solid rgba(6, 182, 212, 0.5)' : '1px solid transparent',
+                borderBottom: activeTab === 'system_logs' ? '2px solid #0F172A' : '1px solid transparent',
+                background: activeTab === 'system_logs' ? 'linear-gradient(180deg, rgba(6, 182, 212, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%)' : 'transparent',
+                color: activeTab === 'system_logs' ? '#22D3EE' : '#94A3B8',
+                fontWeight: activeTab === 'system_logs' ? 800 : 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.65rem',
+                fontSize: '0.94rem',
+                position: 'relative',
+                marginBottom: '-1px',
+                zIndex: activeTab === 'system_logs' ? 2 : 1,
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              <div style={{
+                background: activeTab === 'system_logs' ? 'rgba(6, 182, 212, 0.3)' : 'rgba(255, 255, 255, 0.06)',
+                padding: '0.35rem',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: activeTab === 'system_logs' ? '1px solid rgba(6, 182, 212, 0.5)' : '1px solid transparent'
+              }}>
+                <Terminal size={18} color={activeTab === 'system_logs' ? '#22D3EE' : '#94A3B8'} />
+              </div>
+              <span>📜 لاگ‌های زنده بک‌اند</span>
+              {activeTab === 'system_logs' && (
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#06B6D4', boxShadow: '0 0 8px #06B6D4', marginRight: '0.4rem' }} />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Panel Body Content Container */}

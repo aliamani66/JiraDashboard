@@ -74,14 +74,23 @@ async function start() {
       db.prepare("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '[\"dashboard\",\"overall_timeline\",\"waiting_tasks\",\"user_management\",\"jira_settings\"]'").run();
     }
 
+    const allPermsList = [
+      "dashboard", "sprints", "overall_timeline", "manager_reports", "waiting_tasks", "database_manager", "jira_settings", "user_management",
+      "jira_config", "jira_diagnostics", "jira_mapping", "jira_sync_range", "db_rebuild", "system_tests", "system_logs",
+      "db_explorer", "db_query"
+    ];
+    const allPerms = JSON.stringify(allPermsList);
+
     const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
     if (!existingAdmin) {
       const hashed = await hashPassword('admin123');
-      const allPerms = JSON.stringify(["dashboard", "overall_timeline", "waiting_tasks", "user_management", "jira_settings"]);
       db.prepare('INSERT INTO users (username, password_hash, display_name, role, permissions) VALUES (?, ?, ?, ?, ?)').run(
         'admin', hashed, 'مدیر سیستم', 'admin', allPerms
       );
       console.log('Created admin user (admin / admin123).');
+    } else {
+      // Ensure existing admin user has full permissions
+      db.prepare('UPDATE users SET permissions = ? WHERE username = ?').run(allPerms, 'admin');
     }
   } catch (adminErr) {
     console.error('Error ensuring admin user:', adminErr.message);
