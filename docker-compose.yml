@@ -1,35 +1,17 @@
 version: '3.8'
 
 services:
-
-  # ─── Frontend (Port 5173) ────────────────────────────────────────────
-  frontend:
+  jira-dashboard:
     build:
-      context: ./frontend
+      context: .
       dockerfile: Dockerfile
       args:
         REGISTRY: ${REGISTRY:-docker.arvancloud.ir}
-    image: jira-dashboard-frontend:latest
-    container_name: jira-dashboard-frontend
+    image: jira-dashboard:latest
+    container_name: jira-dashboard
     restart: always
     ports:
-      - "5173:80"
-    depends_on:
-      - backend
-    networks:
-      - jira-net
-
-  # ─── Backend (Port 3001) ─────────────────────────────────────────────
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        REGISTRY: ${REGISTRY:-docker.arvancloud.ir}
-    image: jira-dashboard-backend:latest
-    container_name: jira-dashboard-backend
-    restart: always
-    ports:
+      - "5173:3001"
       - "3001:3001"
     environment:
       - PORT=3001
@@ -45,12 +27,6 @@ services:
       - CONFLUENCE_USERNAME=m.ghafoory
     volumes:
       - sqlite_data:/app/data_volume
-    networks:
-      - jira-net
 
 volumes:
   sqlite_data:
-
-networks:
-  jira-net:
-    driver: bridge

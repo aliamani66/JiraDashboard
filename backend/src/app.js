@@ -39,14 +39,27 @@ app.use('/api/users', userRoutes);
 app.use('/api/jira', jiraSettingsRoutes);
 app.use('/api/db', databaseManagerRoutes);
 
-// Static frontend serving if built
-const frontendDistPath = path.join(__dirname, '../../frontend/dist');
-if (fs.existsSync(frontendDistPath)) {
-  app.use(express.static(frontendDistPath));
+// Static frontend serving (Direct Node.js web server without Nginx)
+const possibleFrontendPaths = [
+  path.join(__dirname, '../../frontend/dist'),
+  path.join(__dirname, '../public'),
+  path.join(__dirname, '../../dist'),
+  path.join(process.cwd(), 'public'),
+  path.join(process.cwd(), '../frontend/dist'),
+  path.join(process.cwd(), 'dist')
+];
+
+let activeFrontendPath = possibleFrontendPaths.find(p => fs.existsSync(path.join(p, 'index.html')));
+
+if (activeFrontendPath) {
+  console.log(`🚀 Serving static React frontend directly from: ${activeFrontendPath}`);
+  app.use(express.static(activeFrontendPath));
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next();
-    res.sendFile(path.join(frontendDistPath, 'index.html'));
+    if (req.path.startsWith('/api/') || req.path === '/health' || req.path === '/api/health') return next();
+    res.sendFile(path.join(activeFrontendPath, 'index.html'));
   });
+} else {
+  console.log('ℹ️ No prebuilt frontend dist found, running in API-only mode.');
 }
 
 // Global Error Handlers to prevent process exit loops on server

@@ -1,28 +1,32 @@
 version: '3.8'
 
 services:
-
-  # ─── Backend (Port 3001) ─────────────────────────────────────────────
-  backend:
-    image: jira-dashboard-backend:latest
-    container_name: jira-dashboard-backend
+  jira-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        REGISTRY: ${REGISTRY:-docker.arvancloud.ir}
+    image: jira-dashboard:latest
+    container_name: jira-dashboard
     restart: always
     ports:
+      - "5173:3001"
       - "3001:3001"
-    env_file:
-      - ./backend.env
+    environment:
+      - PORT=3001
+      - JWT_SECRET=dev-secret-key
+      - SYNC_INTERVAL_MINUTES=60
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+      - JIRA_BASE_URL=https://10.100.71.140:8443
+      - JIRA_USERNAME=m.ghafoory
+      - JIRA_TOKEN=NzIyMzUzNTMwNDM0OnAHiPl33I/QMs2nYu8GUiTP3d/p
+      - JIRA_PROJECT_KEY=ORD
+      - JIRA_WAITING_STATUSES=OnHolding,Waiting,On Hold,Wait,Pending
+      - CONFLUENCE_BASE_URL=https://10.100.71.140:8443/wiki
+      - CONFLUENCE_USERNAME=m.ghafoory
     volumes:
       - sqlite_data:/app/data_volume
-
-  # ─── Frontend (Port 5173) ────────────────────────────────────────────
-  frontend:
-    image: jira-dashboard-frontend:latest
-    container_name: jira-dashboard-frontend
-    restart: always
-    ports:
-      - "5173:80"
-    depends_on:
-      - backend
 
 volumes:
   sqlite_data:
