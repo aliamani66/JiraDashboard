@@ -71,77 +71,97 @@ function extractQuarterLabels(labelsInput) {
   return Array.from(results);
 }
 
-// List all projects with summary stats
+// List all projects with summary stats (Optimized high-performance batch queries)
 router.get('/projects', (req, res) => {
   try {
     const db = getDb();
     const projects = db.prepare(`
       SELECT p.*,
         IFNULL((SELECT COUNT(*) FROM tasks WHERE UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)), 0) as calc_total_tasks,
-        IFNULL((SELECT COUNT(*) FROM tasks WHERE (UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)) AND (LOWER(status) IN ('done', 'completed', 'resolved'))), 0) as calc_completed_tasks,
-        IFNULL((SELECT COUNT(*) FROM tasks WHERE (UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)) AND (is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked'))), 0) as calc_waiting_tasks,
+        IFNULL((SELECT COUNT(*) FROM tasks WHERE (UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)) AND (LOWER(status) IN ('done', 'completed', 'resolved', 'بسته'))), 0) as calc_completed_tasks,
+        IFNULL((SELECT COUNT(*) FROM tasks WHERE (UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)) AND (is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked', 'منتظر', 'معلق'))), 0) as calc_waiting_tasks,
         IFNULL((SELECT SUM(estimate_hours) FROM tasks WHERE UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)), 0) as total_estimate_hours,
         IFNULL((SELECT SUM(spent_hours) FROM tasks WHERE UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)), 0) as total_spent_hours
       FROM projects p
     `).all();
 
+    // 1. Single batch query for component breakdowns across all tasks
+    const compRows = db.prepare(`
+      SELECT UPPER(COALESCE(parent_task_id, epic_id, project_id)) as project_ref, component, COUNT(*) as count 
+      FROM tasks 
+      WHERE component IS NOT NULL AND component != ''
+      GROUP BY UPPER(COALESCE(parent_task_id, epic_id, project_id)), component
+    `).all();
+    
+    const compMap = new Map();
+    for (const row of compRows) {
+      if (!row.project_ref) continue;
+      if (!compMap.has(row.project_ref)) compMap.set(row.project_ref, {});
+      const parts = String(row.component).split(/[,|]/).map(c => c.trim()).filter(Boolean);
+      for (const part of parts) {
+        compMap.get(row.project_ref)[part] = (compMap.get(row.project_ref)[part] || 0) + row.count;
+      }
+    }
+
+    // 2. Single batch query for status breakdowns across all tasks
+    const statusRows = db.prepare(`
+      SELECT UPPER(COALESCE(parent_task_id, epic_id, project_id)) as project_ref, status, is_waiting, COUNT(*) as count 
+      FROM tasks 
+      WHERE parent_task_id IS NOT NULL OR epic_id IS NOT NULL OR project_id IS NOT NULL
+      GROUP BY UPPER(COALESCE(parent_task_id, epic_id, project_id)), status, is_waiting
+    `).all();
+
+    const statusBreakdownMap = new Map();
+    for (const row of statusRows) {
+      if (!row.project_ref) continue;
+      if (!statusBreakdownMap.has(row.project_ref)) {
+        statusBreakdownMap.set(row.project_ref, { done: 0, active: 0, waiting: 0, todo: 0 });
+      }
+      const sMap = statusBreakdownMap.get(row.project_ref);
+      const s = (row.status || '').toLowerCase();
+      if (row.is_waiting === 1 || s === 'waiting' || s === 'onholding' || s === 'on hold' || s === 'blocked' || s === 'منتظر' || s === 'معلق') {
+        sMap.waiting += row.count;
+      } else if (s === 'done' || s === 'completed' || s === 'resolved' || s === 'بسته') {
+        sMap.done += row.count;
+      } else if (s === 'in progress' || s === 'in_progress' || s === 'active' || s === 'in review' || s === 'testing' || s === 'در حال انجام') {
+        sMap.active += row.count;
+      } else {
+        sMap.todo += row.count;
+      }
+    }
+
+    // 3. Single batch query for all task quarter labels
+    const labelRows = db.prepare(`
+      SELECT UPPER(COALESCE(parent_task_id, epic_id, project_id)) as project_ref, labels 
+      FROM tasks 
+      WHERE labels IS NOT NULL AND labels != '[]' AND labels != ''
+    `).all();
+
+    const taskLabelMap = new Map();
+    for (const row of labelRows) {
+      if (!row.project_ref) continue;
+      if (!taskLabelMap.has(row.project_ref)) taskLabelMap.set(row.project_ref, new Set());
+      extractQuarterLabels(row.labels).forEach(q => taskLabelMap.get(row.project_ref).add(q));
+    }
+
     for (const p of projects) {
+      const pKey = String(p.id || '').toUpperCase();
       p.total_tasks = p.calc_total_tasks || p.total_tasks || 0;
       p.completed_tasks = p.calc_completed_tasks || p.completed_tasks || 0;
       p.waiting_tasks = p.calc_waiting_tasks || p.waiting_tasks || 0;
       p.total_estimate_hours = Math.round((p.total_estimate_hours || 0) * 100) / 100;
       p.total_spent_hours = Math.round((p.total_spent_hours || 0) * 100) / 100;
 
-      // Component map
-      const compRows = db.prepare(`
-        SELECT component, COUNT(*) as count 
-        FROM tasks 
-        WHERE UPPER(parent_task_id) = UPPER(?) OR UPPER(epic_id) = UPPER(?) OR UPPER(project_id) = UPPER(?)
-        GROUP BY component
-      `).all(p.id, p.id, p.id);
-      
-      const compObj = {};
-      for (const row of compRows) {
-        if (row.component) {
-          const parts = String(row.component).split(/[,|]/).map(c => c.trim()).filter(Boolean);
-          for (const part of parts) {
-            compObj[part] = (compObj[part] || 0) + row.count;
-          }
-        }
-      }
-      p.components_map = compObj;
-
-      // Task status breakdown map (done, active, waiting, todo)
-      const statusRows = db.prepare(`
-        SELECT status, is_waiting, COUNT(*) as count 
-        FROM tasks 
-        WHERE UPPER(parent_task_id) = UPPER(?) OR UPPER(epic_id) = UPPER(?) OR UPPER(project_id) = UPPER(?)
-        GROUP BY status, is_waiting
-      `).all(p.id, p.id, p.id);
-
-      const statusMap = { done: 0, active: 0, waiting: 0, todo: 0 };
-      for (const row of statusRows) {
-        const s = (row.status || '').toLowerCase();
-        if (row.is_waiting === 1 || s === 'waiting' || s === 'onholding' || s === 'on hold' || s === 'blocked') {
-          statusMap.waiting += row.count;
-        } else if (s === 'done' || s === 'completed' || s === 'resolved') {
-          statusMap.done += row.count;
-        } else if (s === 'in progress' || s === 'in_progress' || s === 'active' || s === 'in review' || s === 'testing') {
-          statusMap.active += row.count;
-        } else {
-          statusMap.todo += row.count;
-        }
-      }
-      p.status_map = statusMap;
+      p.components_map = compMap.get(pKey) || {};
+      p.status_map = statusBreakdownMap.get(pKey) || { done: p.completed_tasks, active: 0, waiting: p.waiting_tasks, todo: 0 };
 
       // Quarter labels — collect from BOTH Epic's own labels AND all linked tasks
       const quarterSet = new Set();
       if (p.labels) {
         extractQuarterLabels(p.labels).forEach(q => quarterSet.add(q));
       }
-      const labelRows = db.prepare(`SELECT labels FROM tasks WHERE UPPER(parent_task_id) = UPPER(?) OR UPPER(epic_id) = UPPER(?) OR UPPER(project_id) = UPPER(?)`).all(p.id, p.id, p.id);
-      for (const row of labelRows) {
-        extractQuarterLabels(row.labels).forEach(q => quarterSet.add(q));
+      if (taskLabelMap.has(pKey)) {
+        taskLabelMap.get(pKey).forEach(q => quarterSet.add(q));
       }
       p.quarters = Array.from(quarterSet).sort();
 
