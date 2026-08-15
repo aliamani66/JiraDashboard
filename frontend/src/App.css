@@ -115,15 +115,17 @@ body {
     radial-gradient(at 20% 90%, rgba(80, 250, 123, 0.11) 0px, transparent 45%);
 }
 
-/* 🧊 MASTER FROSTED GLASS CARD */
+/* 🧊 MASTER FROSTED GLASS CARD (Optimized for 60FPS GPU Rendering) */
 .glass-card, .glass-panel {
   background: var(--bg-card) !important;
-  backdrop-filter: blur(28px) saturate(200%) brightness(105%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(200%) brightness(105%) !important;
+  backdrop-filter: blur(10px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
   border: 1px solid var(--glass-border) !important;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-glass) !important;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: translateZ(0);
+  will-change: transform, opacity;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
 }
 
@@ -143,13 +145,14 @@ body {
 .glass-card:hover {
   background: var(--bg-card-hover) !important;
   border-color: rgba(56, 189, 248, 0.38) !important;
-  transform: translateY(-4px);
-  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.55), 0 0 25px rgba(56, 189, 248, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-3px) translateZ(0);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), 0 0 18px rgba(56, 189, 248, 0.15) !important;
 }
 
 [data-theme="dracula"] .glass-card:hover {
   border-color: rgba(189, 147, 249, 0.5) !important;
-  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.65), 0 0 25px rgba(189, 147, 249, 0.3), inset 0 1px 1px rgba(255, 121, 198, 0.4) !important;
+  transform: translateY(-3px) translateZ(0);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 18px rgba(189, 147, 249, 0.2) !important;
 }
 
 /* Glass Inputs & Selects */
