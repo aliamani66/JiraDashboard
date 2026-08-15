@@ -1,44 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Layers, Activity, AlertOctagon, Clock, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './StatsCards.css';
 
-const StatCard = ({ title, value, icon: Icon, colorClass, delay, onClick }) => {
-  const [count, setCount] = useState(0);
-  
-  useEffect(() => {
-    let start = 0;
-    const end = parseInt(value) || 0;
-    if (end === 0) {
-      setCount(0);
-      return;
-    }
-    
-    const duration = 1000;
-    const increment = end / (duration / 16);
-    
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= end) {
-        setCount(end);
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(start));
-      }
-    }, 16);
-    
-    return () => clearInterval(timer);
-  }, [value]);
+const StatCard = ({ title, value, icon: Icon, colorClass, onClick }) => {
+  const displayValue = parseInt(value) || 0;
 
   return (
     <div 
       className={`glass-card stat-card ${colorClass} ${onClick ? 'clickable' : ''}`} 
-      style={{ animationDelay: `${delay}ms` }}
       onClick={onClick}
     >
       <div className="stat-content">
         <span className="stat-title">{title}</span>
-        <h3 className="stat-value">{count}</h3>
+        <h3 className="stat-value">{displayValue}</h3>
       </div>
       <div className="stat-icon-wrapper">
         <Icon size={24} className="stat-icon" />
@@ -59,39 +34,39 @@ const StatsCards = ({ stats = {}, projects = [], onExport }) => {
             value={stats.totalProjects || stats.total || projects.length || 0} 
             icon={Layers} 
             colorClass="blue" 
-            delay={0} 
+            onClick={() => navigate('/dashboard')}
           />
           <StatCard 
-            title="پروژه‌های فعال" 
-            value={stats.activeProjects || stats.active || 0} 
+            title="در حال انجام" 
+            value={stats.inProgress || stats.in_progress || 0} 
             icon={Activity} 
             colorClass="green" 
-            delay={100} 
+            onClick={() => navigate('/dashboard?status=in_progress')}
           />
           <StatCard 
-            title="پروژه‌های متوقف‌شده" 
-            value={stats.stoppedProjects || 0} 
+            title="پروژه‌های منتظر / بلوکه" 
+            value={stats.waiting || stats.blocked || 0} 
             icon={AlertOctagon} 
             colorClass="red" 
-            delay={200} 
+            onClick={() => navigate('/waiting-tasks')}
           />
           <StatCard 
-            title="تسک‌های منتظر" 
-            value={stats.waitingTasks || 0} 
+            title="اسپرینت‌های فعال" 
+            value={stats.activeSprints || stats.active_sprints || 0} 
             icon={Clock} 
-            colorClass="orange" 
-            delay={300} 
-            onClick={() => navigate('/waiting-tasks')}
+            colorClass="purple" 
+            onClick={() => navigate('/sprints')}
           />
         </div>
 
         {onExport && (
           <button 
-            className="db-export-btn icon-only-btn"
+            className="export-dashboard-btn"
             onClick={onExport}
-            title="چاپ و خروجی PDF پروژه‌ها"
+            title="خروجی گزارش داشبورد (PDF / چاپ استاندارد)"
           >
             <Printer size={18} />
+            <span>چاپ / PDF گزارش</span>
           </button>
         )}
       </div>
