@@ -14,11 +14,11 @@ git fetch origin main
 git reset --hard origin/main
 
 echo.
-echo [2/4] Creating clean tar.gz deployment package (JiraDashboard.tar.gz)...
+echo [2/4] Creating clean deployment package (JiraDashboard.tar.gz)...
 if exist "JiraDashboard.tar.gz" del /f /q JiraDashboard.tar.gz
 if exist "JiraDashboard.zip" del /f /q JiraDashboard.zip
 
-tar -czf JiraDashboard.tar.gz --exclude="node_modules" --exclude="frontend/node_modules" --exclude="backend/node_modules" --exclude=".git" --exclude="backend/database.sqlite" --exclude=".vscode" --exclude="deploy" --exclude="*.tar.gz" --exclude="*.zip" .
+tar -czf JiraDashboard.tar.gz --exclude="frontend/node_modules" --exclude=".git" --exclude="backend/database.sqlite" --exclude=".vscode" --exclude="deploy" --exclude="*.tar.gz" --exclude="*.zip" .
 
 if not exist "JiraDashboard.tar.gz" (
     echo [ERROR] Failed to create JiraDashboard.tar.gz archive!
@@ -56,4 +56,3 @@ echo Server Target: /appserver/amani/JiraDashboard
 echo ======================================================
 echo.
 pause
-
