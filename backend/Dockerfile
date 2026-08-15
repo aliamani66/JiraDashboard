@@ -3,11 +3,11 @@ FROM ${REGISTRY}/node:20-alpine
 
 WORKDIR /app
 
-# کپی تمامی فایل‌ها شامل پکیج‌های آفلاین (node_modules)
+# کپی کامل فایل‌های پروژه
 COPY . .
 
-# اجرای شرطی npm install فقط در صورتی که node_modules از قبل در ریپازیتوری نباشد
-RUN if [ ! -d "node_modules/express" ]; then npm install --omit=dev --legacy-peer-deps || true; fi
+# در صورتی که پکیج‌ها موجود باشند یا سرور آفلاین باشد، فرآیند Build متوقف نمی‌شود
+RUN if [ ! -d "node_modules/express" ]; then npm install --omit=dev --legacy-peer-deps --prefer-offline --no-audit 2>/dev/null || true; fi
 
 EXPOSE 3001
 ENV PORT=3001

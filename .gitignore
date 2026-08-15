@@ -20,7 +20,9 @@ config.local.*
 *.config.local.*
 
 # Dependencies
+node_modules/
 frontend/node_modules/
+backend/node_modules/
 
 # Production build
 frontend/build/
@@ -36,6 +38,7 @@ yarn-error.log*
 
 # IDE & OS
 .vscode/
+
 # Deployment Archives
 *.zip
 *.tar.gz
