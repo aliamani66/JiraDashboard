@@ -29,9 +29,14 @@ function errorHandler(err, req, res, next) {
 }
 
 /**
- * Request logger middleware (logs incoming HTTP requests)
+ * Request logger middleware (Strict logging disabled by default for maximum performance)
  */
 function requestLogger(req, res, next) {
+  const enableVerboseLogs = process.env.ENABLE_VERBOSE_LOGS === 'true';
+  if (!enableVerboseLogs) {
+    return next();
+  }
+
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
