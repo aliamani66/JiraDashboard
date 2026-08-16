@@ -526,16 +526,21 @@ router.get('/waiting-tasks', (req, res) => {
       FROM tasks t 
       LEFT JOIN projects p ON (UPPER(t.project_id) = UPPER(p.id) OR UPPER(t.parent_task_id) = UPPER(p.id) OR UPPER(t.epic_id) = UPPER(p.id))
       WHERE UPPER(t.status) IN ('WAITING', 'ONHOLDING', 'ON HOLD', 'ON_HOLDING', 'BLOCKED', 'منتظر', 'متوقف')
+      GROUP BY t.id
       ORDER BY t.project_id ASC, t.id ASC
     `).all();
     
     const byTeamMap = new Map();
     const byProjectMap = new Map();
     const teamsCountMap = new Map();
-    let totalWaiting = 0;
+    const uniqueTasks = [];
+    const seenTaskIds = new Set();
     
     for (const t of tasks) {
-      totalWaiting++;
+      if (!t.id || seenTaskIds.has(t.id)) continue;
+      seenTaskIds.add(t.id);
+      uniqueTasks.push(t);
+
       const teamGroupKey = (t.waiting_for_team || t.blocked_by_team || 'سایر وابستگی‌ها').trim();
       teamsCountMap.set(teamGroupKey, (teamsCountMap.get(teamGroupKey) || 0) + 1);
 
@@ -567,8 +572,8 @@ router.get('/waiting-tasks', (req, res) => {
     const teams = Array.from(teamsCountMap.entries()).map(([name, count]) => ({ name, count }));
 
     res.json({
-      totalWaiting,
-      tasks,
+      totalWaiting: uniqueTasks.length,
+      tasks: uniqueTasks,
       teams,
       byTeam: Array.from(byTeamMap.values()),
       byProject: Array.from(byProjectMap.values())

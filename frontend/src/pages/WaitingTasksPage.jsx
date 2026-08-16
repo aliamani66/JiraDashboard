@@ -68,24 +68,23 @@ const WaitingTasksPage = () => {
 
   const { totalWaiting = 0, byProject = [], tasks = [] } = data || {};
 
-  // Extract all flat valid waiting tasks
+  // Extract all flat valid waiting tasks with strict unique deduplication by task ID
   const allWaitingTasks = useMemo(() => {
-    let list = [];
-    if (Array.isArray(tasks) && tasks.length > 0) {
-      list = tasks;
-    } else if (Array.isArray(byProject) && byProject.length > 0) {
-      const seen = new Set();
-      for (const p of byProject) {
-        for (const t of (p.tasks || [])) {
-          const tId = t.task_id || t.id;
-          if (tId && !seen.has(tId)) {
-            seen.add(tId);
-            list.push({ ...t, projectTitle: t.projectTitle || p.projectTitle || p.projectId });
-          }
-        }
+    const rawList = Array.isArray(tasks) && tasks.length > 0 
+      ? tasks 
+      : (Array.isArray(byProject) ? byProject.flatMap(p => (p.tasks || []).map(t => ({ ...t, projectTitle: t.projectTitle || p.projectTitle || p.projectId }))) : []);
+
+    const map = new Map();
+    for (const t of rawList) {
+      const taskId = String(t.task_id || t.id || '').trim();
+      if (!taskId) continue;
+      if (!isWaitingStatus(t.status)) continue;
+      
+      if (!map.has(taskId)) {
+        map.set(taskId, t);
       }
     }
-    return list.filter(t => isWaitingStatus(t.status));
+    return Array.from(map.values());
   }, [tasks, byProject]);
 
   // Extract unique Jira Project Keys
