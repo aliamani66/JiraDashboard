@@ -1,5 +1,5 @@
 import React from 'react';
-import { Filter, RotateCcw, Activity, Calendar, Layers, Search, FolderGit2 } from 'lucide-react';
+import { Filter, RotateCcw, Activity, Calendar, Layers, Search, FolderGit2, Sparkles, X } from 'lucide-react';
 import './DashboardFilterPanel.css';
 
 const componentMetaMap = {
@@ -25,6 +25,24 @@ const getCompMeta = (key) => {
   return { label: `📌 ${labelName}`, class: 'comp-generic' };
 };
 
+// Parse quarter string to numeric order for sorting
+const parseQuarterOrder = (s) => {
+  if (!s) return 0;
+  const clean = String(s).trim();
+  const yearMatch = clean.match(/(13\d\d|14\d\d|20\d\d)/);
+  const year = yearMatch ? parseInt(yearMatch[1], 10) : 0;
+  let qNum = 0;
+  if (/q1|بهار|فروردین|اردیبهشت|خرداد/i.test(clean)) qNum = 1;
+  else if (/q2|تابستان|تیر|مرداد|شهریور/i.test(clean)) qNum = 2;
+  else if (/q3|پاییز|مهر|آبان|آذر/i.test(clean)) qNum = 3;
+  else if (/q4|زمستان|دی|بهمن|اسفند/i.test(clean)) qNum = 4;
+  else {
+    const digitMatch = clean.replace(String(year), '').match(/\d+/);
+    if (digitMatch) qNum = parseInt(digitMatch[0], 10);
+  }
+  return year * 10 + qNum;
+};
+
 const DashboardFilterPanel = ({
   statusFilters = [],
   setStatusFilters,
@@ -45,10 +63,8 @@ const DashboardFilterPanel = ({
 }) => {
   const [compSearch, setCompSearch] = React.useState('');
   const [showAllComps, setShowAllComps] = React.useState(false);
-
   const [quarterSearch, setQuarterSearch] = React.useState('');
   const [showAllQuarters, setShowAllQuarters] = React.useState(false);
-
   const [projectSearch, setProjectSearch] = React.useState('');
   const [showAllProjects, setShowAllProjects] = React.useState(false);
 
@@ -61,9 +77,14 @@ const DashboardFilterPanel = ({
     }
   };
 
-  const hasActiveFilters = statusFilters.length > 0 || quarterFilters.length > 0 || componentFilters.length > 0 || projectFilters.length > 0 || searchQuery.trim() !== '';
+  const hasActiveFilters =
+    statusFilters.length > 0 ||
+    quarterFilters.length > 0 ||
+    componentFilters.length > 0 ||
+    projectFilters.length > 0 ||
+    searchQuery.trim() !== '';
 
-  // Filter & sort Quarters
+  // Filter & sort Quarters DESCENDING (Newest first)
   const filteredQuarters = quarters.filter(q => {
     if (!quarterSearch.trim()) return true;
     return q.toLowerCase().includes(quarterSearch.toLowerCase().trim());
@@ -74,10 +95,11 @@ const DashboardFilterPanel = ({
     const bSel = quarterFilters.includes(b);
     if (aSel && !bSel) return -1;
     if (!aSel && bSel) return 1;
-    return 0;
+    // Sort descending by chronological quarter value (newest first)
+    return parseQuarterOrder(b) - parseQuarterOrder(a);
   });
 
-  const Q_LIMIT = 6;
+  const Q_LIMIT = 5;
   const visibleQuarters = showAllQuarters || quarterSearch.trim() !== '' ? sortedQuarters : sortedQuarters.slice(0, Q_LIMIT);
   const hiddenQuartersCount = sortedQuarters.length - visibleQuarters.length;
 
@@ -93,10 +115,10 @@ const DashboardFilterPanel = ({
     const bSel = componentFilters.includes(b);
     if (aSel && !bSel) return -1;
     if (!aSel && bSel) return 1;
-    return 0;
+    return a.localeCompare(b);
   });
 
-  const COMP_LIMIT = 8;
+  const COMP_LIMIT = 6;
   const visibleComponents = showAllComps || compSearch.trim() !== '' ? sortedComponents : sortedComponents.slice(0, COMP_LIMIT);
   const hiddenCount = sortedComponents.length - visibleComponents.length;
 
@@ -119,261 +141,186 @@ const DashboardFilterPanel = ({
     return 0;
   });
 
-  const PROJ_LIMIT = 6;
+  const PROJ_LIMIT = 5;
   const visibleProjects = showAllProjects || projectSearch.trim() !== '' ? sortedProjectsList : sortedProjectsList.slice(0, PROJ_LIMIT);
   const hiddenProjectsCount = sortedProjectsList.length - visibleProjects.length;
 
   return (
-    <div className="glass-card main-filter-tile">
+    <div className="glass-card compact-filter-panel">
       
-      {/* Tile Header: Title + Result Counter + Reset All Button */}
-      <div className="mft-header">
-        <div className="mft-header-right">
-          <Filter size={18} className="text-accent-cyan" />
-          <h2 className="mft-title">جستجو و فیلترها</h2>
-          <span className="mft-count-badge">
-            <strong>{filteredCount}</strong> / <strong>{totalProjectsCount}</strong>
-          </span>
+      {/* ─── Top Control Row: Search + Counter + Reset ─────────────────── */}
+      <div className="cfp-top-row">
+        <div className="cfp-search-wrap">
+          <Search size={15} className="cfp-search-icon" />
+          <input 
+            type="text"
+            placeholder="جستجوی سریع در پروژه‌ها، اپیک‌ها و تگ‌ها..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="cfp-search-input"
+          />
+          {searchQuery && (
+            <button className="cfp-clear-search" onClick={() => setSearchQuery('')} title="پاک کردن جستجو">
+              <X size={13} />
+            </button>
+          )}
         </div>
 
-        <div className="mft-header-left">
-          {/* Quick Search Input */}
-          <div className="mft-search-box">
-            <Search size={15} className="mft-search-icon" />
-            <input 
-              type="text"
-              placeholder="جستجو..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="mft-search-input"
-            />
-            {searchQuery && (
-              <button className="mft-clear-search" onClick={() => setSearchQuery('')}>×</button>
-            )}
+        <div className="cfp-meta-actions">
+          <div className="cfp-counter-badge" title="تعداد نتایج فیلترشده از کل پروژه‌ها">
+            <span>نمایش:</span>
+            <strong>{filteredCount}</strong>
+            <span className="cfp-slash">/</span>
+            <span>{totalProjectsCount}</span>
           </div>
 
           {hasActiveFilters && (
-            <button className="mft-reset-btn" onClick={onResetAll} title="پاک‌سازی فیلترها">
-              <RotateCcw size={14} />
-              <span>پاک‌سازی</span>
+            <button className="cfp-reset-btn" onClick={onResetAll} title="پاک‌سازی تمامی فیلترها">
+              <RotateCcw size={13} />
+              <span>بازنشانی</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* 3 Sub-Tiles Grid Side-by-Side */}
-      <div className="mft-grid">
+      {/* ─── Compact Horizontal Filter Rows ─────────────────────────────── */}
+      <div className="cfp-rows-container">
 
-        {/* ─── Sub-Tile 1: Status Filter ──────────────────────────────────── */}
-        <div className="mft-subcard">
-          <div className="mft-subcard-header">
-            <Activity size={15} className="text-accent-blue" />
-            <span>وضعیت</span>
-            {statusFilters.length > 0 && <span className="sub-count-pill">{statusFilters.length}</span>}
+        {/* Row 1: Status Filters */}
+        <div className="cfp-filter-row">
+          <div className="cfp-row-label">
+            <Activity size={13} className="text-accent-blue" />
+            <span>وضعیت:</span>
           </div>
-
-          <div className="mft-pills-wrap">
+          <div className="cfp-pills-row">
             <button
-              className={`mft-pill ${statusFilters.length === 0 ? 'active-all' : ''}`}
+              className={`cfp-pill ${statusFilters.length === 0 ? 'active-all' : ''}`}
               onClick={() => setStatusFilters([])}
             >
               همه
             </button>
-
             <button
-              className={`mft-pill status-active-pill ${statusFilters.includes('active') ? 'active' : ''}`}
+              className={`cfp-pill status-active-pill ${statusFilters.includes('active') ? 'active' : ''}`}
               onClick={() => toggleSelection('active', statusFilters, setStatusFilters)}
-              title="پروژه‌های در حال اجرا"
             >
               ⚡ در حال اجرا
             </button>
-
             <button
-              className={`mft-pill ${statusFilters.includes('todo') ? 'active' : ''}`}
+              className={`cfp-pill ${statusFilters.includes('todo') ? 'active-todo' : ''}`}
               onClick={() => toggleSelection('todo', statusFilters, setStatusFilters)}
-              style={statusFilters.includes('todo') ? { background: 'linear-gradient(135deg, rgba(168,85,247,0.35), rgba(192,132,252,0.35))', borderColor: '#C084FC', color: '#FFFFFF', boxShadow: '0 0 12px rgba(192,132,252,0.35)' } : {}}
-              title="پروژه‌های برای انجام"
             >
               📋 برای انجام
             </button>
-
             <button
-              className={`mft-pill status-done-pill ${statusFilters.includes('done') ? 'active' : ''}`}
+              className={`cfp-pill status-done-pill ${statusFilters.includes('done') ? 'active' : ''}`}
               onClick={() => toggleSelection('done', statusFilters, setStatusFilters)}
-              title="پروژه‌های انجام‌شده"
             >
               ✅ انجام‌شده
             </button>
-
             <button
-              className={`mft-pill status-critical-pill ${statusFilters.includes('critical') ? 'active' : ''}`}
+              className={`cfp-pill status-critical-pill ${statusFilters.includes('critical') ? 'active' : ''}`}
               onClick={() => toggleSelection('critical', statusFilters, setStatusFilters)}
-              title="پروژه‌های متوقف یا کریتیکال"
             >
               🚨 کریتیکال
             </button>
           </div>
         </div>
 
-        {/* ─── Sub-Tile 2: Quarter Filter (Multi-select) ──────────────────── */}
-        <div className="mft-subcard">
-          <div className="mft-subcard-header">
-            <Calendar size={15} className="text-accent-cyan" />
-            <span>فصل (Quarter)</span>
-            {quarterFilters.length > 0 && <span className="sub-count-pill">{quarterFilters.length}</span>}
-          </div>
+        {/* Row 2: Quarter Filter (Descending / Newest first) */}
+        {quarters.length > 0 && (
+          <div className="cfp-filter-row">
+            <div className="cfp-row-label">
+              <Calendar size={13} className="text-accent-cyan" />
+              <span>فصل:</span>
+            </div>
+            <div className="cfp-pills-row">
+              <button
+                className={`cfp-pill ${quarterFilters.length === 0 ? 'active-all' : ''}`}
+                onClick={() => setQuarterFilters([])}
+              >
+                همه
+              </button>
 
-          {/* Quick Quarter Filter Input if > 6 quarters */}
-          {quarters.length > 6 && (
-            <div className="mft-mini-search">
-              <input
-                type="text"
-                placeholder="جستجوی فصل..."
-                value={quarterSearch}
-                onChange={e => setQuarterSearch(e.target.value)}
-                className="mft-mini-input"
-              />
-              {quarterSearch && (
-                <button className="mft-mini-clear" onClick={() => setQuarterSearch('')}>×</button>
+              {visibleQuarters.map(q => {
+                const isSelected = quarterFilters.includes(q);
+                return (
+                  <button
+                    key={q}
+                    className={`cfp-pill quarter-pill ${isSelected ? 'active' : ''}`}
+                    onClick={() => toggleSelection(q, quarterFilters, setQuarterFilters)}
+                  >
+                    📅 {q}
+                  </button>
+                );
+              })}
+
+              {hiddenQuartersCount > 0 && !showAllQuarters && (
+                <button className="cfp-more-btn" onClick={() => setShowAllQuarters(true)}>
+                  + {hiddenQuartersCount} فصل دیگر...
+                </button>
+              )}
+              {showAllQuarters && quarters.length > Q_LIMIT && (
+                <button className="cfp-more-btn collapse" onClick={() => setShowAllQuarters(false)}>
+                  ▲ کمتر
+                </button>
               )}
             </div>
-          )}
+          </div>
+        )}
 
-          <div className="mft-pills-wrap scrollable">
-            <button
-              className={`mft-pill ${quarterFilters.length === 0 ? 'active-all' : ''}`}
-              onClick={() => setQuarterFilters([])}
-            >
-              همه
-            </button>
+        {/* Row 3: Component Filter */}
+        {availableComponents.length > 0 && (
+          <div className="cfp-filter-row">
+            <div className="cfp-row-label">
+              <Layers size={13} className="text-accent-purple" />
+              <span>کامپوننت:</span>
+            </div>
+            <div className="cfp-pills-row">
+              <button
+                className={`cfp-pill ${componentFilters.length === 0 ? 'active-all' : ''}`}
+                onClick={() => setComponentFilters([])}
+              >
+                همه
+              </button>
 
-            {visibleQuarters.map(q => {
-              const isSelected = quarterFilters.includes(q);
-              return (
-                <button
-                  key={q}
-                  className={`mft-pill quarter-item-pill ${isSelected ? 'active' : ''}`}
-                  onClick={() => toggleSelection(q, quarterFilters, setQuarterFilters)}
-                >
-                  📅 {q}
+              {visibleComponents.map(key => {
+                const meta = getCompMeta(key);
+                const isSelected = componentFilters.includes(key);
+                return (
+                  <button
+                    key={key}
+                    className={`cfp-pill comp-pill ${meta.class} ${isSelected ? 'active' : ''}`}
+                    onClick={() => toggleSelection(key, componentFilters, setComponentFilters)}
+                  >
+                    {meta.label}
+                  </button>
+                );
+              })}
+
+              {hiddenCount > 0 && !showAllComps && (
+                <button className="cfp-more-btn" onClick={() => setShowAllComps(true)}>
+                  + {hiddenCount} مورد...
                 </button>
-              );
-            })}
-
-            {!quarterSearch && hiddenQuartersCount > 0 && (
-              <button
-                className="mft-expand-btn"
-                onClick={() => setShowAllQuarters(true)}
-              >
-                + {hiddenQuartersCount} بیشتر...
-              </button>
-            )}
-
-            {!quarterSearch && showAllQuarters && quarters.length > Q_LIMIT && (
-              <button
-                className="mft-expand-btn collapse"
-                onClick={() => setShowAllQuarters(false)}
-              >
-                ▲ کمتر
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ─── Sub-Tile 3: Component Filter (Multi-select) ────────────────── */}
-        <div className="mft-subcard">
-          <div className="mft-subcard-header">
-            <Layers size={15} className="text-accent-purple" />
-            <span>کامپوننت‌ها</span>
-            {componentFilters.length > 0 && <span className="sub-count-pill">{componentFilters.length}</span>}
-          </div>
-
-          {/* Quick Label Filter Input if > 6 components */}
-          {availableComponents.length > 6 && (
-            <div className="mft-mini-search">
-              <input
-                type="text"
-                placeholder="جستجوی کامپوننت..."
-                value={compSearch}
-                onChange={e => setCompSearch(e.target.value)}
-                className="mft-mini-input"
-              />
-              {compSearch && (
-                <button className="mft-mini-clear" onClick={() => setCompSearch('')}>×</button>
+              )}
+              {showAllComps && availableComponents.length > COMP_LIMIT && (
+                <button className="cfp-more-btn collapse" onClick={() => setShowAllComps(false)}>
+                  ▲ کمتر
+                </button>
               )}
             </div>
-          )}
-
-          <div className="mft-pills-wrap scrollable">
-            <button
-              className={`mft-pill ${componentFilters.length === 0 ? 'active-all' : ''}`}
-              onClick={() => setComponentFilters([])}
-            >
-              همه
-            </button>
-
-            {visibleComponents.map(key => {
-              const meta = getCompMeta(key);
-              const isSelected = componentFilters.includes(key);
-              return (
-                <button
-                  key={key}
-                  className={`mft-pill comp-item-pill ${meta.class} ${isSelected ? 'active' : ''}`}
-                  onClick={() => toggleSelection(key, componentFilters, setComponentFilters)}
-                >
-                  {meta.label}
-                </button>
-              );
-            })}
-
-            {!compSearch && hiddenCount > 0 && (
-              <button
-                className="mft-expand-btn"
-                onClick={() => setShowAllComps(true)}
-              >
-                + {hiddenCount} بیشتر...
-              </button>
-            )}
-
-            {!compSearch && showAllComps && availableComponents.length > COMP_LIMIT && (
-              <button
-                className="mft-expand-btn collapse"
-                onClick={() => setShowAllComps(false)}
-              >
-                ▲ کمتر
-              </button>
-            )}
           </div>
-        </div>
+        )}
 
-        {/* ─── Sub-Tile 4: Project Key Filter (Multi-select) ──────────────────── */}
-        {availableProjects && availableProjects.length > 0 && (
-          <div className="mft-subcard">
-            <div className="mft-subcard-header">
-              <FolderGit2 size={15} className="text-accent-purple" style={{ color: '#C084FC' }} />
-              <span>پروژه‌ها</span>
-              {projectFilters.length > 0 && <span className="sub-count-pill" style={{ background: 'rgba(192, 132, 252, 0.25)', color: '#E9D5FF', border: '1px solid rgba(192, 132, 252, 0.4)' }}>{projectFilters.length}</span>}
+        {/* Row 4: Projects Filter (If multiple projects configured) */}
+        {availableProjects && availableProjects.length > 1 && (
+          <div className="cfp-filter-row">
+            <div className="cfp-row-label">
+              <FolderGit2 size={13} style={{ color: '#C084FC' }} />
+              <span>پروژه:</span>
             </div>
-
-            {/* Quick Project Search Input */}
-            {availableProjects.length > 4 && (
-              <div className="mft-mini-search">
-                <input
-                  type="text"
-                  placeholder="جستجوی پروژه..."
-                  value={projectSearch}
-                  onChange={e => setProjectSearch(e.target.value)}
-                  className="mft-mini-input"
-                />
-                {projectSearch && (
-                  <button className="mft-mini-clear" onClick={() => setProjectSearch('')}>×</button>
-                )}
-              </div>
-            )}
-
-            <div className="mft-pills-wrap scrollable">
+            <div className="cfp-pills-row">
               <button
-                className={`mft-pill ${projectFilters.length === 0 ? 'active-all' : ''}`}
+                className={`cfp-pill ${projectFilters.length === 0 ? 'active-all' : ''}`}
                 onClick={() => setProjectFilters([])}
               >
                 همه
@@ -386,30 +333,21 @@ const DashboardFilterPanel = ({
                 return (
                   <button
                     key={pKey}
-                    className={`mft-pill project-item-pill ${isSelected ? 'active' : ''}`}
+                    className={`cfp-pill project-pill ${isSelected ? 'active' : ''}`}
                     onClick={() => toggleSelection(pKey, projectFilters, setProjectFilters)}
-                    title={`فیلتر پروژه‌های وابسته به کلید ${pKey}`}
-                    style={isSelected ? { background: 'linear-gradient(135deg, rgba(168,85,247,0.35), rgba(192,132,252,0.35))', borderColor: '#C084FC', color: '#FFFFFF', boxShadow: '0 0 12px rgba(192,132,252,0.35)' } : {}}
                   >
-                    📂 <strong>پروژه {pKey}</strong> {count ? <small style={{ opacity: 0.85, fontSize: '0.76rem' }}>({count} اپیک)</small> : null}
+                    📂 {pKey} {count ? <small>({count})</small> : null}
                   </button>
                 );
               })}
 
-              {!projectSearch && hiddenProjectsCount > 0 && !showAllProjects && (
-                <button 
-                  className="mft-expand-btn"
-                  onClick={() => setShowAllProjects(true)}
-                >
-                  + {hiddenProjectsCount} پروژه دیگر...
+              {hiddenProjectsCount > 0 && !showAllProjects && (
+                <button className="cfp-more-btn" onClick={() => setShowAllProjects(true)}>
+                  + {hiddenProjectsCount} پروژه...
                 </button>
               )}
-
-              {!projectSearch && showAllProjects && sortedProjectsList.length > PROJ_LIMIT && (
-                <button 
-                  className="mft-expand-btn collapse"
-                  onClick={() => setShowAllProjects(false)}
-                >
+              {showAllProjects && sortedProjectsList.length > PROJ_LIMIT && (
+                <button className="cfp-more-btn collapse" onClick={() => setShowAllProjects(false)}>
                   ▲ کمتر
                 </button>
               )}

@@ -205,14 +205,24 @@ router.get('/quarters', (req, res) => {
     }
 
     const quarters = Array.from(quarterSet).sort((a, b) => {
-      // Sort chronologically (e.g. 1404 Q1 < 1404 Q2 < 1405 Q1)
+      // Sort chronologically DESCENDING (newest first: e.g. 1404 Q3, 1404 Q2, 1404 Q1, 1403 Q4...)
       const parseQ = (s) => {
-        const parts = s.split(' ');
-        const year = parseInt(parts[0], 10) || 0;
-        const qNum = parseInt((parts[1] || '').replace(/\D/g, ''), 10) || 0;
+        if (!s) return 0;
+        const clean = String(s).trim();
+        const yearMatch = clean.match(/(13\d\d|14\d\d|20\d\d)/);
+        const year = yearMatch ? parseInt(yearMatch[1], 10) : 0;
+        let qNum = 0;
+        if (/q1|بهار|فروردین|اردیبهشت|خرداد/i.test(clean)) qNum = 1;
+        else if (/q2|تابستان|تیر|مرداد|شهریور/i.test(clean)) qNum = 2;
+        else if (/q3|پاییز|مهر|آبان|آذر/i.test(clean)) qNum = 3;
+        else if (/q4|زمستان|دی|بهمن|اسفند/i.test(clean)) qNum = 4;
+        else {
+          const digitMatch = clean.replace(String(year), '').match(/\d+/);
+          if (digitMatch) qNum = parseInt(digitMatch[0], 10);
+        }
         return year * 10 + qNum;
       };
-      return parseQ(a) - parseQ(b);
+      return parseQ(b) - parseQ(a);
     });
 
     res.json({ quarters });

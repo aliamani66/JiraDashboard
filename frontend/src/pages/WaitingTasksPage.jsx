@@ -436,12 +436,11 @@ const WaitingTasksPage = () => {
             </div>
 
             <button 
-              className="wt-export-btn"
+              className="wt-export-btn icon-only-btn"
               onClick={() => window.print()}
               title={`چاپ تسک‌های منتظر فیلترشده (${filteredTasks.length} تسک)`}
             >
               <Printer size={16} />
-              <span>چاپ ({filteredTasks.length})</span>
             </button>
           </div>
         </div>

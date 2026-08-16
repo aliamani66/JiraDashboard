@@ -171,9 +171,8 @@ const ManagerReportPage = () => {
     >
       {/* ─── Top Actions Bar (Print Button Only) ─────────────────────────── */}
       <div className="mr-actions-bar">
-        <button className="mr-print-btn" onClick={handlePrint} title="چاپ تسک‌های فیلترشده فعلی">
+        <button className="mr-print-btn icon-only-btn" onClick={handlePrint} title={`چاپ تسک‌های فیلترشده (${filteredTasks.length} تسک)`}>
           <Printer size={18} />
-          <span>چاپ تسک‌های فیلترشده ({filteredTasks.length} تسک)</span>
         </button>
       </div>
 
