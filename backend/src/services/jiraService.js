@@ -777,8 +777,17 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     // Issue key MUST match PROJECT-NUMBER pattern (e.g. ORD-1001), otherwise ignore completely!
     return null;
   }
-  const issueTypeName = (issue.fields?.issuetype?.name || '').toLowerCase().trim();
-  if (issueTypeName === 'epic') {
+  let issueTypeName = '';
+  if (issue.fields?.issuetype) {
+    if (typeof issue.fields.issuetype === 'string') {
+      issueTypeName = issue.fields.issuetype.toLowerCase().trim();
+    } else if (typeof issue.fields.issuetype === 'object') {
+      issueTypeName = (issue.fields.issuetype.name || issue.fields.issuetype.value || '').toLowerCase().trim();
+    }
+  }
+
+  const isEpicType = (issueTypeName === 'epic' || issueTypeName === 'اپیک') && !issueTypeName.includes('request') && !issueTypeName.includes('internal') && !issueTypeName.includes('درخواست');
+  if (isEpicType) {
     // Epics are saved into projects table only, NEVER into tasks table!
     return null;
   }

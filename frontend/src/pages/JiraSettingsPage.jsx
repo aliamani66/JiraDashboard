@@ -892,18 +892,56 @@ const JiraSettingsPage = () => {
       await api.saveJiraConfig(cfg);
     } catch (_) {}
 
+    // STEP 0: Sync all Epics first with immediate real-time progress update
+    setSyncFlowModal(prev => ({
+      ...prev,
+      stepNum: 0,
+      totalSteps: monthRanges.length,
+      progressPercent: 5,
+      currentMonthLabel: 'دریافت و ذخیره اپیک‌های پروژه‌ها از سرور جیرا...',
+      dateRange: 'تمامی اپیک‌های فعال',
+      totalTasksSoFar: 0
+    }));
+
+    try {
+      const epicRes = await api.syncEpics();
+      if (epicRes && epicRes.epicCount !== undefined) {
+        results.push({
+          monthIndex: 0,
+          monthLabel: 'اپیک‌های پروژه',
+          jalaliName: `اپیک‌های پروژه‌ها (${epicRes.epicCount} اپیک)`,
+          gregorianName: 'Jira Epics',
+          dateRange: 'تمامی پروژه‌ها',
+          status: 'success',
+          taskCount: epicRes.epicCount,
+          jql: 'issuetype = Epic',
+          message: `همگام‌سازی ${epicRes.epicCount} اپیک با موفقیت انجام شد.`
+        });
+      }
+    } catch (e) {
+      console.warn('Epics sync warning:', e.message);
+    }
+
+    setSyncFlowModal(prev => ({
+      ...prev,
+      progressPercent: 10,
+      results: [...results]
+    }));
+
     for (let i = 0; i < monthRanges.length; i++) {
       const mRange = monthRanges[i];
       const stepNum = i + 1;
       const totalSteps = monthRanges.length;
-      const progressPercent = Math.round((stepNum / totalSteps) * 100);
+      
+      // Calculate realistic smooth progress starting at 10% up to 95%
+      const currentStartPercent = 10 + Math.round((i / totalSteps) * 85);
 
       setSyncFlowModal(prev => ({
         ...prev,
         stepNum,
         totalSteps,
-        progressPercent,
-        currentMonthLabel: mRange.jalaliName,
+        progressPercent: currentStartPercent,
+        currentMonthLabel: `ماه ${mRange.jalaliName} (در حال دریافت از جیرا...)`,
         dateRange: `${mRange.startStr.split(' ')[0]} تا ${mRange.endStr.split(' ')[0]}`,
         totalTasksSoFar: totalTasksSynced
       }));
@@ -934,8 +972,11 @@ const JiraSettingsPage = () => {
         totalTasksSynced += (monthRes.taskCount || 0);
         results.push(monthRes);
 
+        const currentDonePercent = 10 + Math.round(((i + 1) / totalSteps) * 85);
+
         setSyncFlowModal(prev => ({
           ...prev,
+          progressPercent: currentDonePercent,
           totalTasksSoFar: totalTasksSynced,
           results: [...results]
         }));

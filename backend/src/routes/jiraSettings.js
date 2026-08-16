@@ -655,6 +655,82 @@ router.post('/test-all-jql', async (req, res) => {
   }
 });
 
+// Sync and Upsert Epics directly from Jira
+router.post('/sync-epics', async (req, res) => {
+  try {
+    if (!jiraService.isConfigured) {
+      return res.status(400).json({ success: false, message: 'Jira is not configured' });
+    }
+    const db = getDb();
+    const syncTime = new Date().toISOString();
+    const epics = await jiraService.fetchEpics();
+
+    // Ensure container projects exist for each configured project
+    const cfg = jiraService.getJiraConfig();
+    const projKeyStr = cfg.projectKey || 'ORD';
+    const projKeys = projKeyStr.split(',').map(p => p.trim().toUpperCase()).filter(Boolean);
+    for (const pk of projKeys) {
+      try {
+        db.prepare(`
+          INSERT INTO projects (id, title, status, last_synced)
+          VALUES (?, ?, 'In Progress', ?)
+          ON CONFLICT(id) DO UPDATE SET last_synced=excluded.last_synced
+        `).run(pk, `پروژه ${pk}`, syncTime);
+      } catch (_) {}
+    }
+
+    const insertEpicRelation = db.prepare(`
+      INSERT INTO task_relations (task_id, linked_task_id, relation_type, relationship, title, status, assignee, start_date, due_date, created_at)
+      VALUES (@task_id, @linked_task_id, @relation_type, @relationship, @title, @status, @assignee, @start_date, @due_date, @created_at)
+    `);
+
+    db.transaction(() => {
+      const insertProject = db.prepare(`
+        INSERT INTO projects (id, title, description, status, capabilities, category, confluence_link, start_date, due_date, labels, assignee, priority, linked_tasks, last_synced)
+        VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @labels, @assignee, @priority, @linked_tasks, @last_synced)
+        ON CONFLICT(id) DO UPDATE SET
+          title=excluded.title,
+          description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE projects.description END,
+          status=excluded.status,
+          capabilities=excluded.capabilities,
+          category=excluded.category,
+          confluence_link=excluded.confluence_link,
+          start_date=COALESCE(excluded.start_date, projects.start_date),
+          due_date=COALESCE(excluded.due_date, projects.due_date),
+          labels=COALESCE(excluded.labels, projects.labels),
+          assignee=COALESCE(excluded.assignee, projects.assignee),
+          priority=COALESCE(excluded.priority, projects.priority),
+          linked_tasks=COALESCE(excluded.linked_tasks, projects.linked_tasks),
+          last_synced=excluded.last_synced
+      `);
+
+      for (const epic of epics) {
+        epic.last_synced = syncTime;
+        if (!epic.labels) epic.labels = '[]';
+        if (!epic.assignee) epic.assignee = null;
+        if (!epic.priority) epic.priority = 'Medium';
+        if (!epic.linked_tasks) epic.linked_tasks = '[]';
+        insertProject.run(epic);
+
+        if (Array.isArray(epic.raw_relations) && epic.raw_relations.length > 0) {
+          try { db.prepare('DELETE FROM task_relations WHERE task_id = ?').run(epic.id); } catch (_) {}
+          for (const rel of epic.raw_relations) {
+            rel.created_at = syncTime;
+            try { insertEpicRelation.run(rel); } catch (_) {}
+          }
+        }
+      }
+    })();
+
+    res.json({
+      success: true,
+      epicCount: epics.length,
+      message: `همگام‌سازی ${epics.length} اپیک با موفقیت انجام شد.`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 router.get('/fetch-jira-projects', async (req, res) => {
   try {

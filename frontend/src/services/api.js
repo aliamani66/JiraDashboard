@@ -55,6 +55,7 @@ export const api = {
   syncMonthlyJiraConfig: () => fetchWithAuth('/jira/sync-monthly', { method: 'POST' }),
   syncRangeJiraConfig: (dates) => fetchWithAuth('/jira/sync-range', { method: 'POST', body: JSON.stringify(dates) }),
   syncSingleMonthJiraConfig: (data) => fetchWithAuth('/jira/sync-single-month', { method: 'POST', body: JSON.stringify(data) }),
+  syncEpics: () => fetchWithAuth('/jira/sync-epics', { method: 'POST' }),
   previewJqlQueries: (data) => fetchWithAuth('/jira/preview-jql', { method: 'POST', body: JSON.stringify(data) }),
   testAllJqlQueries: (data) => fetchWithAuth('/jira/test-all-jql', { method: 'POST', body: JSON.stringify(data) }),
   resetDatabase: () => fetchWithAuth('/jira/reset-db', { method: 'POST' }),
