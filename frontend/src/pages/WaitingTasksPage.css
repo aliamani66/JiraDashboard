@@ -491,3 +491,88 @@
     width: 100%;
   }
 }
+
+/* ─── Printable Document Styles ─────────────────────────────────────────── */
+.wt-print-only-header {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+  html, body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    font-size: 9.5pt !important;
+    width: 100% !important;
+  }
+  .sidebar, .topbar, .wt-actions-group, .wt-filters-card, .active-filters-summary, .universal-search-box, .view-mode-toggle-group, .wt-export-btn, .back-btn {
+    display: none !important;
+  }
+  .layout-content, .waiting-tasks-page {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .wt-header {
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .wt-print-only-header {
+    display: block !important;
+    margin-bottom: 0.8rem !important;
+    padding-bottom: 0.5rem !important;
+    border-bottom: 2px solid #0F172A !important;
+  }
+  .unified-waiting-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+  .waiting-task-card {
+    background: #FFFFFF !important;
+    border: 1px solid #94A3B8 !important;
+    box-shadow: none !important;
+    color: #000000 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 0.5rem !important;
+    padding: 0.5rem 0.7rem !important;
+  }
+  .task-title, .task-title-link {
+    color: #0F172A !important;
+    font-size: 9pt !important;
+  }
+  .task-id-badge {
+    background: #F1F5F9 !important;
+    color: #0F172A !important;
+    border: 1px solid #64748B !important;
+  }
+  .wt-team-highlight, .wt-reason-highlight {
+    background: #F8FAFC !important;
+    color: #0F172A !important;
+    border: 1px solid #CBD5E1 !important;
+  }
+  .wt-dep-badge {
+    background: #EFF6FF !important;
+    color: #1E40AF !important;
+    border: 1px solid #93C5FD !important;
+  }
+  .project-group-card {
+    background: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    margin-bottom: 0.8rem !important;
+    padding: 0.8rem !important;
+  }
+  .project-group-title {
+    color: #0F172A !important;
+  }
+}

@@ -44,62 +44,28 @@
   background: rgba(239, 68, 68, 0.35);
 }
 
-/* ─── Header ─────────────────────────────────────────────────────────── */
-.mr-header {
+/* ─── Top Actions Bar ────────────────────────────────────────────────── */
+.mr-actions-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  padding: 1.5rem 2rem;
-  border-radius: 20px;
-  background: var(--bg-glass, rgba(15, 23, 42, 0.75));
-  border: 1px solid var(--border-glass, rgba(255, 255, 255, 0.09));
-  flex-wrap: wrap;
-  gap: 1rem;
+  margin-bottom: 0.85rem;
 }
 
-.mr-header-main {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.mr-header-icon-wrap {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  background: rgba(14, 165, 233, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
-}
-
-.mr-title {
-  font-size: 1.45rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0 0 0.35rem 0;
-  letter-spacing: -0.3px;
-}
-
-.mr-subtitle {
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-  margin: 0;
-  line-height: 1.5;
+.mr-print-only-header {
+  display: none;
 }
 
 .mr-print-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(59, 130, 246, 0.25));
   border: 1px solid #38BDF8;
   color: #FFFFFF;
-  padding: 0.6rem 1.4rem;
-  border-radius: 14px;
-  font-size: 0.9rem;
+  padding: 0.55rem 1.35rem;
+  border-radius: 12px;
+  font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.25s ease;
@@ -583,27 +549,14 @@
     font-size: 10pt !important;
     width: 100% !important;
   }
-  .sidebar, .topbar, .mr-header-actions, .mr-filter-panel, .mr-print-btn, .back-btn {
+  .sidebar, .topbar, .mr-header-actions, .mr-filter-panel, .mr-print-btn, .mr-actions-bar, .back-btn {
     display: none !important;
   }
-  .layout-content, .manager-report-page {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  .mr-header {
-    border: none !important;
-    background: none !important;
-    box-shadow: none !important;
-    padding: 0 0 1rem 0 !important;
-  }
-  .mr-title {
-    color: #000000 !important;
-    font-size: 1.5rem !important;
-  }
-  .mr-subtitle {
-    color: #333333 !important;
+  .mr-print-only-header {
+    display: block !important;
+    margin-bottom: 0.8rem !important;
+    padding-bottom: 0.5rem !important;
+    border-bottom: 2px solid #0F172A !important;
   }
   .glass-card {
     background: #FFFFFF !important;

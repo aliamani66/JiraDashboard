@@ -436,13 +436,25 @@ const WaitingTasksPage = () => {
             </div>
 
             <button 
-              className="wt-export-btn icon-only-btn"
-              onClick={() => window.open(`/api/reports/waiting-html?token=${localStorage.getItem('token')}`, '_blank')}
-              title="دانلود و چاپ گزارش تسک‌های منتظر"
+              className="wt-export-btn"
+              onClick={() => window.print()}
+              title={`چاپ تسک‌های منتظر فیلترشده (${filteredTasks.length} تسک)`}
             >
               <Printer size={16} />
+              <span>چاپ ({filteredTasks.length})</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* ─── Printable Document Header (Appears only on Print / PDF) ─────── */}
+      <div className="wt-print-only-header">
+        <h1 style={{ margin: 0, fontSize: '1.4rem' }}>گزارش تسک‌های منتظر (Waiting Tasks)</h1>
+        <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.4rem', fontSize: '0.9rem', color: '#475569', flexWrap: 'wrap' }}>
+          <span>تعداد تسک‌های فیلترشده: <strong>{filteredTasks.length}</strong></span>
+          {selectedTeams.length > 0 && <span>تیم‌های انتخاب‌شده: <strong>{selectedTeams.join(', ')}</strong></span>}
+          {selectedProjectKeys.length > 0 && <span>پروژه‌های انتخاب‌شده: <strong>{selectedProjectKeys.join(', ')}</strong></span>}
+          <span>تاریخ چاپ گزارش: <strong>{new Date().toLocaleDateString('fa-IR')}</strong></span>
         </div>
       </div>
 

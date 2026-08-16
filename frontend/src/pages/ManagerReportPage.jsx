@@ -169,21 +169,21 @@ const ManagerReportPage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
     >
-      {/* ─── Header Banner ─────────────────────────────────────────────── */}
-      <div className="mr-header glass-card">
-        <div className="mr-header-main">
-          <div className="mr-header-icon-wrap">
-            <BarChart3 size={24} className="text-accent-cyan" />
-          </div>
-          <div>
-            <h1 className="mr-title">گزارش مدیر</h1>
-          </div>
-        </div>
+      {/* ─── Top Actions Bar (Print Button Only) ─────────────────────────── */}
+      <div className="mr-actions-bar">
+        <button className="mr-print-btn" onClick={handlePrint} title="چاپ تسک‌های فیلترشده فعلی">
+          <Printer size={18} />
+          <span>چاپ تسک‌های فیلترشده ({filteredTasks.length} تسک)</span>
+        </button>
+      </div>
 
-        <div className="mr-header-actions">
-          <button className="mr-print-btn icon-only-btn" onClick={handlePrint} title="چاپ و خروجی PDF گزارش مدیر">
-            <Printer size={18} />
-          </button>
+      {/* ─── Printable Document Header (Appears only on Print / PDF) ─────── */}
+      <div className="mr-print-only-header">
+        <h1 style={{ margin: 0, fontSize: '1.4rem' }}>گزارش ممیزی و وضعیت تسک‌ها</h1>
+        <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.4rem', fontSize: '0.9rem', color: '#475569' }}>
+          <span>تعداد تسک‌های فیلترشده: <strong>{filteredTasks.length}</strong></span>
+          <span>مجموع ساعت کارکرد: <strong>{filteredMetrics.spentSum}h</strong></span>
+          <span>تاریخ گزارش: <strong>{new Date().toLocaleDateString('fa-IR')}</strong></span>
         </div>
       </div>
 
