@@ -539,7 +539,7 @@ async function fetchTasksForEpic(epicKey) {
         const inwardDesc = (linkType.inward || '').toLowerCase();
         const outwardDesc = (linkType.outward || '').toLowerCase();
 
-        const blockingKeywords = ['is blocked by', 'depends on', 'is waited on by'];
+        const blockingKeywords = ['is blocked by', 'depends on', 'is depended on by', 'is waited on by', 'is served by', 'served by', 'serves', 'blocked', 'waiting', 'holding', 'prerequisite'];
         const linkedIssue = link.inwardIssue || null;
 
         if (linkedIssue && blockingKeywords.some(kw => inwardDesc.includes(kw))) {
@@ -763,7 +763,7 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     const typeName = linkType.name || link.type || 'Relates';
     const inwardDesc = (linkType.inward || link.inward || 'is related to').toLowerCase();
     const outwardDesc = (linkType.outward || link.outward || 'relates to').toLowerCase();
-    const blockingKeywords = ['is blocked by', 'depends on', 'is waited on by', 'blocked', 'waiting'];
+    const blockingKeywords = ['is blocked by', 'depends on', 'is depended on by', 'is waited on by', 'is served by', 'served by', 'serves', 'blocked', 'waiting', 'holding', 'prerequisite'];
 
     const candidates = [
       { item: link.inwardIssue || link.inward, rel: linkType.inward || 'is related to', dir: 'inward', isBlocking: blockingKeywords.some(kw => inwardDesc.includes(kw)) },

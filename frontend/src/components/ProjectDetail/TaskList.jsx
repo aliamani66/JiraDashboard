@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ListTodo, ExternalLink, User } from 'lucide-react';
+import { ListTodo, ExternalLink, User, Link2 } from 'lucide-react';
 import StatusBadge from '../common/StatusBadge';
 import './TaskList.css';
 import './TaskListFeatures.css';
@@ -126,6 +126,49 @@ const TaskList = ({ tasks }) => {
                     {task.blocked_by_team && (
                       <span className="blocked-team-tag">⏳ {task.blocked_by_team}</span>
                     )}
+                    {(() => {
+                      let links = [];
+                      try {
+                        links = typeof task.linked_tasks === 'string' ? JSON.parse(task.linked_tasks) : (task.linked_tasks || []);
+                      } catch (_) {}
+                      if (!Array.isArray(links) || links.length === 0) return null;
+                      return (
+                        <div className="task-linked-issues-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
+                          {links.map((lt, lIdx) => {
+                            const lUrl = `${JIRA_BASE_URL}/browse/${lt.key}`;
+                            const rel = lt.relationship || lt.linkType || 'وابسته به';
+                            const isServed = String(rel).toLowerCase().includes('served') || String(rel).toLowerCase().includes('serves');
+                            return (
+                              <a
+                                key={lIdx}
+                                href={lUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  fontSize: '0.75rem',
+                                  padding: '0.15rem 0.5rem',
+                                  borderRadius: '6px',
+                                  background: isServed ? 'rgba(245, 158, 11, 0.18)' : 'rgba(56, 189, 248, 0.15)',
+                                  border: isServed ? '1px solid rgba(245, 158, 11, 0.45)' : '1px solid rgba(56, 189, 248, 0.35)',
+                                  color: isServed ? '#FDE68A' : '#7DD3FC',
+                                  textDecoration: 'none',
+                                  fontWeight: 600
+                                }}
+                                title={`${rel}: ${lt.title || lt.key} (${lt.status || ''})`}
+                              >
+                                <Link2 size={11} />
+                                <span>{rel}:</span>
+                                <strong style={{ color: '#FFFFFF' }}>{lt.key}</strong>
+                                {lt.status && <span style={{ opacity: 0.85, fontSize: '0.7rem' }}>({lt.status})</span>}
+                              </a>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td>
                     <div className="task-assignee-badge">
