@@ -546,48 +546,60 @@ async function fetchTasksForEpic(epicKey) {
       const rawStatus = issue.fields?.status?.name || 'To Do';
       const mappedStatus = mapping.statusMapping[rawStatus] || rawStatus;
 
-      let isWaiting = mapping.waitingStatuses.some(ws => 
-        rawStatus.toLowerCase() === ws.toLowerCase()
-      ) ? 1 : 0;
+      const statusLower = (rawStatus || '').toLowerCase().trim();
+      const mappedLower = (mappedStatus || '').toLowerCase().trim();
+      const isDoneStatus = [
+        'done', 'closed', 'resolved', 'complete', 'completed', 'finished', 'انجام شده', 'بسته شده', 'تکمیل شده', 'خاتمه یافته'
+      ].includes(statusLower) || [
+        'done', 'closed', 'resolved', 'complete', 'completed', 'finished', 'انجام شده', 'بسته شده', 'تکمیل شده', 'خاتمه یافته'
+      ].includes(mappedLower);
+
+      const isExplicitWaiting = mapping.waitingStatuses.some(ws => 
+        statusLower === ws.toLowerCase() || mappedLower === ws.toLowerCase()
+      ) || ['waiting', 'onholding', 'on hold', 'on_holding', 'blocked', 'منتظر', 'متوقف', 'توقف'].includes(statusLower) || ['waiting', 'onholding', 'on hold', 'on_holding', 'blocked', 'منتظر', 'متوقف', 'توقف'].includes(mappedLower);
+
+      let isWaiting = (!isDoneStatus && isExplicitWaiting) ? 1 : 0;
 
       // Issue links check
       const issueLinks = issue.fields?.issuelinks || [];
       let linkedWaitingTeam = null;
       let linkedWaitingReason = null;
+      const linkedTasks = [];
 
       for (const link of issueLinks) {
         const linkType = link.type || {};
+        const rel = linkType.inward || linkType.outward || linkType.name || 'relates to';
         const inwardDesc = (linkType.inward || '').toLowerCase();
         const outwardDesc = (linkType.outward || '').toLowerCase();
 
-        const blockingKeywords = ['is blocked by', 'depends on', 'is depended on by', 'is waited on by', 'is served by', 'served by', 'serves', 'blocked', 'waiting', 'holding', 'prerequisite'];
-        const linkedIssue = link.inwardIssue || null;
+        const linkedIssue = link.inwardIssue || link.outwardIssue || link.otherIssue || null;
 
-        if (linkedIssue && blockingKeywords.some(kw => inwardDesc.includes(kw))) {
-          isWaiting = 1;
-          if (linkedIssue.fields) {
-            if (linkedIssue.fields.assignee) {
-              linkedWaitingTeam = linkedWaitingTeam || linkedIssue.fields.assignee.displayName;
+        if (linkedIssue && linkedIssue.key) {
+          linkedTasks.push({
+            key: linkedIssue.key,
+            title: linkedIssue.fields?.summary || linkedIssue.summary || linkedIssue.key,
+            linkType: linkType.name || 'Relates',
+            relationship: rel,
+            direction: link.inwardIssue ? 'inward' : 'outward',
+            status: linkedIssue.fields?.status?.name || null,
+            assignee: linkedIssue.fields?.assignee ? (linkedIssue.fields.assignee.displayName || linkedIssue.fields.assignee.name) : null,
+            start_date: linkedIssue.fields?.created ? linkedIssue.fields.created.split('T')[0] : null,
+            due_date: linkedIssue.fields?.duedate || null
+          });
+
+          if (isWaiting === 1) {
+            if (linkedIssue.fields) {
+              if (linkedIssue.fields.assignee) {
+                linkedWaitingTeam = linkedWaitingTeam || (linkedIssue.fields.assignee.displayName || linkedIssue.fields.assignee.name);
+              }
+              if (linkedIssue.fields.project) {
+                linkedWaitingTeam = linkedWaitingTeam || (linkedIssue.fields.project.name || linkedIssue.fields.project.key);
+              }
             }
-            if (linkedIssue.fields.project) {
-              linkedWaitingTeam = linkedWaitingTeam || linkedIssue.fields.project.name;
+            if (!linkedWaitingReason) {
+              linkedWaitingReason = `${rel}: ${linkedIssue.key} (${linkedIssue.fields?.summary || ''})`;
             }
           }
-          linkedWaitingReason = `بلاک شده توسط ${linkedIssue.key}: ${linkedIssue.fields?.summary || ''}`;
-        }
-
-        const outLinkedIssue = link.outwardIssue || null;
-        if (outLinkedIssue && blockingKeywords.some(kw => outwardDesc.includes(kw))) {
-          isWaiting = 1;
-          if (outLinkedIssue.fields) {
-            if (outLinkedIssue.fields.assignee) {
-              linkedWaitingTeam = linkedWaitingTeam || outLinkedIssue.fields.assignee.displayName;
-            }
-            if (outLinkedIssue.fields.project) {
-              linkedWaitingTeam = linkedWaitingTeam || outLinkedIssue.fields.project.name;
-            }
-          }
-          linkedWaitingReason = `وابسته به ${outLinkedIssue.key}: ${outLinkedIssue.fields?.summary || ''}`;
         }
       }
 
@@ -662,20 +674,7 @@ async function fetchTasksForEpic(epicKey) {
       if (!waitingForTeam && linkedWaitingTeam) waitingForTeam = linkedWaitingTeam;
       if (!waitingReason && linkedWaitingReason) waitingReason = linkedWaitingReason;
 
-      if (waitingForTeam || waitingReason) {
-        isWaiting = 1;
-      }
-
       let finalStatus = mappedStatus;
-      if (isWaiting && mappedStatus !== 'Done') {
-        const labelsStr = JSON.stringify(issue.fields?.labels || []).toLowerCase();
-        const summaryStr = (issue.fields?.summary || '').toLowerCase();
-        if (labelsStr.includes('onhold') || summaryStr.includes('آن‌هولد') || summaryStr.includes('onholding')) {
-          finalStatus = 'OnHolding';
-        } else {
-          finalStatus = 'Waiting';
-        }
-      }
 
       // Fully Dynamic Jira Component extraction (preserves all Jira components)
       let component = 'dev';
@@ -973,20 +972,7 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
   if (!waitingForTeam && linkedWaitingTeam) waitingForTeam = linkedWaitingTeam;
   if (!waitingReason && linkedWaitingReason) waitingReason = linkedWaitingReason;
 
-  if (waitingForTeam || waitingReason) {
-    isWaiting = 1;
-  }
-
   let finalStatus = mappedStatus;
-  if (isWaiting && mappedStatus !== 'Done') {
-    const labelsStr = JSON.stringify(issue.fields?.labels || []).toLowerCase();
-    const summaryStr = (issue.fields?.summary || '').toLowerCase();
-    if (labelsStr.includes('onhold') || summaryStr.includes('آن‌هولد') || summaryStr.includes('onholding')) {
-      finalStatus = 'OnHolding';
-    } else {
-      finalStatus = 'Waiting';
-    }
-  }
 
   let component = 'dev';
   const jiraComponents = issue.fields?.components || [];
