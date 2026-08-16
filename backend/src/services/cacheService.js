@@ -1495,7 +1495,13 @@ async function executeScheduledSync() {
   upsert.run('scheduler_last_run', new Date().toISOString());
 
   const cfg = getSchedulerConfig();
-  console.log(`[SCHEDULER] ⏰ Triggering scheduled Jira sync (Mode: ${cfg.mode}, Type: ${cfg.sync_type}, Days: ${cfg.recent_days}, Months: ${cfg.timeframe_months})...`);
+  const rangeDesc = cfg.sync_type === 'incremental'
+    ? `${cfg.recent_days || 2} روزه (تفاضلی)`
+    : cfg.sync_type === 'full'
+      ? 'بازسازی کامل (تمام تاریخچه)'
+      : `${cfg.timeframe_months || 6} ماه اخیر`;
+
+  console.log(`[SCHEDULER] ⏰ Triggering scheduled Jira sync (Mode: ${cfg.mode}, Type: ${cfg.sync_type}, Range: ${rangeDesc})...`);
 
   try {
     let result;
@@ -1568,7 +1574,12 @@ function setupDynamicScheduler() {
       console.log(`[SCHEDULER] ⏰ Cron trigger fired at ${new Date().toISOString()} (${cronExpression})`);
       executeScheduledSync();
     });
-    console.log(`[SCHEDULER] 🚀 Dynamic Scheduler ACTIVE: [${cronExpression}] (Mode: ${cfg.mode}, Time: ${cfg.time || '-'}, Range: ${cfg.timeframe_months} months)`);
+    const rangeDesc = cfg.sync_type === 'incremental'
+      ? `${cfg.recent_days || 2} روزه (تفاضلی شبانه)`
+      : cfg.sync_type === 'full'
+        ? 'بازسازی کامل (تمام تاریخچه)'
+        : `${cfg.timeframe_months || 6} ماه اخیر`;
+    console.log(`[SCHEDULER] 🚀 Dynamic Scheduler ACTIVE: [${cronExpression}] (Mode: ${cfg.mode}, Time: ${cfg.time || '-'}, Type: ${cfg.sync_type}, Range: ${rangeDesc})`);
   } catch (cronErr) {
     console.error(`[SCHEDULER] Invalid cron expression "${cronExpression}":`, cronErr.message);
   }

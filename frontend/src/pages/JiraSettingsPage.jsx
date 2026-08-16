@@ -4851,8 +4851,8 @@ const JiraSettingsPage = () => {
                           onClick={() => setSchedulerForm({
                             ...schedulerForm,
                             sync_type: opt.type,
-                            recent_days: opt.days || schedulerForm.recent_days,
-                            timeframe_months: opt.months || schedulerForm.timeframe_months
+                            recent_days: opt.days !== undefined && opt.days > 0 ? opt.days : (schedulerForm.recent_days || 2),
+                            timeframe_months: opt.months !== undefined && opt.months > 0 ? opt.months : (schedulerForm.timeframe_months || 6)
                           })}
                           style={{
                             background: isSelected ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.03)',
