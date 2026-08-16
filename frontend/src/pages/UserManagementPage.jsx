@@ -32,7 +32,9 @@ import {
   Sparkles,
   Info,
   Layers,
-  KeyRound
+  KeyRound,
+  Save,
+  Key
 } from 'lucide-react';
 import { api } from '../services/api';
 import './UserManagementPage.css';
@@ -836,7 +838,8 @@ const UserManagementPage = () => {
                     انصراف
                   </button>
                   <button type="submit" className="ump-submit-btn">
-                    ایجاد و ذخیره کاربر
+                    <Save size={16} />
+                    <span>ایجاد و ذخیره کاربر</span>
                   </button>
                 </div>
               </form>
@@ -915,7 +918,8 @@ const UserManagementPage = () => {
                     انصراف
                   </button>
                   <button type="button" className="ump-submit-btn" onClick={handleSavePermissions}>
-                    ذخیره تغییرات دسترسی
+                    <Save size={16} />
+                    <span>ذخیره تغییرات دسترسی</span>
                   </button>
                 </div>
               </div>
@@ -970,7 +974,8 @@ const UserManagementPage = () => {
                     انصراف
                   </button>
                   <button type="submit" className="ump-submit-btn" disabled={passwordLoading}>
-                    {passwordLoading ? 'در حال ثبت...' : 'تغییر و ذخیره رمز'}
+                    <Key size={16} />
+                    <span>{passwordLoading ? 'در حال ثبت...' : 'تغییر و ذخیره رمز'}</span>
                   </button>
                 </div>
               </form>

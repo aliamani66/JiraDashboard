@@ -43,23 +43,23 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--gradient-primary);
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
   color: #FFFFFF;
-  border: none;
-  padding: 0.65rem 1.35rem;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  padding: 0.6rem 1.35rem;
   border-radius: 12px;
   font-size: 0.88rem;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 18px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .ump-add-user-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(56, 189, 248, 0.6);
-  filter: brightness(1.1);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.55);
 }
 
 .ump-refresh-btn {
@@ -871,20 +871,24 @@
 }
 
 .ump-submit-btn {
-  background: var(--gradient-primary);
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  border: 1px solid rgba(52, 211, 153, 0.5);
   color: #FFFFFF;
   padding: 0.55rem 1.6rem;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 0.86rem;
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   transition: all 0.2s ease;
 }
 
 .ump-submit-btn:hover {
-  filter: brightness(1.15);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
   transform: translateY(-1px);
 }
