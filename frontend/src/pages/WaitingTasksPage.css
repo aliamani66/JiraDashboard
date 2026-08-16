@@ -388,6 +388,19 @@
   color: #FDBA74;
 }
 
+.wt-dep-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(249, 115, 22, 0.22);
+  border: 1px solid rgba(249, 115, 22, 0.45);
+  color: #FED7AA;
+  padding: 0.12rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.15);
+}
+
 .wt-reason-highlight {
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.2);

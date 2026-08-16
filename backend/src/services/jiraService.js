@@ -560,46 +560,43 @@ async function fetchTasksForEpic(epicKey) {
 
       let isWaiting = (!isDoneStatus && isExplicitWaiting) ? 1 : 0;
 
-      // Issue links check
+      // Issue links check - Collect ALL linked issues, projects, and teams
       const issueLinks = issue.fields?.issuelinks || [];
-      let linkedWaitingTeam = null;
-      let linkedWaitingReason = null;
+      const linkedTeamsSet = new Set();
+      const linkedReasonsList = [];
       const linkedTasks = [];
 
       for (const link of issueLinks) {
         const linkType = link.type || {};
         const rel = linkType.inward || linkType.outward || linkType.name || 'relates to';
-        const inwardDesc = (linkType.inward || '').toLowerCase();
-        const outwardDesc = (linkType.outward || '').toLowerCase();
-
         const linkedIssue = link.inwardIssue || link.outwardIssue || link.otherIssue || null;
 
         if (linkedIssue && linkedIssue.key) {
+          const lFields = linkedIssue.fields || linkedIssue;
+          const linkTitle = lFields?.summary || linkedIssue.summary || linkedIssue.key;
+          const linkStatus = lFields?.status?.name || (typeof lFields?.status === 'object' ? lFields.status.name : lFields?.status) || null;
+          const linkAssignee = lFields?.assignee ? (lFields.assignee.displayName || lFields.assignee.name) : null;
+          const linkProjectName = lFields?.project?.name || (lFields?.project?.key ? `پروژه ${lFields.project.key}` : `پروژه ${linkedIssue.key.split('-')[0]}`);
+          const linkProjectKey = (lFields?.project?.key || linkedIssue.key.split('-')[0]).toUpperCase();
+
           linkedTasks.push({
             key: linkedIssue.key,
-            title: linkedIssue.fields?.summary || linkedIssue.summary || linkedIssue.key,
+            title: linkTitle,
             linkType: linkType.name || 'Relates',
             relationship: rel,
             direction: link.inwardIssue ? 'inward' : 'outward',
-            status: linkedIssue.fields?.status?.name || null,
-            assignee: linkedIssue.fields?.assignee ? (linkedIssue.fields.assignee.displayName || linkedIssue.fields.assignee.name) : null,
-            start_date: linkedIssue.fields?.created ? linkedIssue.fields.created.split('T')[0] : null,
-            due_date: linkedIssue.fields?.duedate || null
+            status: linkStatus,
+            assignee: linkAssignee,
+            project_key: linkProjectKey,
+            project_name: linkProjectName,
+            start_date: lFields?.created ? lFields.created.split('T')[0] : null,
+            due_date: lFields?.duedate || null
           });
 
-          if (isWaiting === 1) {
-            if (linkedIssue.fields) {
-              if (linkedIssue.fields.assignee) {
-                linkedWaitingTeam = linkedWaitingTeam || (linkedIssue.fields.assignee.displayName || linkedIssue.fields.assignee.name);
-              }
-              if (linkedIssue.fields.project) {
-                linkedWaitingTeam = linkedWaitingTeam || (linkedIssue.fields.project.name || linkedIssue.fields.project.key);
-              }
-            }
-            if (!linkedWaitingReason) {
-              linkedWaitingReason = `${rel}: ${linkedIssue.key} (${linkedIssue.fields?.summary || ''})`;
-            }
-          }
+          // Always add team & project dependencies from linked issue
+          const teamLabel = linkAssignee ? `${linkAssignee} (${linkProjectKey})` : linkProjectName;
+          linkedTeamsSet.add(teamLabel);
+          linkedReasonsList.push(`${rel}: ${linkedIssue.key} (${linkTitle})`);
         }
       }
 
@@ -671,8 +668,23 @@ async function fetchTasksForEpic(epicKey) {
         }
       }
 
-      if (!waitingForTeam && linkedWaitingTeam) waitingForTeam = linkedWaitingTeam;
-      if (!waitingReason && linkedWaitingReason) waitingReason = linkedWaitingReason;
+      const allExtractedTeams = [];
+      if (waitingForTeam) allExtractedTeams.push(waitingForTeam);
+      for (const lt of linkedTeamsSet) {
+        if (!allExtractedTeams.includes(lt)) allExtractedTeams.push(lt);
+      }
+      if (allExtractedTeams.length > 0) {
+        waitingForTeam = allExtractedTeams.join(', ');
+      }
+
+      const allExtractedReasons = [];
+      if (waitingReason) allExtractedReasons.push(waitingReason);
+      for (const lr of linkedReasonsList) {
+        if (!allExtractedReasons.includes(lr)) allExtractedReasons.push(lr);
+      }
+      if (allExtractedReasons.length > 0) {
+        waitingReason = allExtractedReasons.join(' | ');
+      }
 
       let finalStatus = mappedStatus;
 
@@ -786,15 +798,13 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
   const isWaiting = (!isDoneStatus && isExplicitWaiting) ? 1 : 0;
 
   const issueLinks = issue.fields?.issuelinks || issue.fields?.linkedIssues || [];
-  let linkedWaitingTeam = null;
-  let linkedWaitingReason = null;
+  const linkedTeamsSet = new Set();
+  const linkedReasonsList = [];
   const linkedTasks = [];
 
   for (const link of issueLinks) {
     const linkType = link.type || {};
     const typeName = linkType.name || link.type || 'Relates';
-    const inwardDesc = (linkType.inward || link.inward || 'is related to').toLowerCase();
-    const outwardDesc = (linkType.outward || link.outward || 'relates to').toLowerCase();
 
     const candidates = [
       { item: link.inwardIssue || link.inward, rel: linkType.inward || link.inward || 'is related to', dir: 'inward' },
@@ -810,6 +820,8 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
           const linkTitle = fields?.summary || targetObj.summary || targetObj.key;
           const linkStatus = fields?.status?.name || (typeof fields?.status === 'object' ? fields.status.name : fields?.status) || (typeof targetObj.status === 'object' ? targetObj.status.name : targetObj.status) || null;
           const linkAssignee = fields?.assignee ? (fields.assignee.displayName || fields.assignee.name) : (typeof targetObj.assignee === 'object' ? targetObj.assignee.displayName : targetObj.assignee) || null;
+          const linkProjectName = fields?.project?.name || (fields?.project?.key ? `پروژه ${fields.project.key}` : `پروژه ${targetObj.key.split('-')[0]}`);
+          const linkProjectKey = (fields?.project?.key || targetObj.key.split('-')[0]).toUpperCase();
           const linkStartDate = fields?.created ? fields.created.split('T')[0] : null;
           const linkDueDate = fields?.duedate || targetObj.duedate || null;
 
@@ -821,24 +833,16 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
             direction: cand.dir,
             status: linkStatus,
             assignee: linkAssignee,
+            project_key: linkProjectKey,
+            project_name: linkProjectName,
             start_date: linkStartDate,
             due_date: linkDueDate
           });
 
-          if (isWaiting === 1) {
-            if (!linkedWaitingTeam) {
-              if (fields.assignee) {
-                linkedWaitingTeam = fields.assignee.displayName || fields.assignee.name;
-              } else if (fields.project) {
-                linkedWaitingTeam = fields.project.name || fields.project.key;
-              } else if (targetObj.key) {
-                linkedWaitingTeam = `پروژه ${targetObj.key.split('-')[0]}`;
-              }
-            }
-            if (!linkedWaitingReason) {
-              linkedWaitingReason = `${cand.rel}: ${targetObj.key} (${linkTitle})`;
-            }
-          }
+          // Always add team & project dependencies from linked issue
+          const teamLabel = linkAssignee ? `${linkAssignee} (${linkProjectKey})` : linkProjectName;
+          linkedTeamsSet.add(teamLabel);
+          linkedReasonsList.push(`${cand.rel}: ${targetObj.key} (${linkTitle})`);
         }
       }
     }
@@ -969,8 +973,23 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     }
   }
 
-  if (!waitingForTeam && linkedWaitingTeam) waitingForTeam = linkedWaitingTeam;
-  if (!waitingReason && linkedWaitingReason) waitingReason = linkedWaitingReason;
+  const allExtractedTeams = [];
+  if (waitingForTeam) allExtractedTeams.push(waitingForTeam);
+  for (const lt of linkedTeamsSet) {
+    if (!allExtractedTeams.includes(lt)) allExtractedTeams.push(lt);
+  }
+  if (allExtractedTeams.length > 0) {
+    waitingForTeam = allExtractedTeams.join(', ');
+  }
+
+  const allExtractedReasons = [];
+  if (waitingReason) allExtractedReasons.push(waitingReason);
+  for (const lr of linkedReasonsList) {
+    if (!allExtractedReasons.includes(lr)) allExtractedReasons.push(lr);
+  }
+  if (allExtractedReasons.length > 0) {
+    waitingReason = allExtractedReasons.join(' | ');
+  }
 
   let finalStatus = mappedStatus;
 

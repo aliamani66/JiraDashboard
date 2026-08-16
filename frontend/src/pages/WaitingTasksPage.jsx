@@ -102,12 +102,46 @@ const WaitingTasksPage = () => {
     return Array.from(keys).sort();
   }, [configuredProjects, allWaitingTasks]);
 
+  // Helper to extract all distinct team and project dependencies for a task
+  const getTaskDependencies = (task) => {
+    const deps = new Set();
+
+    // 1. From waiting_for_team & blocked_by_team string (split by comma or pipe)
+    const teamRaw = `${task.waiting_for_team || ''}, ${task.blocked_by_team || ''}`;
+    teamRaw.split(/[,|]/).map(s => s.trim()).filter(Boolean).forEach(t => {
+      deps.add(t);
+    });
+
+    // 2. From all linked issues (extract both project name/key and assignee)
+    let links = [];
+    try {
+      links = typeof task.linked_tasks === 'string' ? JSON.parse(task.linked_tasks) : (task.linked_tasks || []);
+    } catch (_) {}
+
+    if (Array.isArray(links)) {
+      for (const lt of links) {
+        if (!lt) continue;
+        if (lt.project_key) deps.add(`پروژه ${lt.project_key}`);
+        else if (lt.key) deps.add(`پروژه ${lt.key.split('-')[0].toUpperCase()}`);
+        if (lt.project_name) deps.add(lt.project_name);
+        if (lt.assignee) deps.add(lt.assignee);
+      }
+    }
+
+    if (deps.size === 0) {
+      deps.add('سایر وابستگی‌ها');
+    }
+    return Array.from(deps);
+  };
+
   // Extract unique Team dependencies with count
   const allTeamsList = useMemo(() => {
     const map = new Map();
     allWaitingTasks.forEach(t => {
-      const team = (t.waiting_for_team || t.blocked_by_team || 'سایر وابستگی‌ها').trim();
-      map.set(team, (map.get(team) || 0) + 1);
+      const deps = getTaskDependencies(t);
+      deps.forEach(dep => {
+        map.set(dep, (map.get(dep) || 0) + 1);
+      });
     });
     return Array.from(map.entries())
       .map(([name, count]) => ({ name, count }))
@@ -128,10 +162,11 @@ const WaitingTasksPage = () => {
         if (!matchesProj) return false;
       }
 
-      // Team Dependency Filter (Exact match on team name)
-      const team = (t.waiting_for_team || t.blocked_by_team || 'سایر وابستگی‌ها').trim();
+      // Team Dependency Filter (Matches if ANY of the task's dependencies matches selectedTeams)
       if (selectedTeams.length > 0) {
-        if (!selectedTeams.includes(team)) return false;
+        const deps = getTaskDependencies(t);
+        const hasMatch = selectedTeams.some(st => deps.includes(st) || deps.some(d => d.toLowerCase().includes(st.toLowerCase()) || st.toLowerCase().includes(d.toLowerCase())));
+        if (!hasMatch) return false;
       }
 
       // Search Query
@@ -142,9 +177,9 @@ const WaitingTasksPage = () => {
         const reason = (t.waiting_reason || '').toLowerCase();
         const assignee = (t.assignee || '').toLowerCase();
         const proj = (t.projectTitle || t.project_id || '').toLowerCase();
-        const teamName = team.toLowerCase();
+        const deps = getTaskDependencies(t).join(' ').toLowerCase();
 
-        const match = title.includes(q) || tid.includes(q) || reason.includes(q) || assignee.includes(q) || proj.includes(q) || teamName.includes(q);
+        const match = title.includes(q) || tid.includes(q) || reason.includes(q) || assignee.includes(q) || proj.includes(q) || deps.includes(q);
         if (!match) return false;
       }
 
@@ -177,7 +212,7 @@ const WaitingTasksPage = () => {
   const renderTaskCard = (task) => {
     const pri = priorityMap[task.priority] || { label: task.priority || 'متوسط', className: 'normal' };
     const taskIdStr = task.task_id || task.id;
-    const teamName = (task.waiting_for_team || task.blocked_by_team || 'سایر وابستگی‌ها').trim();
+    const taskDeps = getTaskDependencies(task);
     const jiraUrl = `${JIRA_BASE_URL}/browse/${taskIdStr}`;
     const pId = task.project_id || (taskIdStr ? taskIdStr.split('-')[0] : 'ORD');
     const pTitle = task.projectTitle || pId;
@@ -240,10 +275,15 @@ const WaitingTasksPage = () => {
         </div>
         
         <div className="task-details">
-          {/* Team Dependency Badge */}
-          <div className="detail-item wt-team-highlight">
-            <Users2 size={15} style={{ color: '#F97316' }} />
-            <span>وابسته به تیم: <strong>{teamName}</strong></span>
+          {/* Team & Project Dependencies Highlight */}
+          <div className="detail-item wt-team-highlight" style={{ flexWrap: 'wrap', gap: '0.35rem' }}>
+            <Users2 size={15} style={{ color: '#F97316', flexShrink: 0 }} />
+            <span style={{ fontWeight: 700, marginLeft: '0.2rem' }}>وابستگی‌ها:</span>
+            {taskDeps.map((dep, dIdx) => (
+              <span key={dIdx} className="wt-dep-badge">
+                {dep}
+              </span>
+            ))}
           </div>
           
           {/* Waiting Reason */}
