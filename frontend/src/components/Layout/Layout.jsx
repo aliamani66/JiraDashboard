@@ -177,6 +177,7 @@ const Layout = ({ children }) => {
             {/* 👤 Topbar User Profile Menu */}
             <div className="topbar-user-menu-wrap" ref={menuRef}>
               <button 
+                type="button"
                 className="topbar-user-badge-btn" 
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 title="مشاهده اطلاعات حساب کاربر"
