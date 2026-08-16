@@ -772,15 +772,30 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   }
 
   const insertTask = db.prepare(`
-    INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, epic_id, linked_tasks, last_synced)
-    VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @epic_id, @linked_tasks, @last_synced)
+    INSERT INTO tasks (
+      id, project_id, epic_id, parent_task_id, parent_key, linked_tasks,
+      title, description, status, is_waiting, waiting_for_team, waiting_reason,
+      assignee, estimate_hours, spent_hours, created_at, start_date, due_date,
+      is_subtask, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, last_synced
+    ) VALUES (
+      @id, @project_id, @epic_id, @parent_task_id, @parent_key, @linked_tasks,
+      @title, @description, @status, @is_waiting, @waiting_for_team, @waiting_reason,
+      @assignee, @estimate_hours, @spent_hours, @created_at, @start_date, @due_date,
+      @is_subtask, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @last_synced
+    )
     ON CONFLICT(id) DO UPDATE SET
+      project_id=excluded.project_id,
+      epic_id=COALESCE(excluded.epic_id, tasks.epic_id),
+      parent_task_id=excluded.parent_task_id,
+      parent_key=excluded.parent_key,
+      linked_tasks=excluded.linked_tasks,
       title=excluded.title,
       description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE tasks.description END,
       status=excluded.status,
       assignee=excluded.assignee,
       estimate_hours=excluded.estimate_hours,
       spent_hours=excluded.spent_hours,
+      created_at=COALESCE(excluded.created_at, tasks.created_at),
       start_date=excluded.start_date,
       due_date=excluded.due_date,
       is_waiting=excluded.is_waiting,
@@ -794,14 +809,23 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       component=excluded.component,
       sort_order=excluded.sort_order,
       is_subtask=excluded.is_subtask,
-      parent_task_id=excluded.parent_task_id,
-      epic_id=COALESCE(excluded.epic_id, tasks.epic_id),
-      linked_tasks=excluded.linked_tasks,
       last_synced=excluded.last_synced
   `);
 
   const cfg = jiraService.getJiraConfig();
   const projKeyStr = cfg.projectKey || 'ORD';
+
+  // Ensure container projects exist for each configured project key
+  const confKeys = projKeyStr.split(',').map(p => p.trim().toUpperCase()).filter(Boolean);
+  for (const pk of confKeys) {
+    try {
+      db.prepare(`
+        INSERT INTO projects (id, title, status, last_synced)
+        VALUES (?, ?, 'In Progress', ?)
+        ON CONFLICT(id) DO UPDATE SET last_synced=excluded.last_synced
+      `).run(pk, `پروژه ${pk}`, syncTime);
+    } catch (_) {}
+  }
 
   let projectClause = '';
   if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
@@ -887,31 +911,30 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       console.log(`[SYNC][${monthLabel}] Project keys seen in raw issues: ${projKeysSeen.join(', ')}`);
     }
 
-    // Filter in JS: by configured project keys + exact date range
+    // Filter in JS: by configured project keys (Jira JQL has already filtered the exact date)
     const finalIssues = rawIssues.filter(issue => {
       const issueProjKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || '').toUpperCase();
       if (configuredProjKeys.size > 0 && issueProjKey && !configuredProjKeys.has(issueProjKey)) return false;
-      if (issue.fields?.created) {
-        const cDate = new Date(issue.fields.created);
-        const fullEndDt = new Date(endDt);
-        fullEndDt.setHours(23, 59, 59, 999);
-        if (cDate < startDt || cDate > fullEndDt) return false;
-      }
       return true;
     });
 
-    console.log(`[SYNC][${monthLabel}] Issues after JS project+date filter: ${finalIssues.length}`);
+    console.log(`[SYNC][${monthLabel}] Issues after JS project filter: ${finalIssues.length}`);
 
     const knownEpicsSet = new Set(db.prepare('SELECT UPPER(id) as id FROM projects').all().map(p => p.id));
     const parsedTasks = finalIssues.map((issue, idx) => {
-      const parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx, knownEpicsSet) : issue;
-      if (parsed && !parsed.project_id) {
+      let parsed = null;
+      try {
+        parsed = jiraService.parseTaskIssue ? jiraService.parseTaskIssue(issue, null, idx, knownEpicsSet) : issue;
+      } catch (pErr) {
+        console.error(`Error parsing task issue ${issue?.key}:`, pErr.message);
+      }
+      if (!parsed) return null;
+      if (!parsed.project_id) {
         const projKey = (issue.fields?.project?.key || (issue.key || '').split('-')[0] || 'ORD').toUpperCase();
-        const proj = db.prepare('SELECT id FROM projects WHERE UPPER(id) = ? LIMIT 1').get(projKey);
-        parsed.project_id = proj ? proj.id : projKey;
+        parsed.project_id = projKey;
       }
       return parsed;
-    });
+    }).filter(Boolean);
 
     let savedCount = 0;
     let skippedCount = 0;
@@ -919,7 +942,17 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       for (const task of parsedTasks) {
         if (task && task.id && /^[A-Z][A-Z0-9_]*-\d+$/i.test(task.id)) {
           task.last_synced = syncTime;
-          // Only insert tasks from configured project keys (check by key prefix, not exact epic ID)
+          // Ensure task has all bind properties safely defined
+          if (!task.epic_id) task.epic_id = task.parent_task_id || null;
+          if (!task.parent_key) task.parent_key = null;
+          if (!task.parent_task_id) task.parent_task_id = null;
+          if (!task.created_at) task.created_at = task.start_date || null;
+          if (!task.linked_tasks) task.linked_tasks = '[]';
+          if (!task.labels) task.labels = '[]';
+          if (!task.priority) task.priority = 'Medium';
+          if (!task.component) task.component = 'dev';
+
+          // Only insert tasks from configured project keys (check by key prefix)
           if (task.id && configuredProjKeys.size > 0) {
             const issueKeyPrefix = (task.id || '').split('-')[0].toUpperCase();
             if (!configuredProjKeys.has(issueKeyPrefix)) {
