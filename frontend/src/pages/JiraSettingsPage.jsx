@@ -1007,6 +1007,28 @@ const JiraSettingsPage = () => {
       }
     }
 
+    // 🚀 FINAL STEP: Automatic gap-free reconciliation (instantly catches any edge dates or Internal Requests)
+    try {
+      const activeMonths = cfgRef.current?.rebuildMonths || monthRanges.length || 3;
+      const missingRes = await api.syncMissingTasks({ months: activeMonths });
+      if (missingRes && missingRes.savedCount > 0) {
+        totalTasksSynced += missingRes.savedCount;
+        results.push({
+          monthIndex: monthRanges.length + 1,
+          monthLabel: 'تکمیلی و درخواست‌ها',
+          jalaliName: `تکمیلی و درخواست‌ها (${missingRes.savedCount} تسک)`,
+          gregorianName: 'Supplemental & Internal Requests',
+          dateRange: 'تمامی پروژه‌ها',
+          status: 'success',
+          taskCount: missingRes.savedCount,
+          jql: 'Missing & Internal Requests Reconciliation',
+          message: `همگام‌سازی و ثبت خودکار ${missingRes.savedCount} تسک و درخواست جامانده`
+        });
+      }
+    } catch (mErr) {
+      console.warn('Final reconciliation warning:', mErr.message);
+    }
+
     setSyncFlowModal(prev => ({
       ...prev,
       phase: 'completed',

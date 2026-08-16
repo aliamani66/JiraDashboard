@@ -870,9 +870,9 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     const gregStartDateOnly = (startStr || '').split(' ')[0];
     const gregEndDateOnly = (endStr || '').split(' ')[0];
 
-    const confirmedJql = projectClause
-      ? `${projectClause} AND created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`
-      : `created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
+    let confirmedJql = projectClause
+      ? `${projectClause} AND created >= "${gregStartDateOnly} 00:00" AND created <= "${gregEndDateOnly} 23:59" ORDER BY created ASC`
+      : `created >= "${gregStartDateOnly} 00:00" AND created <= "${gregEndDateOnly} 23:59" ORDER BY created ASC`;
 
     const configuredProjKeys = new Set(
       projKeyStr.split(',').map(k => k.trim().toUpperCase()).filter(Boolean)
@@ -888,17 +888,24 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
     let searchRes = null;
     try {
       searchRes = await jiraService.jiraSearch(confirmedJql);
-    } catch (err) {
-      const errCode = err.code || (err.response ? `HTTP_${err.response.status}` : 'TIMEOUT_OR_NETWORK');
-      const detailMsg = err.response?.data?.errorMessages?.join(', ') || err.message;
-      console.error(`[SYNC][${monthLabel}] Jira search ERROR: ${errCode} - ${detailMsg}`);
-      return {
-        success: false, monthIndex, monthLabel,
-        dateRange: `${gregStartDateOnly} تا ${gregEndDateOnly}`,
-        jql: confirmedJql, taskCount: 0, status: 'error',
-        errorCode: errCode, message: `🔴 خطا (${errCode}): ${detailMsg}`,
-        queryAuditResults: [{ variant: 3, name: 'کوئری #۳ (پروژه + تاریخ میلادی)', jql: confirmedJql, taskCount: 0, status: 'error', error: detailMsg }]
-      };
+    } catch (firstErr) {
+      try {
+        confirmedJql = projectClause
+          ? `${projectClause} AND created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`
+          : `created >= "${gregStartDateOnly}" AND created <= "${gregEndDateOnly}" ORDER BY created ASC`;
+        searchRes = await jiraService.jiraSearch(confirmedJql);
+      } catch (err) {
+        const errCode = err.code || (err.response ? `HTTP_${err.response.status}` : 'TIMEOUT_OR_NETWORK');
+        const detailMsg = err.response?.data?.errorMessages?.join(', ') || err.message;
+        console.error(`[SYNC][${monthLabel}] Jira search ERROR: ${errCode} - ${detailMsg}`);
+        return {
+          success: false, monthIndex, monthLabel,
+          dateRange: `${gregStartDateOnly} تا ${gregEndDateOnly}`,
+          jql: confirmedJql, taskCount: 0, status: 'error',
+          errorCode: errCode, message: `🔴 خطا (${errCode}): ${detailMsg}`,
+          queryAuditResults: [{ variant: 3, name: 'کوئری #۳ (پروژه + تاریخ میلادی)', jql: confirmedJql, taskCount: 0, status: 'error', error: detailMsg }]
+        };
+      }
     }
 
     const startDt = new Date(startStr);
