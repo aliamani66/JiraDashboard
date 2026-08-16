@@ -677,10 +677,11 @@ function checkDbRebuildPerm(req, res, next) {
 router.post('/clear-db', checkDbRebuildPerm, async (req, res) => {
   try {
     const db = getDb();
-    // Only delete task and project data (USERS TABLE IS NEVER TOUCHED)
+    // Only delete task, project, relations, and history data (USERS TABLE IS NEVER TOUCHED)
+    db.prepare('DELETE FROM task_relations').run();
+    db.prepare('DELETE FROM task_estimate_history').run();
     db.prepare('DELETE FROM tasks').run();
     db.prepare('DELETE FROM projects').run();
-    db.prepare('DELETE FROM task_estimate_history').run();
     try { db.exec('VACUUM'); } catch (_) {}
     
     saveDb();
