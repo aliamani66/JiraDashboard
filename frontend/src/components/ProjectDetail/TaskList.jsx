@@ -110,22 +110,18 @@ const TaskList = ({ tasks }) => {
                   </td>
                   <td><StatusBadge status={task.status} /></td>
                   <td className="task-title-cell">
-                    <a 
-                      href={jiraUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="task-title-link"
-                    >
-                      {task.title}
-                    </a>
-                    {task.description && (
-                      <p className="task-desc-text" title={task.description}>
-                        📝 {task.description}
-                      </p>
-                    )}
-                    {task.blocked_by_team && (
-                      <span className="blocked-team-tag">⏳ {task.blocked_by_team}</span>
-                    )}
+                    <div className="task-title-header">
+                      <a 
+                        href={jiraUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="task-title-link"
+                      >
+                        {task.title}
+                      </a>
+                    </div>
+
+                    {/* 🔗 Linked Tasks / External Dependencies (e.g. is served by, blocks) */}
                     {(() => {
                       let links = [];
                       try {
@@ -133,7 +129,7 @@ const TaskList = ({ tasks }) => {
                       } catch (_) {}
                       if (!Array.isArray(links) || links.length === 0) return null;
                       return (
-                        <div className="task-linked-issues-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
+                        <div className="task-linked-issues-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem', marginBottom: '0.25rem' }}>
                           {links.map((lt, lIdx) => {
                             const lUrl = `${JIRA_BASE_URL}/browse/${lt.key}`;
                             const rel = lt.relationship || lt.linkType || 'وابسته به';
@@ -147,28 +143,53 @@ const TaskList = ({ tasks }) => {
                                 style={{
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '0.3rem',
-                                  fontSize: '0.75rem',
-                                  padding: '0.15rem 0.5rem',
-                                  borderRadius: '6px',
-                                  background: isServed ? 'rgba(245, 158, 11, 0.18)' : 'rgba(56, 189, 248, 0.15)',
-                                  border: isServed ? '1px solid rgba(245, 158, 11, 0.45)' : '1px solid rgba(56, 189, 248, 0.35)',
-                                  color: isServed ? '#FDE68A' : '#7DD3FC',
+                                  gap: '0.35rem',
+                                  fontSize: '0.76rem',
+                                  padding: '0.2rem 0.6rem',
+                                  borderRadius: '8px',
+                                  background: isServed ? 'rgba(245, 158, 11, 0.22)' : 'rgba(56, 189, 248, 0.18)',
+                                  border: isServed ? '1px solid #F59E0B' : '1px solid #38BDF8',
+                                  color: isServed ? '#FDE68A' : '#BAE6FD',
                                   textDecoration: 'none',
-                                  fontWeight: 600
+                                  fontWeight: 700,
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
                                 }}
                                 title={`${rel}: ${lt.title || lt.key} (${lt.status || ''})`}
                               >
-                                <Link2 size={11} />
+                                <Link2 size={12} />
                                 <span>{rel}:</span>
-                                <strong style={{ color: '#FFFFFF' }}>{lt.key}</strong>
-                                {lt.status && <span style={{ opacity: 0.85, fontSize: '0.7rem' }}>({lt.status})</span>}
+                                <strong style={{ color: '#FFFFFF', textDecoration: 'underline' }}>{lt.key}</strong>
+                                {lt.status && <span style={{ opacity: 0.9, fontSize: '0.72rem', background: 'rgba(0,0,0,0.3)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>{lt.status}</span>}
+                                <ExternalLink size={10} style={{ opacity: 0.8 }} />
                               </a>
                             );
                           })}
                         </div>
                       );
                     })()}
+
+                    {/* Waiting / Blocked Info */}
+                    {(task.waiting_for_team || task.blocked_by_team || task.waiting_reason) && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.3rem', fontSize: '0.78rem' }}>
+                        {(task.waiting_for_team || task.blocked_by_team) && (
+                          <span className="blocked-team-tag" style={{ background: 'rgba(239, 68, 68, 0.18)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#FCA5A5', padding: '0.15rem 0.5rem', borderRadius: '6px', fontWeight: 700 }}>
+                            ⏳ منتظر: {task.waiting_for_team || task.blocked_by_team}
+                          </span>
+                        )}
+                        {task.waiting_reason && (
+                          <span style={{ color: '#FCD34D', background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>
+                            ⚠️ {task.waiting_reason}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Description Text */}
+                    {task.description && (
+                      <p className="task-desc-text" title={task.description} style={{ marginTop: '0.35rem' }}>
+                        📝 {task.description}
+                      </p>
+                    )}
                   </td>
                   <td>
                     <div className="task-assignee-badge">

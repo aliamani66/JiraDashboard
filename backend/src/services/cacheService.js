@@ -772,8 +772,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
   }
 
   const insertTask = db.prepare(`
-    INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, last_synced)
-    VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @last_synced)
+    INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, epic_id, linked_tasks, last_synced)
+    VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @epic_id, @linked_tasks, @last_synced)
     ON CONFLICT(id) DO UPDATE SET
       title=excluded.title,
       description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE tasks.description END,
@@ -795,6 +795,8 @@ async function syncSingleMonthFromJira({ startStr, endStr, jalaliStartStr, jalal
       sort_order=excluded.sort_order,
       is_subtask=excluded.is_subtask,
       parent_task_id=excluded.parent_task_id,
+      epic_id=COALESCE(excluded.epic_id, tasks.epic_id),
+      linked_tasks=excluded.linked_tasks,
       last_synced=excluded.last_synced
   `);
 
@@ -1156,8 +1158,8 @@ async function syncSingleEpicFromJira(epicKey) {
     }
 
     const insertTask = db.prepare(`
-      INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, epic_id, last_synced)
-      VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @epic_id, @last_synced)
+      INSERT INTO tasks (id, project_id, title, description, status, assignee, estimate_hours, spent_hours, start_date, due_date, is_waiting, waiting_for_team, waiting_reason, sprint_name, sprint_start_date, sprint_end_date, priority, labels, component, sort_order, is_subtask, parent_task_id, epic_id, linked_tasks, last_synced)
+      VALUES (@id, @project_id, @title, @description, @status, @assignee, @estimate_hours, @spent_hours, @start_date, @due_date, @is_waiting, @waiting_for_team, @waiting_reason, @sprint_name, @sprint_start_date, @sprint_end_date, @priority, @labels, @component, @sort_order, @is_subtask, @parent_task_id, @epic_id, @linked_tasks, @last_synced)
       ON CONFLICT(id) DO UPDATE SET
         title=excluded.title,
         description=CASE WHEN excluded.description IS NOT NULL AND excluded.description != '' THEN excluded.description ELSE tasks.description END,
@@ -1180,6 +1182,7 @@ async function syncSingleEpicFromJira(epicKey) {
         is_subtask=excluded.is_subtask,
         parent_task_id=COALESCE(excluded.parent_task_id, tasks.parent_task_id),
         epic_id=COALESCE(excluded.epic_id, tasks.epic_id),
+        linked_tasks=excluded.linked_tasks,
         last_synced=excluded.last_synced
     `);
 
