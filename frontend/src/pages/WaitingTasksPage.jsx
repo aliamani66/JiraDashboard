@@ -286,7 +286,18 @@ const WaitingTasksPage = () => {
                                     {links.map((lt, lIdx) => {
                                       const lUrl = `${JIRA_BASE_URL}/browse/${lt.key}`;
                                       const rel = lt.relationship || lt.linkType || 'وابسته به';
-                                      const isServed = String(rel).toLowerCase().includes('served') || String(rel).toLowerCase().includes('serves');
+                                      const rLow = String(rel).toLowerCase();
+                                      const isBlock = rLow.includes('block');
+                                      const isServeOperate = rLow.includes('serve') || rLow.includes('operat') || rLow.includes('depend') || rLow.includes('wait') || rLow.includes('hold');
+
+                                      const bg = isBlock 
+                                        ? 'rgba(239, 68, 68, 0.22)' 
+                                        : isServeOperate 
+                                        ? 'rgba(245, 158, 11, 0.22)' 
+                                        : 'rgba(56, 189, 248, 0.18)';
+                                      const border = isBlock ? '1px solid #EF4444' : isServeOperate ? '1px solid #F59E0B' : '1px solid #38BDF8';
+                                      const textCol = isBlock ? '#FCA5A5' : isServeOperate ? '#FDE68A' : '#BAE6FD';
+
                                       return (
                                         <a
                                           key={lIdx}
@@ -298,20 +309,20 @@ const WaitingTasksPage = () => {
                                             alignItems: 'center',
                                             gap: '0.3rem',
                                             fontSize: '0.74rem',
-                                            padding: '0.18rem 0.55rem',
+                                            padding: '0.2rem 0.55rem',
                                             borderRadius: '6px',
-                                            background: isServed ? 'rgba(245, 158, 11, 0.18)' : 'rgba(56, 189, 248, 0.15)',
-                                            border: isServed ? '1px solid rgba(245, 158, 11, 0.45)' : '1px solid rgba(56, 189, 248, 0.35)',
-                                            color: isServed ? '#FDE68A' : '#7DD3FC',
+                                            background: bg,
+                                            border: border,
+                                            color: textCol,
                                             textDecoration: 'none',
-                                            fontWeight: 600
+                                            fontWeight: 700
                                           }}
                                           title={`${rel}: ${lt.title || lt.key} (${lt.status || ''})`}
                                         >
                                           <span>{rel}:</span>
-                                          <strong style={{ color: '#FFFFFF' }}>{lt.key}</strong>
-                                          {lt.status && <span style={{ opacity: 0.85, fontSize: '0.7rem' }}>({lt.status})</span>}
-                                          <ExternalLink size={10} style={{ opacity: 0.7 }} />
+                                          <strong style={{ color: '#FFFFFF', textDecoration: 'underline' }}>{lt.key}</strong>
+                                          {lt.status && <span style={{ opacity: 0.9, fontSize: '0.7rem', background: 'rgba(0,0,0,0.3)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>{lt.status}</span>}
+                                          <ExternalLink size={10} style={{ opacity: 0.8 }} />
                                         </a>
                                       );
                                     })}

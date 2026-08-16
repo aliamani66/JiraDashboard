@@ -133,7 +133,18 @@ const TaskList = ({ tasks }) => {
                           {links.map((lt, lIdx) => {
                             const lUrl = `${JIRA_BASE_URL}/browse/${lt.key}`;
                             const rel = lt.relationship || lt.linkType || 'وابسته به';
-                            const isServed = String(rel).toLowerCase().includes('served') || String(rel).toLowerCase().includes('serves');
+                            const rLow = String(rel).toLowerCase();
+                            const isBlock = rLow.includes('block');
+                            const isServeOperate = rLow.includes('serve') || rLow.includes('operat') || rLow.includes('depend') || rLow.includes('wait') || rLow.includes('hold');
+                            
+                            const bg = isBlock 
+                              ? 'rgba(239, 68, 68, 0.22)' 
+                              : isServeOperate 
+                              ? 'rgba(245, 158, 11, 0.22)' 
+                              : 'rgba(56, 189, 248, 0.18)';
+                            const border = isBlock ? '1px solid #EF4444' : isServeOperate ? '1px solid #F59E0B' : '1px solid #38BDF8';
+                            const textCol = isBlock ? '#FCA5A5' : isServeOperate ? '#FDE68A' : '#BAE6FD';
+
                             return (
                               <a
                                 key={lIdx}
@@ -147,9 +158,9 @@ const TaskList = ({ tasks }) => {
                                   fontSize: '0.76rem',
                                   padding: '0.2rem 0.6rem',
                                   borderRadius: '8px',
-                                  background: isServed ? 'rgba(245, 158, 11, 0.22)' : 'rgba(56, 189, 248, 0.18)',
-                                  border: isServed ? '1px solid #F59E0B' : '1px solid #38BDF8',
-                                  color: isServed ? '#FDE68A' : '#BAE6FD',
+                                  background: bg,
+                                  border: border,
+                                  color: textCol,
                                   textDecoration: 'none',
                                   fontWeight: 700,
                                   boxShadow: '0 2px 6px rgba(0,0,0,0.3)'

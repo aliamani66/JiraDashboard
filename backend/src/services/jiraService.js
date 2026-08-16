@@ -415,33 +415,54 @@ async function fetchEpics() {
         }
       }
       const labels = Array.from(labelSet);
-      const rawLinks = Array.isArray(issue.fields?.issuelinks) ? issue.fields.issuelinks : [];
+      const rawLinks = Array.isArray(issue.fields?.issuelinks) ? issue.fields.issuelinks : (Array.isArray(issue.fields?.linkedIssues) ? issue.fields.linkedIssues : []);
       const linkedTasks = [];
       const relationsToSave = [];
 
       for (const link of rawLinks) {
-        const target = link.outwardIssue || link.inwardIssue;
-        const relType = link.type?.name || 'Related';
-        const relDesc = link.outwardIssue ? (link.type?.outward || 'relates to') : (link.type?.inward || 'relates to');
-        if (target && target.key) {
-          linkedTasks.push({
-            key: target.key,
-            type: relType,
-            relationship: relDesc,
-            title: target.fields?.summary || target.key,
-            status: target.fields?.status?.name || 'To Do'
-          });
-          relationsToSave.push({
-            task_id: issue.key,
-            linked_task_id: target.key.toUpperCase(),
-            relation_type: relType,
-            relationship: relDesc,
-            title: target.fields?.summary || null,
-            status: target.fields?.status?.name || null,
-            assignee: target.fields?.assignee?.displayName || null,
-            start_date: target.fields?.created?.split('T')[0] || null,
-            due_date: target.fields?.duedate || null
-          });
+        const relType = link.type?.name || link.type || 'Related';
+        const candidates = [
+          { item: link.inwardIssue || link.inward, rel: link.type?.inward || link.inward || 'is related to', dir: 'inward' },
+          { item: link.outwardIssue || link.outward, rel: link.type?.outward || link.outward || 'relates to', dir: 'outward' },
+          { item: link.otherIssue || link.issue || link.target, rel: relType, dir: 'other' }
+        ];
+
+        for (const cand of candidates) {
+          const target = cand.item;
+          if (target && typeof target === 'object' && target.key) {
+            if (!linkedTasks.some(lt => lt.key === target.key)) {
+              const linkTitle = target.fields?.summary || target.summary || target.key;
+              const linkStatus = target.fields?.status?.name || (typeof target.status === 'object' ? target.status?.name : target.status) || 'To Do';
+              const linkAssignee = target.fields?.assignee ? (target.fields.assignee.displayName || target.fields.assignee.name) : (typeof target.assignee === 'object' ? target.assignee.displayName : target.assignee) || null;
+              const linkStartDate = target.fields?.created ? target.fields.created.split('T')[0] : null;
+              const linkDueDate = target.fields?.duedate || target.duedate || null;
+
+              linkedTasks.push({
+                key: target.key,
+                type: relType,
+                linkType: relType,
+                relationship: cand.rel,
+                direction: cand.dir,
+                title: linkTitle,
+                status: linkStatus,
+                assignee: linkAssignee,
+                start_date: linkStartDate,
+                due_date: linkDueDate
+              });
+
+              relationsToSave.push({
+                task_id: issue.key,
+                linked_task_id: target.key.toUpperCase(),
+                relation_type: relType,
+                relationship: cand.rel,
+                title: linkTitle,
+                status: linkStatus,
+                assignee: linkAssignee,
+                start_date: linkStartDate,
+                due_date: linkDueDate
+              });
+            }
+          }
         }
       }
 
@@ -763,43 +784,83 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     const typeName = linkType.name || link.type || 'Relates';
     const inwardDesc = (linkType.inward || link.inward || 'is related to').toLowerCase();
     const outwardDesc = (linkType.outward || link.outward || 'relates to').toLowerCase();
-    const blockingKeywords = ['is blocked by', 'depends on', 'is depended on by', 'is waited on by', 'is served by', 'served by', 'serves', 'blocked', 'waiting', 'holding', 'prerequisite'];
+    const blockingKeywords = [
+      'block', 'blocked', 'depend', 'wait', 'serve', 'served', 'operat', 'hold', 'held', 'prereq', 'need', 'require', 'cause', 'relat', 'link', 'subtask', 'parent'
+    ];
 
     const candidates = [
-      { item: link.inwardIssue || link.inward, rel: linkType.inward || 'is related to', dir: 'inward', isBlocking: blockingKeywords.some(kw => inwardDesc.includes(kw)) },
-      { item: link.outwardIssue || link.outward, rel: linkType.outward || 'relates to', dir: 'outward', isBlocking: blockingKeywords.some(kw => outwardDesc.includes(kw)) },
-      { item: link.otherIssue || link.issue || link.target, rel: linkType.name || 'is related to', dir: 'other', isBlocking: false }
+      { item: link.inwardIssue || link.inward, rel: linkType.inward || link.inward || 'is related to', dir: 'inward', isBlocking: blockingKeywords.some(kw => inwardDesc.includes(kw)) },
+      { item: link.outwardIssue || link.outward, rel: linkType.outward || link.outward || 'relates to', dir: 'outward', isBlocking: blockingKeywords.some(kw => outwardDesc.includes(kw)) },
+      { item: link.otherIssue || link.issue || link.target, rel: linkType.name || typeName, dir: 'other', isBlocking: false }
     ];
 
     for (const cand of candidates) {
       const targetObj = cand.item;
       if (targetObj && typeof targetObj === 'object' && targetObj.key) {
         if (!linkedTasks.some(lt => lt.key === targetObj.key)) {
+          const fields = targetObj.fields || targetObj;
+          const linkTitle = fields?.summary || targetObj.summary || targetObj.key;
+          const linkStatus = fields?.status?.name || (typeof fields?.status === 'object' ? fields.status.name : fields?.status) || (typeof targetObj.status === 'object' ? targetObj.status.name : targetObj.status) || null;
+          const linkAssignee = fields?.assignee ? (fields.assignee.displayName || fields.assignee.name) : (typeof targetObj.assignee === 'object' ? targetObj.assignee.displayName : targetObj.assignee) || null;
+          const linkStartDate = fields?.created ? fields.created.split('T')[0] : null;
+          const linkDueDate = fields?.duedate || targetObj.duedate || null;
+
           linkedTasks.push({
             key: targetObj.key,
-            title: targetObj.fields?.summary || targetObj.summary || targetObj.key,
+            title: linkTitle,
             linkType: typeName,
             relationship: cand.rel,
             direction: cand.dir,
-            status: targetObj.fields?.status?.name || (typeof targetObj.status === 'object' ? targetObj.status.name : targetObj.status) || null,
-            assignee: targetObj.fields?.assignee ? (targetObj.fields.assignee.displayName || targetObj.fields.assignee.name) : (typeof targetObj.assignee === 'object' ? targetObj.assignee.displayName : targetObj.assignee) || null,
-            start_date: targetObj.fields?.created ? targetObj.fields.created.split('T')[0] : null,
-            due_date: targetObj.fields?.duedate || targetObj.duedate || null
+            status: linkStatus,
+            assignee: linkAssignee,
+            start_date: linkStartDate,
+            due_date: linkDueDate
           });
-        }
 
-        if (cand.isBlocking) {
-          isWaiting = 1;
-          const fields = targetObj.fields || targetObj;
-          if (fields) {
-            if (fields.assignee) {
-              linkedWaitingTeam = linkedWaitingTeam || (fields.assignee.displayName || fields.assignee.name);
+          if (cand.isBlocking || isWaiting === 1) {
+            if (!linkedWaitingTeam) {
+              if (fields.assignee) {
+                linkedWaitingTeam = fields.assignee.displayName || fields.assignee.name;
+              } else if (fields.project) {
+                linkedWaitingTeam = fields.project.name || fields.project.key;
+              } else if (targetObj.key) {
+                linkedWaitingTeam = `پروژه ${targetObj.key.split('-')[0]}`;
+              }
             }
-            if (fields.project) {
-              linkedWaitingTeam = linkedWaitingTeam || (fields.project.name || fields.project.key);
+            if (!linkedWaitingReason) {
+              linkedWaitingReason = `${cand.rel}: ${targetObj.key} (${linkTitle})`;
             }
           }
-          linkedWaitingReason = `وابسته/بلاک شده توسط ${targetObj.key}: ${fields?.summary || ''}`;
+        }
+      }
+    }
+  }
+
+  // Check custom fields that may contain linked Jira issue objects or arrays
+  if (issue.fields && typeof issue.fields === 'object') {
+    for (const [fKey, fVal] of Object.entries(issue.fields)) {
+      if (fKey.startsWith('customfield_') && fVal) {
+        const checkItem = (item) => {
+          if (item && typeof item === 'object' && item.key && /^[A-Z][A-Z0-9_]*-\d+$/i.test(item.key)) {
+            if (!linkedTasks.some(lt => lt.key === item.key)) {
+              linkedTasks.push({
+                key: item.key,
+                title: item.fields?.summary || item.summary || item.key,
+                linkType: 'CustomField',
+                relationship: 'linked via ' + fKey,
+                direction: 'outward',
+                status: item.fields?.status?.name || null,
+                assignee: item.fields?.assignee?.displayName || null,
+                start_date: item.fields?.created ? item.fields.created.split('T')[0] : null,
+                due_date: item.fields?.duedate || null
+              });
+            }
+          }
+        };
+        if (Array.isArray(fVal)) {
+          fVal.forEach(checkItem);
+        } else if (typeof fVal === 'object') {
+          checkItem(fVal);
         }
       }
     }
