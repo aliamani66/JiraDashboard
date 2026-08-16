@@ -154,18 +154,69 @@ for (let i = 1; i <= 500; i++) {
 }
 
 function mockJiraSearch(jql, fields = [], options = {}) {
-  const isEpicQuery = jql.toLowerCase().includes('issuetype=epic') || jql.toLowerCase().includes('issuetype = epic');
+  const isEpicQuery = jql.toLowerCase().includes('issuetype=epic') || jql.toLowerCase().includes('issuetype = epic') || jql.toLowerCase().includes('issuetype in (epic');
   const isWithoutEpicQuery = jql.includes('"Epic Link" EMPTY') || jql.includes('parent IS EMPTY') || jql.includes('withoutEpic');
 
   // Extract project filter from JQL
   let projKeys = null;
   const inMatch = jql.match(/project IN \(([^)]+)\)/i);
-  const eqMatch = jql.match(/project = ([A-Z0-9_]+)/i);
+  const eqMatch = jql.match(/project = "?([A-Z0-9_]+)"?/i);
   if (inMatch && inMatch[1]) {
     projKeys = inMatch[1].split(',').map(s => s.trim().replace(/['"]/g, '').toUpperCase());
   } else if (eqMatch && eqMatch[1]) {
     projKeys = [eqMatch[1].trim().replace(/['"]/g, '').toUpperCase()];
   }
+
+  // Extract Date Filters from JQL (handles created >=, updated >=, created <=, etc.)
+  let filterStartDate = null;
+  let filterEndDate = null;
+
+  const startMatches = jql.match(/(?:created|updated)\s*>=\s*"([^"]+)"/gi);
+  if (startMatches) {
+    for (const sm of startMatches) {
+      const valMatch = sm.match(/"([^"]+)"/);
+      if (valMatch && valMatch[1]) {
+        const d = new Date(valMatch[1]);
+        if (!isNaN(d.getTime())) {
+          if (!filterStartDate || d < filterStartDate) {
+            filterStartDate = d;
+          }
+        }
+      }
+    }
+  }
+
+  const endMatches = jql.match(/(?:created|updated)\s*<=\s*"([^"]+)"/gi);
+  if (endMatches) {
+    for (const em of endMatches) {
+      const valMatch = em.match(/"([^"]+)"/);
+      if (valMatch && valMatch[1]) {
+        const d = new Date(valMatch[1]);
+        if (!isNaN(d.getTime())) {
+          d.setHours(23, 59, 59, 999);
+          if (!filterEndDate || d > filterEndDate) {
+            filterEndDate = d;
+          }
+        }
+      }
+    }
+  }
+
+  const checkDateMatch = (item) => {
+    if (!filterStartDate && !filterEndDate) return true;
+    const cDate = item.fields?.created ? new Date(item.fields.created) : null;
+    const uDate = item.fields?.updated ? new Date(item.fields.updated) : cDate;
+
+    if (filterStartDate) {
+      const matchStart = (cDate && cDate >= filterStartDate) || (uDate && uDate >= filterStartDate);
+      if (!matchStart) return false;
+    }
+    if (filterEndDate) {
+      const matchEnd = (cDate && cDate <= filterEndDate) || (uDate && uDate <= filterEndDate);
+      if (!matchEnd) return false;
+    }
+    return true;
+  };
 
   if (isEpicQuery) {
     let filteredEpics = [...mockEpics];
@@ -175,6 +226,8 @@ function mockJiraSearch(jql, fields = [], options = {}) {
         return projKeys.includes(pKey);
       });
     }
+    filteredEpics = filteredEpics.filter(checkDateMatch);
+
     return {
       startAt: 0,
       maxResults: filteredEpics.length,
@@ -193,23 +246,6 @@ function mockJiraSearch(jql, fields = [], options = {}) {
 
   if (isWithoutEpicQuery) {
     filteredTasks = filteredTasks.filter(t => !t.fields.customfield_10006 && !t.fields.parent);
-    const createdStartMatch = jql.match(/created >= "([^"]+)"/);
-    const createdEndMatch = jql.match(/created <= "([^"]+)"/);
-    if (createdStartMatch && createdStartMatch[1]) {
-      const startDate = new Date(createdStartMatch[1]);
-      filteredTasks = filteredTasks.filter(t => new Date(t.fields.created) >= startDate);
-    }
-    if (createdEndMatch && createdEndMatch[1]) {
-      const endDate = new Date(createdEndMatch[1]);
-      endDate.setHours(23, 59, 59, 999);
-      filteredTasks = filteredTasks.filter(t => new Date(t.fields.created) <= endDate);
-    }
-    return {
-      startAt: 0,
-      maxResults: filteredTasks.length,
-      total: filteredTasks.length,
-      issues: filteredTasks
-    };
   }
 
   const isWithEpicQuery = jql.includes('"Epic Link" NOT EMPTY') || jql.includes('withEpic');
@@ -217,18 +253,7 @@ function mockJiraSearch(jql, fields = [], options = {}) {
     filteredTasks = filteredTasks.filter(t => Boolean(t.fields.customfield_10006 || t.fields.parent));
   }
 
-  const createdStartMatch = jql.match(/created >= "([^"]+)"/);
-  const createdEndMatch = jql.match(/created <= "([^"]+)"/);
-
-  if (createdStartMatch && createdStartMatch[1]) {
-    const startDate = new Date(createdStartMatch[1]);
-    filteredTasks = filteredTasks.filter(t => new Date(t.fields.created) >= startDate);
-  }
-  if (createdEndMatch && createdEndMatch[1]) {
-    const endDate = new Date(createdEndMatch[1]);
-    endDate.setHours(23, 59, 59, 999);
-    filteredTasks = filteredTasks.filter(t => new Date(t.fields.created) <= endDate);
-  }
+  filteredTasks = filteredTasks.filter(checkDateMatch);
 
   return {
     startAt: 0,
