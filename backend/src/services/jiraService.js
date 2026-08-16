@@ -354,10 +354,8 @@ async function fetchEpics(days = null) {
       const issueKey = (issue.key || '').trim().toUpperCase();
       if (!/^[A-Z0-9_]+-\d+$/i.test(issueKey)) return false;
       const issueProjKey = (issue.fields?.project?.key || issueKey.split('-')[0] || '').toUpperCase();
-      const issueTypeName = (issue.fields?.issuetype?.name || '').toLowerCase().trim();
-      const isEpicType = issueTypeName === 'epic' || issueTypeName === 'اپیک' || !!issue.fields?.['customfield_10008'] || !!issue.fields?.['Epic Name'] || !!issue.fields?.[customFields.epicNameField];
       const isConfiguredProj = configuredProjKeysList.length > 0 ? configuredProjKeysList.includes(issueProjKey) : true;
-      return isEpicType && isConfiguredProj;
+      return isConfiguredProj;
     });
 
     return filteredIssues.map(issue => {
