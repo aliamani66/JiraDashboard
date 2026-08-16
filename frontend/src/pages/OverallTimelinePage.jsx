@@ -37,8 +37,10 @@ const OverallTimelinePage = () => {
     }
     const keys = new Set();
     (projects || []).forEach(p => {
-      const pKey = p.project_key || (p.id ? p.id.split('-')[0].toUpperCase() : '');
-      if (pKey && pKey !== 'UNKNOWN') keys.add(pKey);
+      if (p.id && p.id.includes('-')) {
+        const pKey = p.project_key || p.id.split('-')[0].toUpperCase();
+        if (pKey && pKey !== 'UNKNOWN') keys.add(pKey);
+      }
     });
     return Array.from(keys).sort();
   }, [configuredProjects, projects]);
@@ -46,8 +48,11 @@ const OverallTimelinePage = () => {
   if (loading) return <div className="loading-screen">در حال دریافت تایم‌لاین پیشرفت کل پروژه‌ها...</div>;
   if (error) return <div className="error-screen">خطا در دریافت اطلاعات پروژه‌ها</div>;
 
-  // Filter projects by Jira Project Key and search query
+  // Filter projects by Jira Project Key and search query, strictly excluding raw project keys like 'ORD' or 'OPS'
   const filteredProjects = projects.filter(p => {
+    // Exclude generic root project keys that don't have an issue number (e.g. 'ORD', 'OPS')
+    if (!p.id || !p.id.includes('-') || !/^[A-Z][A-Z0-9_]*-\d+$/i.test(p.id)) return false;
+
     const jKey = (p.project_key || (p.id ? p.id.split('-')[0] : '')).toUpperCase();
     if (selectedProjectKeys.length > 0 && !selectedProjectKeys.includes(jKey)) return false;
 

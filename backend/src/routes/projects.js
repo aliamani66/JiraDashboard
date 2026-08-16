@@ -221,17 +221,17 @@ router.get('/quarters', (req, res) => {
   }
 });
 
-// Overall stats
+// Overall stats (calculates strictly over real projects/epics with hyphens, excluding root container 'ORD'/'OPS')
 router.get('/stats', (req, res) => {
   try {
     const db = getDb();
-    const totalProjects = db.prepare("SELECT COUNT(*) as count FROM projects").get().count;
-    const activeProjects = db.prepare("SELECT COUNT(*) as count FROM projects WHERE status != 'Done'").get().count;
-    const completedProjects = db.prepare("SELECT COUNT(*) as count FROM projects WHERE status = 'Done'").get().count;
-    const totalTasks = db.prepare("SELECT SUM(total_tasks) as count FROM projects").get().count || 0;
-    const waitingTasks = db.prepare("SELECT SUM(waiting_tasks) as count FROM projects").get().count || 0;
+    const totalProjects = db.prepare("SELECT COUNT(*) as count FROM projects WHERE id LIKE '%-%'").get().count;
+    const activeProjects = db.prepare("SELECT COUNT(*) as count FROM projects WHERE id LIKE '%-%' AND status != 'Done'").get().count;
+    const completedProjects = db.prepare("SELECT COUNT(*) as count FROM projects WHERE id LIKE '%-%' AND status = 'Done'").get().count;
+    const totalTasks = db.prepare("SELECT SUM(total_tasks) as count FROM projects WHERE id LIKE '%-%'").get().count || 0;
+    const waitingTasks = db.prepare("SELECT SUM(waiting_tasks) as count FROM projects WHERE id LIKE '%-%'").get().count || 0;
     
-    let avgProgressRow = db.prepare("SELECT AVG(progress) as avg FROM projects").get();
+    let avgProgressRow = db.prepare("SELECT AVG(progress) as avg FROM projects WHERE id LIKE '%-%'").get();
     let avgProgress = avgProgressRow && avgProgressRow.avg ? avgProgressRow.avg : 0;
 
     res.json({
