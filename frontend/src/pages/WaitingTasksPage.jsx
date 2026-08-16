@@ -81,7 +81,14 @@ const WaitingTasksPage = () => {
     const pTitle = project.projectTitle || project.project_name || '';
     const jKey = (project.project_key || (pId ? pId.split('-')[0] : '')).toUpperCase();
 
-    const hasMatchingTask = (project.tasks || []).some(t => {
+    const validTasks = (project.tasks || []).filter(t => {
+      const s = String(t.status || '').toLowerCase().trim();
+      return !['done', 'closed', 'resolved', 'complete', 'completed', 'finished', 'انجام شده', 'بسته شده', 'خاتمه یافته'].includes(s);
+    });
+
+    if (validTasks.length === 0) return false;
+
+    const hasMatchingTask = validTasks.some(t => {
       const tId = t.task_id || t.id || '';
       const tKey = tId ? tId.split('-')[0].toUpperCase() : '';
       return selectedProjectKeys.length === 0 || selectedProjectKeys.includes(tKey);
@@ -93,7 +100,7 @@ const WaitingTasksPage = () => {
       const q = searchQuery.toLowerCase().trim();
       const matchPTitle = pTitle.toLowerCase().includes(q);
       const matchPId = pId.toLowerCase().includes(q);
-      const matchTasks = (project.tasks || []).some(t => {
+      const matchTasks = validTasks.some(t => {
         const title = (t.title || '').toLowerCase();
         const tid = (t.task_id || t.id || '').toLowerCase();
         const team = (t.waiting_for_team || t.blocked_by_team || '').toLowerCase();
@@ -231,13 +238,17 @@ const WaitingTasksPage = () => {
                   </div>
                   
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <span className="waiting-count-tag">{project.tasks?.length || 0} تسک منتظر</span>
+                    <span className="waiting-count-tag">
+                      {(project.tasks || []).filter(t => !['done', 'closed', 'resolved', 'complete', 'completed', 'finished', 'انجام شده', 'بسته شده', 'خاتمه یافته'].includes(String(t.status || '').toLowerCase().trim())).length} تسک منتظر
+                    </span>
                   </div>
                 </div>
                 
                 {isExpanded && (
                   <div className="tasks-grid scrollable-tasks-grid">
-                    {(project.tasks || []).map(task => {
+                    {(project.tasks || [])
+                      .filter(t => !['done', 'closed', 'resolved', 'complete', 'completed', 'finished', 'انجام شده', 'بسته شده', 'خاتمه یافته'].includes(String(t.status || '').toLowerCase().trim()))
+                      .map(task => {
                       const pri = priorityMap[task.priority] || { label: task.priority || 'متوسط', className: 'normal' };
                       const taskIdStr = task.task_id || task.id;
                       const teamName = task.waiting_for_team || task.blocked_by_team || 'تیم وابسته';

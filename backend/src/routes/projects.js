@@ -505,7 +505,13 @@ router.get('/reports/manager-audit', (req, res) => {
 router.get('/projects/:id/blocked', (req, res) => {
   try {
     const db = getDb();
-    const tasks = db.prepare("SELECT * FROM tasks WHERE project_id = ? AND (is_waiting = 1 OR status = 'OnHolding' OR status = 'Waiting') ORDER BY sort_order ASC, id ASC").all(req.params.id);
+    const tasks = db.prepare(`
+      SELECT * FROM tasks 
+      WHERE project_id = ? 
+        AND (is_waiting = 1 OR UPPER(status) IN ('WAITING', 'ONHOLDING', 'ON HOLD', 'ON_HOLDING', 'BLOCKED', 'منتظر', 'متوقف'))
+        AND UPPER(status) NOT IN ('DONE', 'CLOSED', 'RESOLVED', 'COMPLETE', 'COMPLETED', 'FINISHED', 'انجام شده', 'بسته شده', 'خاتمه یافته')
+      ORDER BY sort_order ASC, id ASC
+    `).all(req.params.id);
     res.json(tasks);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch waiting tasks for project' });
@@ -516,7 +522,14 @@ router.get('/projects/:id/blocked', (req, res) => {
 router.get('/waiting-tasks', (req, res) => {
   try {
     const db = getDb();
-    const tasks = db.prepare("SELECT t.*, p.title as projectTitle FROM tasks t JOIN projects p ON t.project_id = p.id WHERE t.is_waiting = 1 OR t.status = 'OnHolding' OR t.status = 'Waiting' ORDER BY t.project_id ASC").all();
+    const tasks = db.prepare(`
+      SELECT t.*, p.title as projectTitle 
+      FROM tasks t 
+      LEFT JOIN projects p ON (UPPER(t.project_id) = UPPER(p.id) OR UPPER(t.parent_task_id) = UPPER(p.id) OR UPPER(t.epic_id) = UPPER(p.id))
+      WHERE (t.is_waiting = 1 OR UPPER(t.status) IN ('WAITING', 'ONHOLDING', 'ON HOLD', 'ON_HOLDING', 'BLOCKED', 'منتظر', 'متوقف'))
+        AND UPPER(t.status) NOT IN ('DONE', 'CLOSED', 'RESOLVED', 'COMPLETE', 'COMPLETED', 'FINISHED', 'انجام شده', 'بسته شده', 'خاتمه یافته')
+      ORDER BY t.project_id ASC, t.id ASC
+    `).all();
     
     const byTeamMap = new Map();
     let totalWaiting = 0;

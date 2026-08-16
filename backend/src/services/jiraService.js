@@ -769,10 +769,26 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
 
   const rawStatus = issue.fields?.status?.name || 'To Do';
   const mappedStatus = mapping.statusMapping[rawStatus] || rawStatus;
+  const statusLower = (rawStatus || '').toLowerCase().trim();
+  const mappedLower = (mappedStatus || '').toLowerCase().trim();
 
-  let isWaiting = mapping.waitingStatuses.some(ws => 
-    rawStatus.toLowerCase() === ws.toLowerCase()
-  ) ? 1 : 0;
+  // Strict check: Done / Closed tasks must NEVER be marked as waiting
+  const isDoneStatus = [
+    'done', 'closed', 'resolved', 'complete', 'completed', 'finished', 'انجام شده', 'بسته شده', 'تکمیل شده', 'خاتمه یافته'
+  ].includes(statusLower) || [
+    'done', 'closed', 'resolved', 'complete', 'completed', 'finished', 'انجام شده', 'بسته شده', 'تکمیل شده', 'خاتمه یافته'
+  ].includes(mappedLower);
+
+  let isWaiting = 0;
+  if (!isDoneStatus) {
+    const isExplicitWaiting = mapping.waitingStatuses.some(ws => 
+      statusLower === ws.toLowerCase() || mappedLower === ws.toLowerCase()
+    ) || ['waiting', 'onholding', 'on hold', 'on_holding', 'blocked', 'منتظر', 'متوقف', 'توقف'].includes(statusLower) || ['waiting', 'onholding', 'on hold', 'on_holding', 'blocked', 'منتظر', 'متوقف', 'توقف'].includes(mappedLower);
+
+    if (isExplicitWaiting) {
+      isWaiting = 1;
+    }
+  }
 
   const issueLinks = issue.fields?.issuelinks || issue.fields?.linkedIssues || [];
   let linkedWaitingTeam = null;
@@ -784,13 +800,15 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
     const typeName = linkType.name || link.type || 'Relates';
     const inwardDesc = (linkType.inward || link.inward || 'is related to').toLowerCase();
     const outwardDesc = (linkType.outward || link.outward || 'relates to').toLowerCase();
-    const blockingKeywords = [
-      'block', 'blocked', 'depend', 'wait', 'serve', 'served', 'operat', 'hold', 'held', 'prereq', 'need', 'require', 'cause', 'relat', 'link', 'subtask', 'parent'
+    
+    // Explicit blocker keywords only (subtasks, relates, general links are NOT blockers by default)
+    const blockerKeywords = [
+      'is blocked by', 'blocked by', 'is depended on by', 'is waited on by', 'waits on', 'is held by', 'is prevented by'
     ];
 
     const candidates = [
-      { item: link.inwardIssue || link.inward, rel: linkType.inward || link.inward || 'is related to', dir: 'inward', isBlocking: blockingKeywords.some(kw => inwardDesc.includes(kw)) },
-      { item: link.outwardIssue || link.outward, rel: linkType.outward || link.outward || 'relates to', dir: 'outward', isBlocking: blockingKeywords.some(kw => outwardDesc.includes(kw)) },
+      { item: link.inwardIssue || link.inward, rel: linkType.inward || link.inward || 'is related to', dir: 'inward', isBlocking: blockerKeywords.some(kw => inwardDesc.includes(kw)) },
+      { item: link.outwardIssue || link.outward, rel: linkType.outward || link.outward || 'relates to', dir: 'outward', isBlocking: blockerKeywords.some(kw => outwardDesc.includes(kw)) },
       { item: link.otherIssue || link.issue || link.target, rel: linkType.name || typeName, dir: 'other', isBlocking: false }
     ];
 
@@ -817,7 +835,10 @@ function parseTaskIssue(issue, epicKeyOverride = null, index = 0, knownEpicKeysS
             due_date: linkDueDate
           });
 
-          if (cand.isBlocking || isWaiting === 1) {
+          if (!isDoneStatus && (cand.isBlocking || isWaiting === 1)) {
+            if (cand.isBlocking) {
+              isWaiting = 1;
+            }
             if (!linkedWaitingTeam) {
               if (fields.assignee) {
                 linkedWaitingTeam = fields.assignee.displayName || fields.assignee.name;
