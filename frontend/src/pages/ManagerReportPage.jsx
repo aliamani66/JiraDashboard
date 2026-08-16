@@ -169,13 +169,6 @@ const ManagerReportPage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
     >
-      {/* ─── Top Actions Bar (Print Button Only) ─────────────────────────── */}
-      <div className="mr-actions-bar">
-        <button className="mr-print-btn icon-only-btn" onClick={handlePrint} title={`چاپ تسک‌های فیلترشده (${filteredTasks.length} تسک)`}>
-          <Printer size={18} />
-        </button>
-      </div>
-
       {/* ─── Printable Document Header (Appears only on Print / PDF) ─────── */}
       <div className="mr-print-only-header">
         <h1 style={{ margin: 0, fontSize: '1.4rem' }}>گزارش ممیزی و وضعیت تسک‌ها</h1>
@@ -185,80 +178,91 @@ const ManagerReportPage = () => {
           <span>تاریخ گزارش: <strong>{new Date().toLocaleDateString('fa-IR')}</strong></span>
         </div>
       </div>
-
-      {/* ─── Top KPI Cards ─────────────────────────────────────────────── */}
-      <div className="mr-kpi-grid">
-        
-        {/* KPI 1: Orphan Tasks */}
-        <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'orphan' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('orphan')}>
-          <div className="mr-kpi-top">
-            <span className="mr-kpi-label">📂 تسک‌های بدون اپیک (خارج از اپیک)</span>
-            <div className="mr-kpi-badge warning">
-              <AlertTriangle size={14} />
+      {/* ─── Top KPI Cards + Inline Print Button ───────────────────────── */}
+      <div className="mr-kpi-wrapper">
+        <div className="mr-kpi-grid">
+          
+          {/* KPI 1: Orphan Tasks */}
+          <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'orphan' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('orphan')}>
+            <div className="mr-kpi-top">
+              <span className="mr-kpi-label">📂 تسک‌های بدون اپیک (خارج از اپیک)</span>
+              <div className="mr-kpi-badge warning">
+                <AlertTriangle size={14} />
+              </div>
+            </div>
+            <div className="mr-kpi-value">{stats.orphanCount || 0} <small>تسک</small></div>
+            <div className="mr-kpi-subtext">
+              <span>⏱️ <strong>{stats.orphanSpentHours || 0}h</strong> کارکرد ثبت‌شده بدون اپیک</span>
             </div>
           </div>
-          <div className="mr-kpi-value">{stats.orphanCount || 0} <small>تسک</small></div>
-          <div className="mr-kpi-subtext">
-            <span>⏱️ <strong>{stats.orphanSpentHours || 0}h</strong> کارکرد ثبت‌شده بدون اپیک</span>
-          </div>
-        </div>
 
-        {/* KPI 2: Revised Estimate Tasks */}
-        <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'revised' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('revised')}>
-          <div className="mr-kpi-top">
-            <span className="mr-kpi-label">📈 تغییرات استیمیت (دست‌خورده)</span>
-            <div className="mr-kpi-badge orange">
-              <Zap size={14} />
+          {/* KPI 2: Revised Estimate Tasks */}
+          <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'revised' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('revised')}>
+            <div className="mr-kpi-top">
+              <span className="mr-kpi-label">📈 تغییرات استیمیت (دست‌خورده)</span>
+              <div className="mr-kpi-badge orange">
+                <Zap size={14} />
+              </div>
+            </div>
+            <div className="mr-kpi-value">{stats.estimateRevisionCount || 0} <small>تسک</small></div>
+            <div className="mr-kpi-subtext">
+              <span>تسک‌های دارای تغییر و نوسان تخمین زمان</span>
             </div>
           </div>
-          <div className="mr-kpi-value">{stats.estimateRevisionCount || 0} <small>تسک</small></div>
-          <div className="mr-kpi-subtext">
-            <span>تسک‌های دارای تغییر و نوسان تخمین زمان</span>
-          </div>
-        </div>
 
-        {/* KPI 3: No Sprint Tasks */}
-        <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'no_sprint' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('no_sprint')}>
-          <div className="mr-kpi-top">
-            <span className="mr-kpi-label">🏃 تسک‌های خارج از اسپرینت</span>
-            <div className="mr-kpi-badge info">
-              <Clock size={14} />
+          {/* KPI 3: No Sprint Tasks */}
+          <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'no_sprint' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('no_sprint')}>
+            <div className="mr-kpi-top">
+              <span className="mr-kpi-label">🏃 تسک‌های خارج از اسپرینت</span>
+              <div className="mr-kpi-badge info">
+                <Clock size={14} />
+              </div>
+            </div>
+            <div className="mr-kpi-value">{stats.noSprintCount || 0} <small>تسک</small></div>
+            <div className="mr-kpi-subtext">
+              <span>تخصیص نیافته به هیچ اسپرینتی</span>
             </div>
           </div>
-          <div className="mr-kpi-value">{stats.noSprintCount || 0} <small>تسک</small></div>
-          <div className="mr-kpi-subtext">
-            <span>تخصیص نیافته به هیچ اسپرینتی</span>
-          </div>
-        </div>
 
-        {/* KPI 4: No Estimate Tasks */}
-        <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'no_estimate' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('no_estimate')}>
-          <div className="mr-kpi-top">
-            <span className="mr-kpi-label">⏱️ تسک‌های بدون تخمین زمان</span>
-            <div className="mr-kpi-badge danger">
-              <AlertTriangle size={14} />
+          {/* KPI 4: No Estimate Tasks */}
+          <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'no_estimate' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('no_estimate')}>
+            <div className="mr-kpi-top">
+              <span className="mr-kpi-label">⏱️ تسک‌های بدون تخمین زمان</span>
+              <div className="mr-kpi-badge danger">
+                <AlertTriangle size={14} />
+              </div>
+            </div>
+            <div className="mr-kpi-value">{stats.noEstimateCount || 0} <small>تسک</small></div>
+            <div className="mr-kpi-subtext">
+              <span>فاقد Estimate مشخص اولیه</span>
             </div>
           </div>
-          <div className="mr-kpi-value">{stats.noEstimateCount || 0} <small>تسک</small></div>
-          <div className="mr-kpi-subtext">
-            <span>فاقد Estimate مشخص اولیه</span>
-          </div>
-        </div>
 
-        {/* KPI 5: No Due Date Tasks */}
-        <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'no_due_date' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('no_due_date')}>
-          <div className="mr-kpi-top">
-            <span className="mr-kpi-label">📅 تسک‌های بدون تاریخ سررسید</span>
-            <div className="mr-kpi-badge purple">
-              <Calendar size={14} />
+          {/* KPI 5: No Due Date Tasks */}
+          <div className={`mr-kpi-card glass-card ${auditTypeFilter === 'no_due_date' ? 'active-kpi' : ''}`} onClick={() => setAuditTypeFilter('no_due_date')}>
+            <div className="mr-kpi-top">
+              <span className="mr-kpi-label">📅 تسک‌های بدون تاریخ سررسید</span>
+              <div className="mr-kpi-badge purple">
+                <Calendar size={14} />
+              </div>
+            </div>
+            <div className="mr-kpi-value">{stats.noDueDateCount || 0} <small>تسک</small></div>
+            <div className="mr-kpi-subtext">
+              <span>زمان‌بندی پایانی تعیین نشده</span>
             </div>
           </div>
-          <div className="mr-kpi-value">{stats.noDueDateCount || 0} <small>تسک</small></div>
-          <div className="mr-kpi-subtext">
-            <span>زمان‌بندی پایانی تعیین نشده</span>
-          </div>
+
         </div>
 
+        {/* Inline Print Button alongside KPI tiles */}
+        <button 
+          type="button"
+          className="mr-inline-print-btn icon-only-btn" 
+          onClick={handlePrint} 
+          title={`چاپ تسک‌های فیلترشده (${filteredTasks.length} تسک)`}
+        >
+          <Printer size={18} />
+        </button>
       </div>
 
       {/* ─── Audit Filter Control Panel ────────────────────────────────── */}
