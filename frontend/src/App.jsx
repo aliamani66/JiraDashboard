@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { MotionProvider } from './context/MotionContext';
@@ -16,7 +16,7 @@ import DatabaseManagerPage from './pages/DatabaseManagerPage';
 
 import ErrorBoundary from './components/common/ErrorBoundary';
 
-function ProtectedRoute({ children }) {
+function ProtectedLayout() {
   const { isAuthenticated, loading } = useAuth();
   
   if (loading) return <div className="loading-screen">در حال بارگذاری...</div>;
@@ -24,7 +24,9 @@ function ProtectedRoute({ children }) {
   
   return (
     <ErrorBoundary>
-      <Layout>{children}</Layout>
+      <Layout>
+        <Outlet />
+      </Layout>
     </ErrorBoundary>
   );
 }
@@ -34,88 +36,26 @@ function App() {
     <ThemeProvider>
       <MotionProvider>
         <AuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/project/:id" 
-              element={
-                <ProtectedRoute>
-                  <ProjectPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/sprints" 
-              element={
-                <ProtectedRoute>
-                  <SprintsPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/waiting-tasks" 
-              element={
-                <ProtectedRoute>
-                  <WaitingTasksPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/overall-timeline" 
-              element={
-                <ProtectedRoute>
-                  <OverallTimelinePage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/user-management" 
-              element={
-                <ProtectedRoute>
-                  <UserManagementPage />
-                </ProtectedRoute>
-              } 
-            />
-
-            <Route 
-              path="/manager-reports" 
-              element={
-                <ProtectedRoute>
-                  <ManagerReportPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/jira-settings" 
-              element={
-                <ProtectedRoute>
-                  <JiraSettingsPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/database-manager" 
-              element={
-                <ProtectedRoute>
-                  <DatabaseManagerPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
-      </AuthProvider>
-    </MotionProvider>
-  </ThemeProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route element={<ProtectedLayout />}>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/project/:id" element={<ProjectPage />} />
+                <Route path="/sprints" element={<SprintsPage />} />
+                <Route path="/waiting-tasks" element={<WaitingTasksPage />} />
+                <Route path="/overall-timeline" element={<OverallTimelinePage />} />
+                <Route path="/user-management" element={<UserManagementPage />} />
+                <Route path="/manager-reports" element={<ManagerReportPage />} />
+                <Route path="/jira-settings" element={<JiraSettingsPage />} />
+                <Route path="/database-manager" element={<DatabaseManagerPage />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Router>
+        </AuthProvider>
+      </MotionProvider>
+    </ThemeProvider>
   );
 }
 

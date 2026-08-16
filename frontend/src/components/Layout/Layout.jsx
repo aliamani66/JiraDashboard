@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, User, CheckCircle2, LogOut, Shield, ChevronDown, Palette, Sparkles, X, Layers, FileCheck, AlertTriangle, Zap, ZapOff } from 'lucide-react';
 import Sidebar from './Sidebar';
@@ -458,7 +459,7 @@ const Layout = ({ children }) => {
         </AnimatePresence>
         
         <main className="main-content">
-          {children}
+          {children || <Outlet />}
         </main>
       </div>
     </div>

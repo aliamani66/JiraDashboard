@@ -5,11 +5,18 @@ const MotionContext = createContext();
 
 export const MotionProvider = ({ children }) => {
   const [reducedMotion, setReducedMotion] = useState(() => {
-    return localStorage.getItem('app-reduced-motion') === 'true';
+    const saved = localStorage.getItem('app-reduced-motion');
+    // Default is true (high performance mode ON by default) unless user explicitly turned it off
+    return saved === null ? true : saved === 'true';
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-reduced-motion', reducedMotion ? 'true' : 'false');
+    if (reducedMotion) {
+      document.body.classList.add('reduce-motion');
+    } else {
+      document.body.classList.remove('reduce-motion');
+    }
     localStorage.setItem('app-reduced-motion', reducedMotion ? 'true' : 'false');
   }, [reducedMotion]);
 

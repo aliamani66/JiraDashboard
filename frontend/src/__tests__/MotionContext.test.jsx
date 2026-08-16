@@ -19,15 +19,15 @@ describe('MotionContext & Reduced Motion Mode', () => {
     document.documentElement.removeAttribute('data-reduced-motion');
   });
 
-  it('defaults to normal motion when localStorage is empty', () => {
+  it('defaults to reduced motion (high performance mode) when localStorage is empty', () => {
     render(
       <MotionProvider>
         <TestComponent />
       </MotionProvider>
     );
 
-    expect(screen.getByTestId('motion-status')).toHaveTextContent('normal');
-    expect(document.documentElement.getAttribute('data-reduced-motion')).toBe('false');
+    expect(screen.getByTestId('motion-status')).toHaveTextContent('reduced');
+    expect(document.documentElement.getAttribute('data-reduced-motion')).toBe('true');
   });
 
   it('toggles reduced motion mode and persists in localStorage and html attribute', () => {
@@ -40,13 +40,13 @@ describe('MotionContext & Reduced Motion Mode', () => {
     const btn = screen.getByTestId('toggle-btn');
     fireEvent.click(btn);
 
-    expect(screen.getByTestId('motion-status')).toHaveTextContent('reduced');
-    expect(document.documentElement.getAttribute('data-reduced-motion')).toBe('true');
-    expect(localStorage.getItem('app-reduced-motion')).toBe('true');
-
-    fireEvent.click(btn);
     expect(screen.getByTestId('motion-status')).toHaveTextContent('normal');
     expect(document.documentElement.getAttribute('data-reduced-motion')).toBe('false');
     expect(localStorage.getItem('app-reduced-motion')).toBe('false');
+
+    fireEvent.click(btn);
+    expect(screen.getByTestId('motion-status')).toHaveTextContent('reduced');
+    expect(document.documentElement.getAttribute('data-reduced-motion')).toBe('true');
+    expect(localStorage.getItem('app-reduced-motion')).toBe('true');
   });
 });

@@ -585,19 +585,27 @@ ul {
 }
 
 /* ==========================================================================
-   ⚡ HIGH PERFORMANCE / REDUCED MOTION MODE (Ultra-light for low-spec CPUs / Servers)
+   ⚡ ULTRA HIGH-PERFORMANCE / REDUCED MOTION MODE (Ultra-light for low vCPUs / Server VMs)
    ========================================================================== */
 [data-reduced-motion="true"] *,
 [data-reduced-motion="true"] *::before,
-[data-reduced-motion="true"] *::after {
-  animation-duration: 0.001s !important;
+[data-reduced-motion="true"] *::after,
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation: none !important;
+  animation-duration: 0s !important;
   animation-iteration-count: 1 !important;
-  transition-duration: 0.001s !important;
+  transition: none !important;
+  transition-duration: 0s !important;
   scroll-behavior: auto !important;
+  text-shadow: none !important;
 }
 
-[data-reduced-motion="true"] body {
+[data-reduced-motion="true"] body,
+body.reduce-motion {
   background-image: none !important;
+  background-attachment: scroll !important;
   background-color: var(--bg-primary) !important;
 }
 
@@ -607,31 +615,91 @@ ul {
 [data-reduced-motion="true"] .sidebar,
 [data-reduced-motion="true"] .gantt-container,
 [data-reduced-motion="true"] .modal-content,
-[data-reduced-motion="true"] .sync-modal-box {
+[data-reduced-motion="true"] .sync-modal-box,
+[data-reduced-motion="true"] .user-dropdown-card,
+[data-reduced-motion="true"] .filter-section,
+[data-reduced-motion="true"] input,
+[data-reduced-motion="true"] select,
+[data-reduced-motion="true"] textarea,
+body.reduce-motion .glass-card,
+body.reduce-motion .glass-panel,
+body.reduce-motion .topbar,
+body.reduce-motion .sidebar,
+body.reduce-motion .gantt-container,
+body.reduce-motion .modal-content,
+body.reduce-motion .sync-modal-box,
+body.reduce-motion .user-dropdown-card,
+body.reduce-motion .filter-section,
+body.reduce-motion input,
+body.reduce-motion select,
+body.reduce-motion textarea {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  filter: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
   transform: none !important;
   will-change: auto !important;
 }
 
+/* Crisp opaque solid surfaces for 0% CPU blur cost */
 [data-reduced-motion="true"] .glass-card,
-[data-reduced-motion="true"] .glass-panel {
+[data-reduced-motion="true"] .glass-panel,
+body.reduce-motion .glass-card,
+body.reduce-motion .glass-panel {
   background: #0f172a !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 [data-reduced-motion="true"][data-theme="dracula"] .glass-card,
-[data-reduced-motion="true"][data-theme="dracula"] .glass-panel {
+[data-reduced-motion="true"][data-theme="dracula"] .glass-panel,
+[data-theme="dracula"].reduce-motion .glass-card,
+[data-theme="dracula"].reduce-motion .glass-panel {
   background: #282a36 !important;
+  border-color: rgba(98, 114, 164, 0.3) !important;
 }
 
-[data-reduced-motion="true"] .glass-card:hover {
+[data-reduced-motion="true"] .topbar,
+body.reduce-motion .topbar {
+  background: #0c1222 !important;
+}
+
+[data-reduced-motion="true"][data-theme="dracula"] .topbar,
+[data-theme="dracula"].reduce-motion .topbar {
+  background: #1e1f29 !important;
+}
+
+[data-reduced-motion="true"] .sidebar,
+body.reduce-motion .sidebar {
+  background: #090d19 !important;
+}
+
+[data-reduced-motion="true"][data-theme="dracula"] .sidebar,
+[data-theme="dracula"].reduce-motion .sidebar {
+  background: #191a21 !important;
+}
+
+[data-reduced-motion="true"] input,
+[data-reduced-motion="true"] select,
+[data-reduced-motion="true"] textarea,
+body.reduce-motion input,
+body.reduce-motion select,
+body.reduce-motion textarea {
+  background: #1e293b !important;
+}
+
+[data-reduced-motion="true"] .glass-card:hover,
+body.reduce-motion .glass-card:hover {
   transform: none !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  background: #131d35 !important;
 }
 
 [data-reduced-motion="true"] .live-pulse-dot,
-[data-reduced-motion="true"] .brand-pulse-badge {
+[data-reduced-motion="true"] .brand-pulse-badge,
+body.reduce-motion .live-pulse-dot,
+body.reduce-motion .brand-pulse-badge {
   animation: none !important;
+  box-shadow: none !important;
 }
+
 
