@@ -354,8 +354,25 @@ const ManagerReportPage = () => {
               )}
             </div>
 
-            <div className="mr-summary-tag">
-              نمایش <strong>{filteredTasks.length}</strong> تسک دارای اختلال | مجموع اختلالات: <strong>{filteredMetrics.totalIssueOccurrences} مورد</strong> | مجموع کارکرد: <strong>{filteredMetrics.spentSum} ساعت</strong>
+            {/* Filter Summary Metrics Bar */}
+            <div className="mr-summary-bar">
+              <div className="mr-summary-item">
+                <span className="mr-summary-label">نمایش:</span>
+                <strong className="mr-num-cyan">{filteredTasks.length}</strong>
+                <span className="mr-summary-sub">تسک</span>
+              </div>
+              <span className="mr-summary-divider">|</span>
+              <div className="mr-summary-item">
+                <span className="mr-summary-label">مجموع اختلالات:</span>
+                <strong className="mr-num-amber">{filteredMetrics.totalIssueOccurrences}</strong>
+                <span className="mr-summary-sub">مورد</span>
+              </div>
+              <span className="mr-summary-divider">|</span>
+              <div className="mr-summary-item">
+                <span className="mr-summary-label">مجموع کارکرد:</span>
+                <strong className="mr-num-emerald">{filteredMetrics.spentSum}</strong>
+                <span className="mr-summary-sub">ساعت</span>
+              </div>
             </div>
           </div>
 
