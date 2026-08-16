@@ -95,9 +95,10 @@ const WaitingTasksPage = () => {
     }
     const keys = new Set();
     allWaitingTasks.forEach(t => {
-      const tId = t.task_id || t.id || '';
-      const tKey = tId ? tId.split('-')[0].toUpperCase() : '';
+      const tKey = (t.task_id || t.id || '').split('-')[0].trim().toUpperCase();
+      const pKey = (t.project_id || '').split('-')[0].trim().toUpperCase();
       if (tKey && tKey !== 'UNKNOWN') keys.add(tKey);
+      if (pKey && pKey !== 'UNKNOWN') keys.add(pKey);
     });
     return Array.from(keys).sort();
   }, [configuredProjects, allWaitingTasks]);
@@ -117,17 +118,18 @@ const WaitingTasksPage = () => {
   // Filter tasks based on selected Jira projects, selected teams, and search query
   const filteredTasks = useMemo(() => {
     return allWaitingTasks.filter(t => {
-      const tId = (t.task_id || t.id || '').toUpperCase();
-      const tKey = tId ? tId.split('-')[0] : '';
-      const pKey = (t.project_id || '').toUpperCase();
+      const taskIdStr = (t.task_id || t.id || '').trim().toUpperCase();
+      const taskKeyPrefix = taskIdStr ? taskIdStr.split('-')[0] : '';
+      const projIdStr = (t.project_id || '').trim().toUpperCase();
+      const parentProjectPrefix = projIdStr ? projIdStr.split('-')[0] : '';
 
-      // Project Filter
+      // Strict Jira Project Key Filter (Exact match on task key prefix or parent epic project prefix)
       if (selectedProjectKeys.length > 0) {
-        const matchesProj = selectedProjectKeys.includes(tKey) || selectedProjectKeys.some(k => pKey.startsWith(k));
+        const matchesProj = selectedProjectKeys.includes(taskKeyPrefix) || selectedProjectKeys.includes(parentProjectPrefix);
         if (!matchesProj) return false;
       }
 
-      // Team Dependency Filter
+      // Team Dependency Filter (Exact match on team name)
       const team = (t.waiting_for_team || t.blocked_by_team || 'سایر وابستگی‌ها').trim();
       if (selectedTeams.length > 0) {
         if (!selectedTeams.includes(team)) return false;
