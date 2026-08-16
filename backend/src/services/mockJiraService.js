@@ -1,7 +1,11 @@
 // Mock Jira Data Engine for local development and testing across 5 Years (60 Months) (UNTRACKED IN GIT)
 const mockProjects = [
   { id: 'ORD', key: 'ORD', name: 'پروژه عملیات و پشتیبانی (ORD)', epicCount: 60 },
-  { id: 'OPS', key: 'OPS', name: 'پروژه زیرساخت و سامانه (OPS)', epicCount: 40 }
+  { id: 'OPS', key: 'OPS', name: 'پروژه زیرساخت و سامانه (OPS)', epicCount: 40 },
+  { id: 'DEV', key: 'DEV', name: 'پروژه توسعه نرم‌افزار و فریم‌ورک (DEV)', epicCount: 25 },
+  { id: 'INFRA', key: 'INFRA', name: 'پروژه کلود و دیتاسنتر (INFRA)', epicCount: 18 },
+  { id: 'CORE', key: 'CORE', name: 'پلتفرم پایه و هسته اصلی (CORE)', epicCount: 32 },
+  { id: 'SEC', key: 'SEC', name: 'امنیت اطلاعات و احراز هویت (SEC)', epicCount: 14 }
 ];
 
 const mockEpics = [];

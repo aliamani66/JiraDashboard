@@ -1117,16 +1117,30 @@ async function fetchAllJiraProjects() {
   const { baseUrl, username, token } = cfg;
   if (!baseUrl || !token) throw new Error('تنظیمات آدرس یا توکن جیرا وارد نشده است.');
 
-  // Get epic counts per project key quickly from DB
-  let epicCountsMap = new Map();
+  // 1. Fetch live Epics count across ALL projects from Jira directly
+  const jiraEpicsCountMap = new Map();
+  try {
+    const epicSearchRes = await jiraSearch('issuetype = Epic', ['project'], { maxResults: 2000, timeout: 8000, singlePage: true }).catch(() => null);
+    if (epicSearchRes && Array.isArray(epicSearchRes.issues)) {
+      for (const ep of epicSearchRes.issues) {
+        const pKey = ep.fields?.project?.key ? ep.fields.project.key.toUpperCase() : (ep.key ? ep.key.split('-')[0].toUpperCase() : '');
+        if (pKey) {
+          jiraEpicsCountMap.set(pKey, (jiraEpicsCountMap.get(pKey) || 0) + 1);
+        }
+      }
+    }
+  } catch (_) {}
+
+  // 2. Fallback / supplement with DB cached epic counts
+  let dbEpicCountsMap = new Map();
   try {
     const { getDb } = require('../db/database');
     const db = getDb();
-    const rows = db.prepare('SELECT id FROM projects').all();
+    const rows = db.prepare("SELECT id FROM projects WHERE id LIKE '%-%'").all();
     for (const row of rows) {
       const pKey = row.id ? String(row.id).split('-')[0].toUpperCase() : '';
       if (pKey) {
-        epicCountsMap.set(pKey, (epicCountsMap.get(pKey) || 0) + 1);
+        dbEpicCountsMap.set(pKey, (dbEpicCountsMap.get(pKey) || 0) + 1);
       }
     }
   } catch (_) {}
@@ -1144,11 +1158,14 @@ async function fetchAllJiraProjects() {
       if (Array.isArray(res.data) && res.data.length > 0) {
         projectsList = res.data.map(p => {
           const keyUpper = p.key ? p.key.toUpperCase() : '';
+          const epicCount = jiraEpicsCountMap.has(keyUpper) 
+            ? jiraEpicsCountMap.get(keyUpper) 
+            : (dbEpicCountsMap.get(keyUpper) || 0);
           return {
             key: p.key,
             name: p.name || p.key,
             id: p.id || p.key,
-            epicCount: epicCountsMap.get(keyUpper) || 0
+            epicCount
           };
         });
         break;
@@ -1165,11 +1182,14 @@ async function fetchAllJiraProjects() {
           if (issue.fields?.project) {
             const p = issue.fields.project;
             const keyUpper = p.key ? p.key.toUpperCase() : '';
+            const epicCount = jiraEpicsCountMap.has(keyUpper) 
+              ? jiraEpicsCountMap.get(keyUpper) 
+              : (dbEpicCountsMap.get(keyUpper) || 0);
             pMap.set(p.key, {
               key: p.key,
               name: p.name || p.key,
               id: p.id || p.key,
-              epicCount: epicCountsMap.get(keyUpper) || 0
+              epicCount
             });
           }
         }
@@ -1182,11 +1202,14 @@ async function fetchAllJiraProjects() {
     const currentKeys = (getJiraConfig().projectKey || 'ORD').split(',').map(k => k.trim());
     projectsList = currentKeys.map(k => {
       const keyUpper = k.toUpperCase();
+      const epicCount = jiraEpicsCountMap.has(keyUpper) 
+        ? jiraEpicsCountMap.get(keyUpper) 
+        : (dbEpicCountsMap.get(keyUpper) || 0);
       return {
         key: k,
         name: `پروژه ${k}`,
         id: k,
-        epicCount: epicCountsMap.get(keyUpper) || 0
+        epicCount
       };
     });
   }
