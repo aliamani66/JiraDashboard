@@ -1544,23 +1544,13 @@ const JiraSettingsPage = () => {
         </div>
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           <button 
-            className="jsp-run-diag-btn secondary" 
-            onClick={handleDiagnose} 
-            disabled={diagLoading}
-            title="پایش زنده ارتباط API جیرا"
-          >
-            <Zap size={15} className={diagLoading ? 'spin' : ''} />
-            <span>{diagLoading ? 'در حال پایش...' : 'پایش API'}</span>
-          </button>
-
-          <button 
             className="jsp-run-diag-btn" 
             onClick={handleSave} 
             disabled={saving}
             title="ذخیره تمام تنظیمات و مپینگ‌ها"
           >
             <Save size={15} className={saving ? 'spin' : ''} />
-            <span>{saving ? 'در حال ذخیره...' : 'ذخیره'}</span>
+            <span>{saving ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}</span>
           </button>
         </div>
       </div>
@@ -3038,7 +3028,26 @@ const JiraSettingsPage = () => {
 
             {activeTab === 'connection' && (
               <motion.div key="connection" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-<Section defaultOpen={false} icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
+<Section defaultOpen={true} icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
+        {/* Top Actions Row: Section Description + Diagnose / Test API Button */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', flexWrap: 'wrap', gap: '0.65rem' }}>
+          <p className="jsp-section-desc" style={{ margin: 0 }}>
+            پیکربندی اطلاعات اتصال، آدرس سرور جیرا و تست زنده دسترسی به API
+          </p>
+
+          <button 
+            type="button"
+            className="jsp-run-diag-btn secondary" 
+            onClick={handleDiagnose} 
+            disabled={diagLoading}
+            title="پایش زنده ارتباط API جیرا و تست سلامت اتصال"
+            style={{ padding: '0.45rem 1.1rem', fontSize: '0.84rem' }}
+          >
+            <Zap size={15} className={diagLoading ? 'spin' : ''} />
+            <span>{diagLoading ? 'در حال پایش...' : '⚡ پایش و تست API Jira'}</span>
+          </button>
+        </div>
+
         <div className="jsp-grid-2">
           <Field label="آدرس پایه Jira (Base URL)" hint="مثال: https://10.100.71.140:8443 یا https://jira.company.com">
             <Input value={cfg.connection?.baseUrl} onChange={v => set('connection', 'baseUrl', v)} placeholder="https://10.100.71.140:8443" />
