@@ -193,7 +193,7 @@ const Layout = ({ children }) => {
               </button>
 
               {showUserMenu && (
-                <div className="user-dropdown-card glass-card">
+                <div className="user-dropdown-card">
                   <div className="udc-header">
                     <div className="udc-avatar">
                       <User size={24} />
