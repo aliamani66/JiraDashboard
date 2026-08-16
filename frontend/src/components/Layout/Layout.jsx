@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, User, CheckCircle2, LogOut, Shield, ChevronDown, Palette, Sparkles, X, Layers, FileCheck, AlertTriangle } from 'lucide-react';
+import { RefreshCw, User, CheckCircle2, LogOut, Shield, ChevronDown, Palette, Sparkles, X, Layers, FileCheck, AlertTriangle, Zap, ZapOff } from 'lucide-react';
 import Sidebar from './Sidebar';
 import './Layout.css';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useMotion } from '../../context/MotionContext';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { reducedMotion, toggleReducedMotion } = useMotion();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState('---');
@@ -137,6 +139,16 @@ const Layout = ({ children }) => {
           </div>
           
           <div className="topbar-left">
+            {/* ⚡ Performance / Eco Mode Toggle (Reduced Motion) */}
+            <button 
+              className={`motion-toggle-btn ${reducedMotion ? 'reduced-active' : ''}`}
+              onClick={toggleReducedMotion}
+              title={reducedMotion ? 'حالت عملکرد بهینه (فعال) - انیمیشن‌ها و افکت‌های سنگین غیرفعال هستند. کلیک جهت فعال‌سازی' : 'حالت کاهش انیمیشن و افزایش سرعت (غیرفعال) - مناسب سرور و سیستم‌های ضعیف'}
+              style={{ padding: '0.45rem', borderRadius: '50%', width: '36px', height: '36px', justifyContent: 'center' }}
+            >
+              {reducedMotion ? <ZapOff size={17} style={{ color: '#10b981' }} /> : <Zap size={17} />}
+            </button>
+
             {/* 🎨 Theme Toggle Button (Icon Only) */}
             <button 
               className={`theme-toggle-btn icon-only-theme-btn ${theme === 'dracula' ? 'dracula-active' : ''}`}

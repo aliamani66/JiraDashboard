@@ -27,9 +27,9 @@ describe('StatsCards KPI Component Tests', () => {
       </MemoryRouter>
     );
     expect(screen.getByText(/کل پروژه‌ها/i)).toBeInTheDocument();
-    expect(screen.getByText(/پروژه‌های متوقف‌شده/i)).toBeInTheDocument();
-    expect(screen.getByText(/پروژه‌های فعال/i)).toBeInTheDocument();
-    expect(screen.getByText(/تسک‌های منتظر/i)).toBeInTheDocument();
+    expect(screen.getByText(/در حال انجام/i)).toBeInTheDocument();
+    expect(screen.getByText(/پروژه‌های منتظر \/ بلوکه/i)).toBeInTheDocument();
+    expect(screen.getByText(/اسپرینت‌های فعال/i)).toBeInTheDocument();
   });
 
   it('displays accurate KPI numerical values after counter animation', () => {

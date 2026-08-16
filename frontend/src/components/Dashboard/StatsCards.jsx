@@ -38,21 +38,21 @@ const StatsCards = ({ stats = {}, projects = [], onExport }) => {
           />
           <StatCard 
             title="در حال انجام" 
-            value={stats.inProgress || stats.in_progress || 0} 
+            value={stats.inProgress || stats.activeProjects || stats.in_progress || 0} 
             icon={Activity} 
             colorClass="green" 
             onClick={() => navigate('/dashboard?status=in_progress')}
           />
           <StatCard 
             title="پروژه‌های منتظر / بلوکه" 
-            value={stats.waiting || stats.blocked || 0} 
+            value={stats.waiting || stats.stoppedProjects || stats.blocked || 0} 
             icon={AlertOctagon} 
             colorClass="red" 
             onClick={() => navigate('/waiting-tasks')}
           />
           <StatCard 
             title="اسپرینت‌های فعال" 
-            value={stats.activeSprints || stats.active_sprints || 0} 
+            value={stats.activeSprints || stats.waitingTasks || stats.active_sprints || 0} 
             icon={Clock} 
             colorClass="purple" 
             onClick={() => navigate('/sprints')}

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { MotionProvider } from './context/MotionContext';
 import Layout from './components/Layout/Layout';
 import LoginPage from './components/Auth/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -31,7 +32,8 @@ function ProtectedRoute({ children }) {
 function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
+      <MotionProvider>
+        <AuthProvider>
         <Router>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -112,7 +114,8 @@ function App() {
           </Routes>
         </Router>
       </AuthProvider>
-    </ThemeProvider>
+    </MotionProvider>
+  </ThemeProvider>
   );
 }
 

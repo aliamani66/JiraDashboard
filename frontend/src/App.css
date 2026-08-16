@@ -583,3 +583,55 @@ ul {
 .universal-search-clear:hover {
   color: #FFFFFF;
 }
+
+/* ==========================================================================
+   ⚡ HIGH PERFORMANCE / REDUCED MOTION MODE (Ultra-light for low-spec CPUs / Servers)
+   ========================================================================== */
+[data-reduced-motion="true"] *,
+[data-reduced-motion="true"] *::before,
+[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+  scroll-behavior: auto !important;
+}
+
+[data-reduced-motion="true"] body {
+  background-image: none !important;
+  background-color: var(--bg-primary) !important;
+}
+
+[data-reduced-motion="true"] .glass-card,
+[data-reduced-motion="true"] .glass-panel,
+[data-reduced-motion="true"] .topbar,
+[data-reduced-motion="true"] .sidebar,
+[data-reduced-motion="true"] .gantt-container,
+[data-reduced-motion="true"] .modal-content,
+[data-reduced-motion="true"] .sync-modal-box {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+[data-reduced-motion="true"] .glass-card,
+[data-reduced-motion="true"] .glass-panel {
+  background: #0f172a !important;
+}
+
+[data-reduced-motion="true"][data-theme="dracula"] .glass-card,
+[data-reduced-motion="true"][data-theme="dracula"] .glass-panel {
+  background: #282a36 !important;
+}
+
+[data-reduced-motion="true"] .glass-card:hover {
+  transform: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-reduced-motion="true"] .live-pulse-dot,
+[data-reduced-motion="true"] .brand-pulse-badge {
+  animation: none !important;
+}
+
