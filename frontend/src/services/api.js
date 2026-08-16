@@ -72,7 +72,7 @@ export const api = {
   deleteDbOnlyTasks: (payload) => fetchWithAuth('/jira/delete-db-only-tasks', { method: 'POST', body: JSON.stringify(payload) }),
   getSchedulerConfig: () => fetchWithAuth('/jira/scheduler'),
   saveSchedulerConfig: (cfg) => fetchWithAuth('/jira/scheduler', { method: 'POST', body: JSON.stringify(cfg) }),
-  runSchedulerNow: () => fetchWithAuth('/jira/scheduler/run-now', { method: 'POST' }),
+  runSchedulerNow: (payload) => fetchWithAuth('/jira/scheduler/run-now', { method: 'POST', body: JSON.stringify(payload || {}) }),
   getDbTables: () => fetchWithAuth('/db/tables'),
   getDbTableData: (tableName, page = 1, search = '', category = 'all', limit = 50) => fetchWithAuth(`/db/data/${tableName}?page=${page}&search=${encodeURIComponent(search)}&category=${category}&limit=${limit}`),
   runDbQuery: (sql) => fetchWithAuth('/db/query', { method: 'POST', body: JSON.stringify({ sql }) }),

@@ -199,6 +199,9 @@ router.post('/scheduler', (req, res) => {
 // POST /api/jira/scheduler/run-now - Trigger scheduled job immediately
 router.post('/scheduler/run-now', async (req, res) => {
   try {
+    if (req.body && Object.keys(req.body).length > 0) {
+      cacheService.saveSchedulerConfig(req.body);
+    }
     cacheService.executeScheduledSync().catch(e => console.error('Error in run-now:', e));
     res.json({ success: true, message: 'همگام‌سازی زمان‌بندی‌شده آغاز گردید و در پس‌زمینه در حال اجراست.' });
   } catch (err) {

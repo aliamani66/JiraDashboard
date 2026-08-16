@@ -806,10 +806,10 @@ const JiraSettingsPage = () => {
   const handleRunSchedulerNow = async () => {
     try {
       setSchedulerRunLoading(true);
-      const res = await api.runSchedulerNow();
+      const res = await api.runSchedulerNow(schedulerForm);
       if (res && res.success) {
         showToast(res.message || 'همگام‌سازی زمان‌بندی‌شده آغاز گردید.', 'success');
-        setTimeout(() => fetchSchedulerConfig(), 3000);
+        setTimeout(() => fetchSchedulerConfig(), 2500);
       } else {
         showToast(res?.message || 'خطا در آغاز همگام‌سازی', 'error');
       }
@@ -4835,12 +4835,11 @@ const JiraSettingsPage = () => {
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem' }}>
                     {[
-                      { type: 'incremental', days: 2, months: 0, label: '🌙 ۲ روز اخیر (شبانه)', desc: 'دیتای جدید روزانه (فوق‌سریع)' },
+                      { type: 'incremental', days: 2, months: 0, label: '🌙 ۲ روز اخیر (شبانه)', desc: 'دیتای جدید روزانه (پیش‌فرض)' },
                       { type: 'incremental', days: 10, months: 0, label: '🚀 ۱۰ روز اخیر', desc: 'تغییرات اخیر' },
                       { type: 'timeframe', days: 0, months: 1, label: '۱ ماه اخیر', desc: '۱ ماه گذشته' },
                       { type: 'timeframe', days: 0, months: 3, label: '۳ ماه اخیر', desc: 'فصل جاری' },
                       { type: 'timeframe', days: 0, months: 6, label: '🌟 ۶ ماه اخیر', desc: 'پیشنهادی' },
-                      { type: 'timeframe', days: 0, months: 12, label: '۱۲ ماه اخیر', desc: 'یک سال گذشته' },
                       { type: 'full', days: 0, months: 0, label: '⚡ بازسازی کامل', desc: 'تمام تاریخچه' }
                     ].map(opt => {
                       const isSelected = schedulerForm.sync_type === opt.type &&

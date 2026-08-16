@@ -1444,7 +1444,7 @@ function getSchedulerConfig() {
     interval_hours: parseInt(cfg.scheduler_interval_hours) || 1,
     timeframe_months: parseInt(cfg.scheduler_timeframe_months) || 6,
     recent_days: parseInt(cfg.scheduler_recent_days) || 2, // 2 days default for nightly sync
-    sync_type: cfg.scheduler_sync_type || 'incremental', // default incremental for fast nightly updates
+    sync_type: cfg.scheduler_sync_type || 'incremental', // default incremental (2 days) for fast nightly updates
     last_run: cfg.scheduler_last_run || null,
     last_status: cfg.scheduler_last_status || 'idle',
     last_message: cfg.scheduler_last_message || null,
