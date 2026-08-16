@@ -502,38 +502,48 @@
     size: A4 landscape;
     margin: 8mm;
   }
-  html, body {
+  html, body, #root, .layout-container, .layout-content, .main-content {
     background: #FFFFFF !important;
     color: #000000 !important;
     font-size: 9.5pt !important;
     width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
   }
-  .sidebar, .topbar, .wt-actions-group, .wt-filters-card, .active-filters-summary, .universal-search-box, .view-mode-toggle-group, .wt-export-btn, .back-btn {
+  .sidebar, .topbar, .page-header, .wt-actions-group, .wt-filters-card, .active-filters-summary, .universal-search-box, .view-mode-toggle-group, .wt-export-btn, .back-link, .back-btn {
     display: none !important;
   }
-  .layout-content, .waiting-tasks-page {
+  .waiting-tasks-page {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-  }
-  .wt-header {
-    border: none !important;
-    background: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin-bottom: 0.5rem !important;
+    height: auto !important;
+    overflow: visible !important;
+    transform: none !important;
+    position: static !important;
   }
   .wt-print-only-header {
     display: block !important;
     margin-bottom: 0.8rem !important;
     padding-bottom: 0.5rem !important;
     border-bottom: 2px solid #0F172A !important;
+    color: #000000 !important;
+  }
+  .wt-content-area {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
   }
   .unified-waiting-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.5rem !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
   }
   .waiting-task-card {
     background: #FFFFFF !important;
@@ -544,6 +554,8 @@
     page-break-inside: avoid;
     margin-bottom: 0.5rem !important;
     padding: 0.5rem 0.7rem !important;
+    height: auto !important;
+    overflow: visible !important;
   }
   .task-title, .task-title-link {
     color: #0F172A !important;
@@ -569,8 +581,11 @@
     border: 1px solid #CBD5E1 !important;
     box-shadow: none !important;
     page-break-inside: avoid;
+    break-inside: avoid;
     margin-bottom: 0.8rem !important;
     padding: 0.8rem !important;
+    height: auto !important;
+    overflow: visible !important;
   }
   .project-group-title {
     color: #0F172A !important;

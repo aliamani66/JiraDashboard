@@ -61,12 +61,11 @@ const StatsCards = ({ stats = {}, projects = [], onExport }) => {
 
         {onExport && (
           <button 
-            className="export-dashboard-btn"
+            className="db-export-btn icon-only-btn"
             onClick={onExport}
-            title="خروجی گزارش داشبورد (PDF / چاپ استاندارد)"
+            title="چاپ و خروجی PDF داشبورد"
           >
             <Printer size={18} />
-            <span>چاپ / PDF گزارش</span>
           </button>
         )}
       </div>

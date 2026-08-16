@@ -486,3 +486,22 @@
     overflow-x: hidden;
   }
 }
+
+/* ─── Global Clean Print Reset (Full Page Visibility) ─── */
+@media print {
+  html, body, #root, .layout-container, .layout-content, .main-content {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .sidebar, .topbar, .menu-toggle, .back-btn {
+    display: none !important;
+  }
+}
