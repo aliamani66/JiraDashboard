@@ -448,13 +448,53 @@ const WaitingTasksPage = () => {
 
       {/* ─── Printable Document Header (Appears only on Print / PDF) ─────── */}
       <div className="wt-print-only-header">
-        <h1 style={{ margin: 0, fontSize: '1.4rem' }}>گزارش تسک‌های منتظر (Waiting Tasks)</h1>
+        <h1 style={{ margin: 0, fontSize: '1.4rem', color: '#0F172A' }}>گزارش تسک‌های منتظر و متوقف (Waiting Tasks)</h1>
         <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.4rem', fontSize: '0.9rem', color: '#475569', flexWrap: 'wrap' }}>
           <span>تعداد تسک‌های فیلترشده: <strong>{filteredTasks.length}</strong></span>
           {selectedTeams.length > 0 && <span>تیم‌های انتخاب‌شده: <strong>{selectedTeams.join(', ')}</strong></span>}
           {selectedProjectKeys.length > 0 && <span>پروژه‌های انتخاب‌شده: <strong>{selectedProjectKeys.join(', ')}</strong></span>}
           <span>تاریخ چاپ گزارش: <strong>{new Date().toLocaleDateString('fa-IR')}</strong></span>
         </div>
+      </div>
+
+      {/* ─── Printable Audit Table (Rendered only on Print / PDF) ─────────── */}
+      <div className="wt-print-only-container">
+        <table className="wt-print-table">
+          <thead>
+            <tr>
+              <th style={{ width: '4%', textAlign: 'center' }}>#</th>
+              <th style={{ width: '13%' }}>کلید تسک</th>
+              <th style={{ width: '28%' }}>عنوان تسک</th>
+              <th style={{ width: '12%' }}>پروژه</th>
+              <th style={{ width: '15%' }}>تیم‌ها / وابستگی‌ها</th>
+              <th style={{ width: '16%' }}>دلیل توقف / وضعیت</th>
+              <th style={{ width: '12%' }}>مسئول</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredTasks.map((t, idx) => {
+              const taskId = t.key || t.id || `#${idx + 1}`;
+              let deps = [];
+              try {
+                deps = typeof t.dependencies === 'string' ? JSON.parse(t.dependencies) : (t.dependencies || []);
+              } catch (_) {}
+              if (!Array.isArray(deps)) deps = deps ? [deps] : [];
+              if (t.team && !deps.includes(t.team)) deps = [t.team, ...deps];
+
+              return (
+                <tr key={taskId}>
+                  <td style={{ textAlign: 'center' }}>{idx + 1}</td>
+                  <td><strong>{taskId}</strong></td>
+                  <td>{t.title}</td>
+                  <td>{t.projectTitle || t.projectId || '-'}</td>
+                  <td>{deps.length > 0 ? deps.join('، ') : '-'}</td>
+                  <td>{t.waiting_reason || 'منتظر وابستگی'}</td>
+                  <td>{t.assignee || '-'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* TOP FILTERS BAR: Jira Projects & Team Dependencies & Search */}
