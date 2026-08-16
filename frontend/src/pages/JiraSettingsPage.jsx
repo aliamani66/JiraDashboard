@@ -1544,13 +1544,13 @@ const JiraSettingsPage = () => {
         </div>
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           <button 
-            className="jsp-run-diag-btn" 
+            className="jsp-save-btn" 
             onClick={handleSave} 
             disabled={saving}
             title="ذخیره تمام تنظیمات و مپینگ‌ها"
           >
-            <Save size={15} className={saving ? 'spin' : ''} />
-            <span>{saving ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}</span>
+            <Save size={16} className={saving ? 'spin' : ''} />
+            <span>{saving ? 'در حال ذخیره...' : 'ذخیره'}</span>
           </button>
         </div>
       </div>
