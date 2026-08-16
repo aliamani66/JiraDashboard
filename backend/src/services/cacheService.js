@@ -1417,7 +1417,7 @@ async function syncRecentFromJira(days = 10) {
       projectsSynced,
       tasksSynced,
       days,
-      message: `همگام‌سازی ۱۰ روز گذشته با موفقیت انجام شد (${projectsSynced} پروژه، ${tasksSynced} تسک).`
+      message: `همگام‌سازی ${days} روز گذشته با موفقیت انجام شد (${projectsSynced} پروژه، ${tasksSynced} تسک).`
     };
   } catch (err) {
     console.error('Error during syncRecentFromJira:', err);
@@ -1443,7 +1443,8 @@ function getSchedulerConfig() {
     time: cfg.scheduler_time || '02:00', // e.g. '02:00' (2:00 AM)
     interval_hours: parseInt(cfg.scheduler_interval_hours) || 1,
     timeframe_months: parseInt(cfg.scheduler_timeframe_months) || 6,
-    sync_type: cfg.scheduler_sync_type || 'timeframe', // 'timeframe' | 'incremental' | 'full'
+    recent_days: parseInt(cfg.scheduler_recent_days) || 2, // 2 days default for nightly sync
+    sync_type: cfg.scheduler_sync_type || 'incremental', // default incremental for fast nightly updates
     last_run: cfg.scheduler_last_run || null,
     last_status: cfg.scheduler_last_status || 'idle',
     last_message: cfg.scheduler_last_message || null,
@@ -1462,6 +1463,7 @@ function saveSchedulerConfig(newCfg) {
     if (newCfg.time !== undefined) upsert.run('scheduler_time', String(newCfg.time));
     if (newCfg.interval_hours !== undefined) upsert.run('scheduler_interval_hours', String(newCfg.interval_hours));
     if (newCfg.timeframe_months !== undefined) upsert.run('scheduler_timeframe_months', String(newCfg.timeframe_months));
+    if (newCfg.recent_days !== undefined) upsert.run('scheduler_recent_days', String(newCfg.recent_days));
     if (newCfg.sync_type !== undefined) upsert.run('scheduler_sync_type', String(newCfg.sync_type));
   })();
 
@@ -1489,12 +1491,13 @@ async function executeScheduledSync() {
   upsert.run('scheduler_last_run', new Date().toISOString());
 
   const cfg = getSchedulerConfig();
-  console.log(`[SCHEDULER] ⏰ Triggering scheduled Jira sync (Mode: ${cfg.mode}, Type: ${cfg.sync_type}, Months: ${cfg.timeframe_months})...`);
+  console.log(`[SCHEDULER] ⏰ Triggering scheduled Jira sync (Mode: ${cfg.mode}, Type: ${cfg.sync_type}, Days: ${cfg.recent_days}, Months: ${cfg.timeframe_months})...`);
 
   try {
     let result;
     if (cfg.sync_type === 'incremental') {
-      result = await syncRecentFromJira(10);
+      const days = cfg.recent_days || 2;
+      result = await syncRecentFromJira(days);
     } else if (cfg.sync_type === 'full') {
       result = await syncFromJira();
     } else {

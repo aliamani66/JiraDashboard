@@ -310,7 +310,8 @@ const JiraSettingsPage = () => {
     time: '02:00',
     interval_hours: 1,
     timeframe_months: 6,
-    sync_type: 'timeframe'
+    recent_days: 2,
+    sync_type: 'incremental'
   });
   const [schedulerSaving, setSchedulerSaving] = useState(false);
   const [schedulerRunLoading, setSchedulerRunLoading] = useState(false);
@@ -769,7 +770,8 @@ const JiraSettingsPage = () => {
           time: res.config.time || '02:00',
           interval_hours: res.config.interval_hours || 1,
           timeframe_months: res.config.timeframe_months || 6,
-          sync_type: res.config.sync_type || 'timeframe'
+          recent_days: res.config.recent_days || 2,
+          sync_type: res.config.sync_type || 'incremental'
         });
       }
     } catch (e) {
@@ -2615,7 +2617,7 @@ const JiraSettingsPage = () => {
                 <Clock size={13} className="text-accent-cyan" />
                 <span>
                   {schedulerConfig?.enabled
-                    ? `زمان‌بندی: ${schedulerConfig.mode === 'daily' ? `هر شب ${schedulerConfig.time}` : `هر ${schedulerConfig.interval_hours} ساعت`}`
+                    ? `زمان‌بندی: ${schedulerConfig.mode === 'daily' ? `هر شب ${schedulerConfig.time}` : `هر ${schedulerConfig.interval_hours} ساعت`}${schedulerConfig.sync_type === 'incremental' ? ` (${schedulerConfig.recent_days || 2} روزه)` : ` (${schedulerConfig.timeframe_months || 6} ماهه)`}`
                     : 'زمان‌بندی خودکار'}
                 </span>
               </button>
@@ -4833,20 +4835,24 @@ const JiraSettingsPage = () => {
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem' }}>
                     {[
-                      { type: 'incremental', months: 0, label: '🚀 ۱۰ روز اخیر (سریع)', desc: 'تغییرات اخیر' },
-                      { type: 'timeframe', months: 1, label: '۱ ماه اخیر', desc: '۱ ماه گذشته' },
-                      { type: 'timeframe', months: 3, label: '۳ ماه اخیر', desc: 'فصل جاری' },
-                      { type: 'timeframe', months: 6, label: '🌟 ۶ ماه اخیر', desc: 'پیشنهادی' },
-                      { type: 'timeframe', months: 12, label: '۱۲ ماه اخیر', desc: 'یک سال گذشته' },
-                      { type: 'full', months: 0, label: '⚡ بازسازی کامل', desc: 'تمام تاریخچه' }
+                      { type: 'incremental', days: 2, months: 0, label: '🌙 ۲ روز اخیر (شبانه)', desc: 'دیتای جدید روزانه (فوق‌سریع)' },
+                      { type: 'incremental', days: 10, months: 0, label: '🚀 ۱۰ روز اخیر', desc: 'تغییرات اخیر' },
+                      { type: 'timeframe', days: 0, months: 1, label: '۱ ماه اخیر', desc: '۱ ماه گذشته' },
+                      { type: 'timeframe', days: 0, months: 3, label: '۳ ماه اخیر', desc: 'فصل جاری' },
+                      { type: 'timeframe', days: 0, months: 6, label: '🌟 ۶ ماه اخیر', desc: 'پیشنهادی' },
+                      { type: 'timeframe', days: 0, months: 12, label: '۱۲ ماه اخیر', desc: 'یک سال گذشته' },
+                      { type: 'full', days: 0, months: 0, label: '⚡ بازسازی کامل', desc: 'تمام تاریخچه' }
                     ].map(opt => {
-                      const isSelected = schedulerForm.sync_type === opt.type && (opt.type !== 'timeframe' || schedulerForm.timeframe_months === opt.months);
+                      const isSelected = schedulerForm.sync_type === opt.type &&
+                        (opt.type !== 'timeframe' || schedulerForm.timeframe_months === opt.months) &&
+                        (opt.type !== 'incremental' || (schedulerForm.recent_days || 2) === opt.days);
                       return (
                         <div
                           key={opt.label}
                           onClick={() => setSchedulerForm({
                             ...schedulerForm,
                             sync_type: opt.type,
+                            recent_days: opt.days || schedulerForm.recent_days,
                             timeframe_months: opt.months || schedulerForm.timeframe_months
                           })}
                           style={{
@@ -4862,7 +4868,7 @@ const JiraSettingsPage = () => {
                           <strong style={{ fontSize: '0.82rem', color: isSelected ? '#34D399' : '#FFFFFF', display: 'block' }}>
                             {opt.label}
                           </strong>
-                          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '2px', display: 'block' }}>
+                          <span style={{ fontSize: '0.7rem', color: isSelected ? '#A7F3D0' : '#94A3B8', marginTop: '2px', display: 'block' }}>
                             {opt.desc}
                           </span>
                         </div>
