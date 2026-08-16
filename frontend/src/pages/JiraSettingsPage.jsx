@@ -1543,36 +1543,6 @@ const JiraSettingsPage = () => {
           <h1 className="jsp-title"><Settings size={22} className="text-accent-cyan" />تنظیمات</h1>
         </div>
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <button
-            className="jsp-run-diag-btn"
-            style={{
-              background: canRebuildDb ? 'linear-gradient(135deg, #EF4444, #8B5CF6)' : 'rgba(255, 255, 255, 0.08)',
-              boxShadow: canRebuildDb ? '0 4px 15px rgba(239, 68, 68, 0.4)' : 'none',
-              cursor: canRebuildDb ? 'pointer' : 'not-allowed',
-              opacity: canRebuildDb ? 1 : 0.65
-            }}
-            onClick={handleOpenRebuildModal}
-            disabled={monthlySyncing}
-            title={canRebuildDb ? `بازسازی کامل دیتابیس و سایت بر اساس ${cfg?.rebuildMonths || 3} ماه اخیر` : 'دسترسی محدود: نیاز به مجوز «بازسازی دیتابیس (db_rebuild)»'}
-          >
-            {canRebuildDb ? <RefreshCw size={15} className={monthlySyncing ? 'spin' : ''} /> : <Lock size={15} color="#FCA5A5" />}
-            <span>{monthlySyncing ? 'در حال بازسازی...' : 'بازسازی دیتابیس'}</span>
-          </button>
-          <button
-            className="jsp-run-diag-btn"
-            style={{
-              background: canSyncRange ? 'linear-gradient(135deg, #10B981, #059669)' : 'rgba(255, 255, 255, 0.08)',
-              boxShadow: canSyncRange ? '0 4px 15px rgba(16, 185, 129, 0.35)' : 'none',
-              cursor: canSyncRange ? 'pointer' : 'not-allowed',
-              opacity: canSyncRange ? 1 : 0.65
-            }}
-            onClick={handleOpenRangeModal}
-            disabled={monthlySyncing}
-            title={canSyncRange ? "استخراج و همگام‌سازی دیتای جیرا در بازه زمانی دلخواه" : 'دسترسی محدود: نیاز به مجوز «استخراج بازه زمانی (jira_sync_range)»'}
-          >
-            {canSyncRange ? <Calendar size={15} /> : <Lock size={15} color="#6EE7B7" />}
-            <span>{monthlySyncing ? 'در حال استخراج...' : 'استخراج بازه زمانی'}</span>
-          </button>
           <button 
             className="jsp-run-diag-btn secondary" 
             onClick={handleDiagnose} 
@@ -1723,13 +1693,13 @@ const JiraSettingsPage = () => {
                     fontSize: '0.88rem',
                     lineHeight: '1.8',
                     color: '#CBD5E1',
-                    marginBottom: '1.75rem'
+                    marginBottom: '1.25rem'
                   }}>
                     <p style={{ margin: '0 0 0.5rem', color: '#FCD34D', fontWeight: 800 }}>
                       ⚠️ توجه: این عملیات دیتابیس جاری را کاملاً خالی کرده و تمامی اطلاعات را مجدداً از Jira دریافت می‌کند.
                     </p>
                     <p style={{ margin: 0 }}>
-                      {syncFlowModal.description}
+                      اطلاعات مربوط به بازه انتخابی به صورت گام به گام و زنده از سرور جیرا استخراج و بازسازی خواهد شد.
                     </p>
                     {selectedProjectKeys.length > 0 && (
                       <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
@@ -1737,6 +1707,80 @@ const JiraSettingsPage = () => {
                         <strong style={{ color: '#38BDF8' }}>{selectedProjectKeys.join(', ')}</strong>
                       </div>
                     )}
+                  </div>
+
+                  {/* 🗓️ Timeframe Month Selector directly in Rebuild Confirmation Modal */}
+                  <div style={{
+                    background: 'rgba(15, 23, 42, 0.75)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    borderRadius: '14px',
+                    padding: '1rem',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#F8FAFC', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <Calendar size={16} color="#EF4444" />
+                        انتخاب بازه زمانی بازسازی:
+                      </span>
+                      <span style={{ fontSize: '0.8rem', color: '#FCA5A5', background: 'rgba(239, 68, 68, 0.2)', padding: '0.15rem 0.65rem', borderRadius: '8px', fontWeight: 800, border: '1px solid rgba(239, 68, 68, 0.4)' }}>
+                        {cfg?.rebuildMonths || 3} ماه گذشته
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                      {[
+                        { m: 1, label: '🚀 ۱ ماه' },
+                        { m: 3, label: '📅 ۳ ماه' },
+                        { m: 6, label: '🗓️ ۶ ماه' },
+                        { m: 12, label: '📅 ۱ سال' },
+                        { m: 60, label: '🔥 ۵ سال' }
+                      ].map(item => {
+                        const isSel = (parseInt(cfg?.rebuildMonths, 10) || 3) === item.m;
+                        return (
+                          <button
+                            key={item.m}
+                            type="button"
+                            onClick={() => handleSelectRebuildMonths(item.m)}
+                            style={{
+                              padding: '0.35rem 0.8rem',
+                              borderRadius: '10px',
+                              border: isSel ? '1px solid #EF4444' : '1px solid rgba(255, 255, 255, 0.12)',
+                              background: isSel ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255, 255, 255, 0.05)',
+                              color: isSel ? '#FFFFFF' : '#94A3B8',
+                              fontWeight: isSel ? 800 : 500,
+                              fontSize: '0.82rem',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              boxShadow: isSel ? '0 0 12px rgba(239, 68, 68, 0.35)' : 'none'
+                            }}
+                          >
+                            {item.label}
+                          </button>
+                        );
+                      })}
+
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginRight: '0.5rem', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '0.6rem' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>دستی:</span>
+                        <input
+                          type="number"
+                          value={cfg?.rebuildMonths || 3}
+                          onChange={e => handleSelectRebuildMonths(e.target.value)}
+                          placeholder="3"
+                          style={{
+                            width: '60px',
+                            padding: '0.25rem 0.45rem',
+                            fontSize: '0.82rem',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            background: 'rgba(0,0,0,0.3)',
+                            color: '#FFFFFF',
+                            textAlign: 'center',
+                            outline: 'none'
+                          }}
+                        />
+                        <span style={{ fontSize: '0.78rem', color: '#64748B' }}>ماه</span>
+                      </div>
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.85rem' }}>
@@ -2420,139 +2464,6 @@ const JiraSettingsPage = () => {
 <Section icon={Server} title="تنظیمات سرور و دیتابیس (Server & Database Management)" color="#10B981" defaultOpen={true}>
         <p className="jsp-section-desc">پایش زنده وضعیت دیتابیس SQLite، تعداد کل تسک‌های ثبت‌شده، حجم فایل و به‌روزرسانی سیستم.</p>
 
-        {/* 🗓️ CONFIGURABLE TIMEFRAME INLINE BAR */}
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.65)',
-          border: '1px solid rgba(16, 185, 129, 0.35)',
-          borderRadius: '12px',
-          padding: '0.6rem 0.95rem',
-          marginBottom: '1.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '0.65rem',
-          boxShadow: '0 4px 15px rgba(0,0,0,0.25)'
-        }}>
-          {/* Title & Active Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <Calendar size={16} color="#10B981" />
-            <span style={{ fontWeight: 800, color: '#E2E8F0', fontSize: '0.85rem' }}>
-              بازه زمانی بازسازی:
-            </span>
-            <span style={{ fontSize: '0.78rem', color: '#6EE7B7', background: 'rgba(16, 185, 129, 0.2)', padding: '0.15rem 0.55rem', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.35)', fontWeight: 700 }}>
-              {cfg.rebuildMonths || 3} ماه گذشته
-            </span>
-          </div>
-
-          {/* Selection Pills & Manual Input in 1 Inline Row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => handleSelectRebuildMonths(1)}
-              style={{
-                padding: '0.3rem 0.65rem',
-                borderRadius: '8px',
-                border: cfg?.rebuildMonths === 1 ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: cfg?.rebuildMonths === 1 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: cfg?.rebuildMonths === 1 ? '#6EE7B7' : '#94A3B8',
-                fontWeight: cfg?.rebuildMonths === 1 ? 800 : 500,
-                cursor: 'pointer',
-                fontSize: '0.78rem',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              🚀 ۱ ماه
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectRebuildMonths(3)}
-              style={{
-                padding: '0.3rem 0.65rem',
-                borderRadius: '8px',
-                border: (cfg?.rebuildMonths === 3 || !cfg?.rebuildMonths) ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: (cfg?.rebuildMonths === 3 || !cfg?.rebuildMonths) ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: (cfg?.rebuildMonths === 3 || !cfg?.rebuildMonths) ? '#38BDF8' : '#94A3B8',
-                fontWeight: (cfg?.rebuildMonths === 3 || !cfg?.rebuildMonths) ? 800 : 500,
-                cursor: 'pointer',
-                fontSize: '0.78rem',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              📅 ۳ ماه (پیش‌فرض)
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectRebuildMonths(6)}
-              style={{
-                padding: '0.3rem 0.65rem',
-                borderRadius: '8px',
-                border: cfg?.rebuildMonths === 6 ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: cfg?.rebuildMonths === 6 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: cfg?.rebuildMonths === 6 ? '#FCD34D' : '#94A3B8',
-                fontWeight: cfg?.rebuildMonths === 6 ? 800 : 500,
-                cursor: 'pointer',
-                fontSize: '0.78rem',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              🗓️ ۶ ماه
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectRebuildMonths(12)}
-              style={{
-                padding: '0.3rem 0.65rem',
-                borderRadius: '8px',
-                border: cfg?.rebuildMonths === 12 ? '1px solid #A78BFA' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: cfg?.rebuildMonths === 12 ? 'rgba(167, 139, 250, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: cfg?.rebuildMonths === 12 ? '#C4B5FD' : '#94A3B8',
-                fontWeight: cfg?.rebuildMonths === 12 ? 800 : 500,
-                cursor: 'pointer',
-                fontSize: '0.78rem',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              📅 ۱ سال
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectRebuildMonths(60)}
-              style={{
-                padding: '0.3rem 0.65rem',
-                borderRadius: '8px',
-                border: cfg?.rebuildMonths === 60 ? '1px solid #EC4899' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: cfg?.rebuildMonths === 60 ? 'rgba(236, 72, 153, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                color: cfg?.rebuildMonths === 60 ? '#F472B6' : '#94A3B8',
-                fontWeight: cfg?.rebuildMonths === 60 ? 800 : 500,
-                cursor: 'pointer',
-                fontSize: '0.78rem',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              🔥 ۵ سال
-            </button>
-
-            {/* Inline Manual Input */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginRight: '0.3rem', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '0.5rem' }}>
-              <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>دستی:</span>
-              <Input
-                type="number"
-                value={cfg?.rebuildMonths || 3}
-                onChange={v => handleSelectRebuildMonths(v)}
-                placeholder="3"
-                style={{ width: '65px', padding: '0.2rem 0.4rem', fontSize: '0.78rem' }}
-                mono
-              />
-              <span style={{ fontSize: '0.75rem', color: '#64748B' }}>ماه</span>
-            </div>
-          </div>
-        </div>
-
         {/* 📊 DATABASE STATS TILE CARD */}
         <div style={{
           background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
@@ -2574,6 +2485,48 @@ const JiraSettingsPage = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {/* 🔴 بازسازی دیتابیس */}
+              <button
+                type="button"
+                className="jsp-run-diag-btn"
+                style={{
+                  background: canRebuildDb ? 'linear-gradient(135deg, #EF4444, #DC2626)' : 'rgba(255, 255, 255, 0.08)',
+                  boxShadow: canRebuildDb ? '0 4px 15px rgba(239, 68, 68, 0.4)' : 'none',
+                  cursor: canRebuildDb ? 'pointer' : 'not-allowed',
+                  opacity: canRebuildDb ? 1 : 0.65,
+                  padding: '0.35rem 0.85rem',
+                  fontSize: '0.8rem',
+                  borderRadius: '10px'
+                }}
+                onClick={handleOpenRebuildModal}
+                disabled={monthlySyncing}
+                title={canRebuildDb ? 'بازسازی کامل دیتابیس بر اساس بازه انتخابی در پاپ‌آپ' : 'دسترسی محدود: نیاز به مجوز «بازسازی دیتابیس (db_rebuild)»'}
+              >
+                {canRebuildDb ? <RefreshCw size={13} className={monthlySyncing ? 'spin' : ''} /> : <Lock size={13} color="#FCA5A5" />}
+                <span>{monthlySyncing ? 'در حال بازسازی...' : 'بازسازی دیتابیس'}</span>
+              </button>
+
+              {/* 🟢 استخراج بازه زمانی */}
+              <button
+                type="button"
+                className="jsp-run-diag-btn"
+                style={{
+                  background: canSyncRange ? 'linear-gradient(135deg, #10B981, #059669)' : 'rgba(255, 255, 255, 0.08)',
+                  boxShadow: canSyncRange ? '0 4px 15px rgba(16, 185, 129, 0.35)' : 'none',
+                  cursor: canSyncRange ? 'pointer' : 'not-allowed',
+                  opacity: canSyncRange ? 1 : 0.65,
+                  padding: '0.35rem 0.85rem',
+                  fontSize: '0.8rem',
+                  borderRadius: '10px'
+                }}
+                onClick={handleOpenRangeModal}
+                disabled={monthlySyncing}
+                title={canSyncRange ? 'استخراج و همگام‌سازی دیتای جیرا در بازه زمانی دلخواه' : 'دسترسی محدود: نیاز به مجوز «استخراج بازه زمانی (jira_sync_range)»'}
+              >
+                {canSyncRange ? <Calendar size={13} /> : <Lock size={13} color="#6EE7B7" />}
+                <span>{monthlySyncing ? 'در حال استخراج...' : 'استخراج بازه زمانی'}</span>
+              </button>
+
               <div style={{ background: 'rgba(14, 165, 233, 0.12)', border: '1px solid rgba(14, 165, 233, 0.35)', borderRadius: '8px', padding: '0.3rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>حجم:</span>
                 <strong style={{ fontSize: '0.85rem', color: '#38BDF8', fontWeight: 800 }}>{dbStats?.dbSizeMb ?? '0.00'} MB</strong>
