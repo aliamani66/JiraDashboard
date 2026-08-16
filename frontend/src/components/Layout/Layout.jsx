@@ -302,18 +302,11 @@ const Layout = ({ children }) => {
             <div className="topbar-user-menu-wrap" ref={menuRef}>
               <button 
                 type="button"
-                className="topbar-user-badge-btn" 
+                className="topbar-user-icon-btn" 
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                title="مشاهده اطلاعات حساب کاربر"
+                title={`حساب کاربر: ${displayName} (${roleTitle})`}
               >
-                <div className="user-avatar">
-                  <User size={18} />
-                </div>
-                <div className="topbar-user-info">
-                  <span className="tb-user-name">{displayName}</span>
-                  <span className={`tb-user-role ${roleBadgeColor}`}>{roleTitle}</span>
-                </div>
-                <ChevronDown size={14} className={`tb-user-arrow ${showUserMenu ? 'open' : ''}`} />
+                <User size={18} />
               </button>
 
               {showUserMenu && (
