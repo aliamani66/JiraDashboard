@@ -21,6 +21,14 @@ const WaitingTasksPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [configuredProjects, setConfiguredProjects] = useState([]);
   const [expandedProjects, setExpandedProjects] = useState({}); // Default closed for all
+  const [expandedTaskLinks, setExpandedTaskLinks] = useState({});
+
+  const toggleTaskLinks = (taskId) => {
+    setExpandedTaskLinks(prev => ({
+      ...prev,
+      [taskId]: !prev[taskId]
+    }));
+  };
 
   const toggleProject = (pId) => {
     setExpandedProjects(prev => ({
@@ -277,13 +285,51 @@ const WaitingTasksPage = () => {
                                 links = typeof task.linked_tasks === 'string' ? JSON.parse(task.linked_tasks) : (task.linked_tasks || []);
                               } catch (_) {}
                               if (!Array.isArray(links) || links.length === 0) return null;
+
+                              const tId = task.task_id || task.id;
+                              const isExp = !!expandedTaskLinks[tId];
+                              const sortedLinks = [...links].sort((a, b) => {
+                                const aRel = String(a.relationship || a.linkType || '').toLowerCase();
+                                const bRel = String(b.relationship || b.linkType || '').toLowerCase();
+                                const aCrit = aRel.includes('block') || aRel.includes('serve') || aRel.includes('operat') || aRel.includes('depend') || aRel.includes('wait');
+                                const bCrit = bRel.includes('block') || bRel.includes('serve') || bRel.includes('operat') || bRel.includes('depend') || bRel.includes('wait');
+                                if (aCrit && !bCrit) return -1;
+                                if (!aCrit && bCrit) return 1;
+                                return 0;
+                              });
+
+                              const visibleLinks = isExp ? sortedLinks : sortedLinks.slice(0, 3);
+                              const hiddenCount = sortedLinks.length - 3;
+
                               return (
-                                <div className="detail-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem', marginTop: '0.2rem' }}>
-                                  <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                    <Link2 size={13} style={{ color: '#38BDF8' }} /> تسک‌های لینک‌شده / وابسته:
-                                  </span>
+                                <div className="detail-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.35rem', marginTop: '0.2rem' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                      <Link2 size={13} style={{ color: '#38BDF8' }} /> تسک‌های لینک‌شده / وابسته:
+                                    </span>
+                                    {sortedLinks.length > 3 && (
+                                      <button
+                                        type="button"
+                                        style={{
+                                          background: 'rgba(255, 255, 255, 0.08)',
+                                          border: '1px dashed rgba(255, 255, 255, 0.25)',
+                                          color: isExp ? '#FDE68A' : 'var(--text-secondary)',
+                                          fontSize: '0.7rem',
+                                          padding: '0.1rem 0.45rem',
+                                          borderRadius: '4px',
+                                          cursor: 'pointer'
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleTaskLinks(tId);
+                                        }}
+                                      >
+                                        {isExp ? '▲ کمتر' : `+${hiddenCount} دیگر ▾`}
+                                      </button>
+                                    )}
+                                  </div>
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                                    {links.map((lt, lIdx) => {
+                                    {visibleLinks.map((lt, lIdx) => {
                                       const lUrl = `${JIRA_BASE_URL}/browse/${lt.key}`;
                                       const rel = lt.relationship || lt.linkType || 'وابسته به';
                                       const rLow = String(rel).toLowerCase();
@@ -309,20 +355,24 @@ const WaitingTasksPage = () => {
                                             alignItems: 'center',
                                             gap: '0.3rem',
                                             fontSize: '0.74rem',
-                                            padding: '0.2rem 0.55rem',
+                                            padding: '0.15rem 0.5rem',
                                             borderRadius: '6px',
                                             background: bg,
                                             border: border,
                                             color: textCol,
                                             textDecoration: 'none',
-                                            fontWeight: 700
+                                            fontWeight: 700,
+                                            maxWidth: '220px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
                                           }}
                                           title={`${rel}: ${lt.title || lt.key} (${lt.status || ''})`}
                                         >
                                           <span>{rel}:</span>
                                           <strong style={{ color: '#FFFFFF', textDecoration: 'underline' }}>{lt.key}</strong>
-                                          {lt.status && <span style={{ opacity: 0.9, fontSize: '0.7rem', background: 'rgba(0,0,0,0.3)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>{lt.status}</span>}
-                                          <ExternalLink size={10} style={{ opacity: 0.8 }} />
+                                          {lt.status && <span style={{ opacity: 0.9, fontSize: '0.68rem', background: 'rgba(0,0,0,0.3)', padding: '0.05rem 0.3rem', borderRadius: '4px' }}>{lt.status}</span>}
+                                          <ExternalLink size={9} style={{ opacity: 0.8 }} />
                                         </a>
                                       );
                                     })}

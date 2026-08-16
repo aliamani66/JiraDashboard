@@ -23,6 +23,11 @@ const compBadgeMap = {
 const TaskList = ({ tasks }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [compFilter, setCompFilter] = useState('all');
+  const [expandedLinks, setExpandedLinks] = useState({});
+
+  const toggleLinks = (taskId) => {
+    setExpandedLinks(prev => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
 
   const filteredTasks = tasks.filter(task => {
     // Status Filter
@@ -121,60 +126,98 @@ const TaskList = ({ tasks }) => {
                       </a>
                     </div>
 
-                    {/* 🔗 Linked Tasks / External Dependencies (e.g. is served by, blocks) */}
+                    {/* 🔗 Linked Tasks / External Dependencies (e.g. is served by, operates, blocks) */}
                     {(() => {
                       let links = [];
                       try {
                         links = typeof task.linked_tasks === 'string' ? JSON.parse(task.linked_tasks) : (task.linked_tasks || []);
                       } catch (_) {}
                       if (!Array.isArray(links) || links.length === 0) return null;
-                      return (
-                        <div className="task-linked-issues-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem', marginBottom: '0.25rem' }}>
-                          {links.map((lt, lIdx) => {
-                            const lUrl = `${JIRA_BASE_URL}/browse/${lt.key}`;
-                            const rel = lt.relationship || lt.linkType || 'وابسته به';
-                            const rLow = String(rel).toLowerCase();
-                            const isBlock = rLow.includes('block');
-                            const isServeOperate = rLow.includes('serve') || rLow.includes('operat') || rLow.includes('depend') || rLow.includes('wait') || rLow.includes('hold');
-                            
-                            const bg = isBlock 
-                              ? 'rgba(239, 68, 68, 0.22)' 
-                              : isServeOperate 
-                              ? 'rgba(245, 158, 11, 0.22)' 
-                              : 'rgba(56, 189, 248, 0.18)';
-                            const border = isBlock ? '1px solid #EF4444' : isServeOperate ? '1px solid #F59E0B' : '1px solid #38BDF8';
-                            const textCol = isBlock ? '#FCA5A5' : isServeOperate ? '#FDE68A' : '#BAE6FD';
 
-                            return (
-                              <a
-                                key={lIdx}
-                                href={lUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.35rem',
-                                  fontSize: '0.76rem',
-                                  padding: '0.2rem 0.6rem',
-                                  borderRadius: '8px',
-                                  background: bg,
-                                  border: border,
-                                  color: textCol,
-                                  textDecoration: 'none',
-                                  fontWeight: 700,
-                                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                      // Prioritize critical blocking/serving/operating relations first
+                      const sortedLinks = [...links].sort((a, b) => {
+                        const aRel = String(a.relationship || a.linkType || '').toLowerCase();
+                        const bRel = String(b.relationship || b.linkType || '').toLowerCase();
+                        const aCrit = aRel.includes('block') || aRel.includes('serve') || aRel.includes('operat') || aRel.includes('depend') || aRel.includes('wait');
+                        const bCrit = bRel.includes('block') || bRel.includes('serve') || bRel.includes('operat') || bRel.includes('depend') || bRel.includes('wait');
+                        if (aCrit && !bCrit) return -1;
+                        if (!aCrit && bCrit) return 1;
+                        return 0;
+                      });
+
+                      const isExpanded = !!expandedLinks[task.id];
+                      const visibleLinks = isExpanded ? sortedLinks : sortedLinks.slice(0, 2);
+                      const hiddenCount = sortedLinks.length - 2;
+
+                      return (
+                        <div className="task-linked-issues-row">
+                          <div className="linked-pills-container">
+                            {visibleLinks.map((lt, lIdx) => {
+                              const lUrl = `${JIRA_BASE_URL}/browse/${lt.key}`;
+                              const rel = lt.relationship || lt.linkType || 'وابسته به';
+                              const rLow = String(rel).toLowerCase();
+                              const isBlock = rLow.includes('block');
+                              const isServeOperate = rLow.includes('serve') || rLow.includes('operat') || rLow.includes('depend') || rLow.includes('wait') || rLow.includes('hold');
+                              
+                              const bg = isBlock 
+                                ? 'rgba(239, 68, 68, 0.22)' 
+                                : isServeOperate 
+                                ? 'rgba(245, 158, 11, 0.22)' 
+                                : 'rgba(56, 189, 248, 0.18)';
+                              const border = isBlock ? '1px solid #EF4444' : isServeOperate ? '1px solid #F59E0B' : '1px solid #38BDF8';
+                              const textCol = isBlock ? '#FCA5A5' : isServeOperate ? '#FDE68A' : '#BAE6FD';
+
+                              return (
+                                <a
+                                  key={lIdx}
+                                  href={lUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="compact-link-pill"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    fontSize: '0.74rem',
+                                    padding: '0.15rem 0.5rem',
+                                    borderRadius: '6px',
+                                    background: bg,
+                                    border: border,
+                                    color: textCol,
+                                    textDecoration: 'none',
+                                    fontWeight: 700,
+                                    boxShadow: '0 2px 5px rgba(0,0,0,0.25)',
+                                    maxWidth: '220px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                  title={`${rel}: ${lt.title || lt.key} (${lt.status || ''})`}
+                                >
+                                  <Link2 size={11} style={{ flexShrink: 0 }} />
+                                  <span style={{ opacity: 0.9 }}>{rel}:</span>
+                                  <strong style={{ color: '#FFFFFF', textDecoration: 'underline' }}>{lt.key}</strong>
+                                  {lt.status && <span style={{ opacity: 0.9, fontSize: '0.68rem', background: 'rgba(0,0,0,0.3)', padding: '0.05rem 0.3rem', borderRadius: '4px' }}>{lt.status}</span>}
+                                  <ExternalLink size={9} style={{ opacity: 0.7, flexShrink: 0 }} />
+                                </a>
+                              );
+                            })}
+
+                            {sortedLinks.length > 2 && (
+                              <button
+                                type="button"
+                                className={`more-links-toggle-btn ${isExpanded ? 'active' : ''}`}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleLinks(task.id);
                                 }}
-                                title={`${rel}: ${lt.title || lt.key} (${lt.status || ''})`}
+                                title={isExpanded ? 'بستن لیست کامل لینک‌ها' : `مشاهده ${hiddenCount} تسک لینک‌شده دیگر`}
                               >
-                                <Link2 size={12} />
-                                <span>{rel}:</span>
-                                <strong style={{ color: '#FFFFFF', textDecoration: 'underline' }}>{lt.key}</strong>
-                                {lt.status && <span style={{ opacity: 0.9, fontSize: '0.72rem', background: 'rgba(0,0,0,0.3)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>{lt.status}</span>}
-                                <ExternalLink size={10} style={{ opacity: 0.8 }} />
-                              </a>
-                            );
-                          })}
+                                {isExpanded ? '▲ کمتر' : `+${hiddenCount} دیگر ▾`}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })()}

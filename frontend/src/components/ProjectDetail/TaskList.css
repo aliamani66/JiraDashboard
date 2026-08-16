@@ -222,3 +222,68 @@
   background: rgba(100, 116, 139, 0.18);
   color: var(--text-muted);
 }
+
+/* =========================================================
+   Compact & Safe Linked Issues Grid / Pills
+   ========================================================= */
+.task-linked-issues-row {
+  margin-top: 0.35rem;
+  margin-bottom: 0.2rem;
+}
+
+.linked-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.compact-link-pill {
+  transition: all 0.2s ease;
+  line-height: 1.2;
+}
+
+.compact-link-pill:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35) !important;
+}
+
+.more-links-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.more-links-toggle-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38BDF8;
+  color: #FFFFFF;
+}
+
+.more-links-toggle-btn.active {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #F59E0B;
+  color: #FDE68A;
+}
+
+/* Table Column Width Locks for Structure Stability */
+.task-table th:nth-child(1), .task-table td:nth-child(1) { width: 110px; min-width: 100px; white-space: nowrap; }
+.task-table th:nth-child(2), .task-table td:nth-child(2) { width: 115px; min-width: 105px; white-space: nowrap; }
+.task-table th:nth-child(3), .task-table td:nth-child(3) { width: 105px; min-width: 95px; white-space: nowrap; }
+.task-table th:nth-child(4), .task-table td:nth-child(4) { min-width: 280px; }
+.task-table th:nth-child(5), .task-table td:nth-child(5) { width: 130px; min-width: 120px; white-space: nowrap; }
+.task-table th:nth-child(6), .task-table td:nth-child(6) { width: 110px; min-width: 100px; white-space: nowrap; }
+.task-table th:nth-child(7), .task-table td:nth-child(7) { width: 140px; min-width: 130px; }
+.task-table th:nth-child(8), .task-table td:nth-child(8) { width: 85px; min-width: 80px; white-space: nowrap; }
+
