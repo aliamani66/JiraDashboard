@@ -116,6 +116,44 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 .jsp-run-diag-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
+/* ⚡ Glowing Diagnose / Test Jira API Trigger Button */
+.jsp-diag-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 1.15rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(6, 182, 212, 0.25)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  color: #38BDF8 !important;
+  font-size: 0.84rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  white-space: nowrap;
+}
+
+.jsp-diag-trigger-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.32), rgba(6, 182, 212, 0.42)) !important;
+  border-color: #38BDF8 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.45) !important;
+  transform: none !important; /* Prevents jumping or overlapping into tile header */
+  filter: brightness(1.1);
+}
+
+.jsp-diag-trigger-btn:active:not(:disabled) {
+  transform: scale(0.98) !important;
+}
+
+.jsp-diag-trigger-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
+
 /* Collapsible Section */
 .jsp-section { padding: 0; overflow: hidden; }
 .jsp-section-toggle {

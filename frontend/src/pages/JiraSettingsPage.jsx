@@ -3030,18 +3030,17 @@ const JiraSettingsPage = () => {
               <motion.div key="connection" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 <Section defaultOpen={true} icon={Server} title="اتصال به Jira Cloud / Server (Connection Settings)" color="#38BDF8">
         {/* Top Actions Row: Section Description + Diagnose / Test API Button */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', flexWrap: 'wrap', gap: '0.65rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.2rem', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', flexWrap: 'wrap', gap: '0.75rem' }}>
           <p className="jsp-section-desc" style={{ margin: 0 }}>
             پیکربندی اطلاعات اتصال، آدرس سرور جیرا و تست زنده دسترسی به API
           </p>
 
           <button 
             type="button"
-            className="jsp-run-diag-btn secondary" 
+            className="jsp-diag-trigger-btn" 
             onClick={handleDiagnose} 
             disabled={diagLoading}
             title="پایش زنده ارتباط API جیرا و تست سلامت اتصال"
-            style={{ padding: '0.45rem 1.1rem', fontSize: '0.84rem' }}
           >
             <Zap size={15} className={diagLoading ? 'spin' : ''} />
             <span>{diagLoading ? 'در حال پایش...' : '⚡ پایش و تست API Jira'}</span>
