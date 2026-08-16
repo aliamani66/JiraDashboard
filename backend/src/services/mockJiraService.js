@@ -1,7 +1,7 @@
-// Mock Jira Data Engine for local development and testing across 5 Years (60 Months) (UNTRACKED IN GIT)
 const mockProjects = [
   { id: 'ORD', key: 'ORD', name: 'پروژه عملیات و پشتیبانی (ORD)', epicCount: 60 },
   { id: 'OPS', key: 'OPS', name: 'پروژه زیرساخت و سامانه (OPS)', epicCount: 40 },
+  { id: 'OPM', key: 'OPM', name: 'پروژه مدیریت عملیات پلتفرم (OPM)', epicCount: 50 },
   { id: 'DEV', key: 'DEV', name: 'پروژه توسعه نرم‌افزار و فریم‌ورک (DEV)', epicCount: 25 },
   { id: 'INFRA', key: 'INFRA', name: 'پروژه کلود و دیتاسنتر (INFRA)', epicCount: 18 },
   { id: 'CORE', key: 'CORE', name: 'پلتفرم پایه و هسته اصلی (CORE)', epicCount: 32 },
@@ -44,6 +44,46 @@ for (let i = 1; i <= 40; i++) {
       issuetype: { name: 'Epic' },
       status: { name: i % 4 === 0 ? 'Done' : 'In Progress' },
       project: { key: 'OPS', name: 'پروژه OPS' },
+      created: createdDate,
+      duedate: '2026-12-29'
+    }
+  });
+}
+// Generate 50 OPM Epics across 5 years
+for (let i = 1; i <= 50; i++) {
+  const key = `OPM-${300 + i}`;
+  const daysAgo = Math.floor((i / 50) * 1800);
+  const createdDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
+  mockEpics.push({
+    id: key,
+    key: key,
+    summary: `اپیک مدیریت عملیات و نظارت پلتفرم OPM شماره ${i}`,
+    fields: {
+      summary: `اپیک مدیریت عملیات و نظارت پلتفرم OPM شماره ${i}`,
+      description: `توضیحات اپیک شماره ${i} پروژه OPM`,
+      issuetype: { name: 'Epic' },
+      status: { name: i % 3 === 0 ? 'Done' : 'In Progress' },
+      project: { key: 'OPM', name: 'پروژه OPM' },
+      created: createdDate,
+      duedate: '2026-12-29'
+    }
+  });
+}
+// Generate 25 DEV Epics across 5 years
+for (let i = 1; i <= 25; i++) {
+  const key = `DEV-${400 + i}`;
+  const daysAgo = Math.floor((i / 25) * 1800);
+  const createdDate = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
+  mockEpics.push({
+    id: key,
+    key: key,
+    summary: `اپیک توسعه ماژول‌های نرم‌افزاری DEV شماره ${i}`,
+    fields: {
+      summary: `اپیک توسعه ماژول‌های نرم‌افزاری DEV شماره ${i}`,
+      description: `توضیحات اپیک شماره ${i} پروژه DEV`,
+      issuetype: { name: 'Epic' },
+      status: { name: i % 2 === 0 ? 'Done' : 'In Progress' },
+      project: { key: 'DEV', name: 'پروژه DEV' },
       created: createdDate,
       duedate: '2026-12-29'
     }

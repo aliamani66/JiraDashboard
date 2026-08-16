@@ -268,27 +268,18 @@ function parseJiraDescription(desc) {
   return '';
 }
 
-// Fetch all epics from the configured project
+// Fetch all epics from the configured project(s)
 async function fetchEpics() {
   const cfg = getJiraConfig();
   if (!cfg.isConfigured) return [];
   const mapping = cfg.mapping || jiraMapping;
   const customFields = mapping.customFields || {};
   try {
-    const projKeyStr = cfg.projectKey;
-    let projectFilter = '';
-    if (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*') {
-      const projects = projKeyStr.split(',').map(p => {
-        const clean = p.trim().toUpperCase();
-        return /^[A-Z0-9_]+$/.test(clean) ? clean : `"${clean}"`;
-      }).filter(p => p !== '""' && p !== '');
-      if (projects.length > 1) {
-        projectFilter = `AND project IN (${projects.join(',')})`;
-      } else if (projects.length === 1) {
-        projectFilter = `AND project = ${projects[0]}`;
-      }
-    }
-    const jql = `issuetype=Epic ${projectFilter} ORDER BY created DESC`;
+    const projKeyStr = cfg.projectKey || '';
+    const configuredProjKeysList = (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*')
+      ? projKeyStr.split(',').map(p => p.trim().toUpperCase().replace(/["']/g, '')).filter(Boolean)
+      : [];
+
     const fields = [
       '*navigable',
       'summary', 
@@ -301,27 +292,68 @@ async function fetchEpics() {
       'issuelinks',
       'assignee',
       'priority',
+      'project',
+      'issuetype',
       mapping.dateMapping.epicStartDateField, 
       mapping.dateMapping.epicDueDateField,
       customFields.confluenceLinkField,
       customFields.capabilitiesField,
       customFields.categoryField
     ].filter(Boolean);
-    
-    const data = await jiraSearch(jql, fields, { maxResults: 2000 });
-    const allIssues = data.issues || [];
 
-    const configuredProjKeys = new Set(
-      (projKeyStr || '').split(',').map(k => k.trim().toUpperCase().replace(/["']/g, '')).filter(Boolean)
-    );
+    let allIssues = [];
+
+    if (configuredProjKeysList.length > 1) {
+      // Fetch epics for each configured project individually to guarantee 100% of epics are retrieved without pagination loss
+      const epicPromises = configuredProjKeysList.map(async (pKey) => {
+        const jqlSingle = `project = "${pKey}" AND (issuetype in (Epic, "اپیک") OR "Epic Name" is not EMPTY OR issuetype = Epic) ORDER BY created DESC`;
+        try {
+          const res = await jiraSearch(jqlSingle, fields, { maxResults: 2000 });
+          return res.issues || [];
+        } catch (_) {
+          try {
+            const fallbackJql = `project = "${pKey}" AND issuetype = Epic ORDER BY created DESC`;
+            const fbRes = await jiraSearch(fallbackJql, fields, { maxResults: 2000 });
+            return fbRes.issues || [];
+          } catch (_) {
+            return [];
+          }
+        }
+      });
+
+      const results = await Promise.all(epicPromises);
+      const seenKeys = new Set();
+      for (const issueList of results) {
+        for (const iss of issueList) {
+          if (iss && iss.key && !seenKeys.has(iss.key.toUpperCase())) {
+            seenKeys.add(iss.key.toUpperCase());
+            allIssues.push(iss);
+          }
+        }
+      }
+    } else {
+      let projectFilter = '';
+      if (configuredProjKeysList.length === 1) {
+        projectFilter = `AND project = "${configuredProjKeysList[0]}"`;
+      }
+      const jql = `(issuetype in (Epic, "اپیک") OR "Epic Name" is not EMPTY OR issuetype = Epic) ${projectFilter} ORDER BY created DESC`;
+      try {
+        const data = await jiraSearch(jql, fields, { maxResults: 2000 });
+        allIssues = data.issues || [];
+      } catch (_) {
+        const fallbackJql = `issuetype=Epic ${projectFilter} ORDER BY created DESC`;
+        const data = await jiraSearch(fallbackJql, fields, { maxResults: 2000 }).catch(() => ({ issues: [] }));
+        allIssues = data.issues || [];
+      }
+    }
 
     const filteredIssues = allIssues.filter(issue => {
       const issueKey = (issue.key || '').trim().toUpperCase();
       if (!/^[A-Z0-9_]+-\d+$/i.test(issueKey)) return false;
       const issueProjKey = (issue.fields?.project?.key || issueKey.split('-')[0] || '').toUpperCase();
       const issueTypeName = (issue.fields?.issuetype?.name || '').toLowerCase().trim();
-      const isEpicType = issueTypeName === 'epic';
-      const isConfiguredProj = (configuredProjKeys.size > 0 && projKeyStr !== 'ALL' && projKeyStr !== '*') ? configuredProjKeys.has(issueProjKey) : true;
+      const isEpicType = issueTypeName === 'epic' || issueTypeName === 'اپیک' || !!issue.fields?.['customfield_10008'] || !!issue.fields?.['Epic Name'] || !!issue.fields?.[customFields.epicNameField];
+      const isConfiguredProj = configuredProjKeysList.length > 0 ? configuredProjKeysList.includes(issueProjKey) : true;
       return isEpicType && isConfiguredProj;
     });
 
