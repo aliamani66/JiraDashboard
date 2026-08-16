@@ -205,6 +205,15 @@ const WaitingTasksPage = () => {
     return Array.from(pMap.values());
   }, [filteredTasks]);
 
+  const handlePrint = () => {
+    const token = localStorage.getItem('token') || '';
+    const projKeys = selectedProjectKeys.join(',');
+    const teams = selectedTeams.join(',');
+    const q = encodeURIComponent(searchQuery || '');
+    const url = `/api/reports/waiting-html?project_keys=${encodeURIComponent(projKeys)}&teams=${encodeURIComponent(teams)}&search=${q}&token=${token}`;
+    window.open(url, '_blank');
+  };
+
   if (loading) {
     return <div className="page-loading">در حال دریافت اطلاعات تسک‌های منتظر...</div>;
   }
@@ -436,9 +445,10 @@ const WaitingTasksPage = () => {
             </div>
 
             <button 
+              type="button"
               className="wt-export-btn icon-only-btn"
-              onClick={() => window.print()}
-              title={`چاپ تسک‌های منتظر فیلترشده (${filteredTasks.length} تسک)`}
+              onClick={handlePrint}
+              title={`چاپ و خروجی سازمانی تسک‌های منتظر (${filteredTasks.length} تسک)`}
             >
               <Printer size={16} />
             </button>

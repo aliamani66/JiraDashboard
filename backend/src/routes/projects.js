@@ -1638,13 +1638,55 @@ router.get('/reports/project-html/:id', (req, res) => {
 router.get('/reports/waiting-html', (req, res) => {
   try {
     const db = getDb();
-    const tasks = db.prepare(`
+    const { project_keys, project_ids, teams, search } = req.query;
+
+    let query = `
       SELECT t.*, p.title as project_title, p.category as project_category
       FROM tasks t
-      JOIN projects p ON t.project_id = p.id
-      WHERE t.is_waiting = 1 OR t.status = 'Waiting' OR t.status = 'OnHolding'
-      ORDER BY t.project_id ASC, t.id ASC
-    `).all();
+      LEFT JOIN projects p ON t.project_id = p.id
+      WHERE (t.is_waiting = 1 OR t.status = 'Waiting' OR t.status = 'OnHolding')
+    `;
+    const params = [];
+    const projFilter = project_keys || project_ids;
+    if (projFilter && projFilter.trim() !== '') {
+      const pList = projFilter.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+      if (pList.length > 0) {
+        const conditions = pList.map(() => `(UPPER(t.project_id) = ? OR UPPER(t.id) LIKE ?)`).join(' OR ');
+        query += ` AND (${conditions})`;
+        for (const pk of pList) {
+          params.push(pk, `${pk}-%`);
+        }
+      }
+    }
+
+    let tasks = db.prepare(query + ` ORDER BY t.project_id ASC, t.id ASC`).all(...params);
+
+    if (teams && teams.trim() !== '') {
+      const teamList = teams.split(',').map(tm => tm.trim().toLowerCase()).filter(Boolean);
+      if (teamList.length > 0) {
+        tasks = tasks.filter(t => {
+          const tTeam = (t.waiting_for_team || t.team || '').toLowerCase();
+          let tDeps = [];
+          try {
+            tDeps = typeof t.dependencies === 'string' ? JSON.parse(t.dependencies) : (t.dependencies || []);
+          } catch (_) {}
+          if (!Array.isArray(tDeps)) tDeps = tDeps ? [tDeps] : [];
+          const dStr = tDeps.map(d => String(d).toLowerCase());
+          return teamList.some(reqTeam => tTeam.includes(reqTeam) || dStr.some(d => d.includes(reqTeam)));
+        });
+      }
+    }
+
+    if (search && search.trim() !== '') {
+      const sLow = search.trim().toLowerCase();
+      tasks = tasks.filter(t => 
+        (t.id && t.id.toLowerCase().includes(sLow)) ||
+        (t.title && t.title.toLowerCase().includes(sLow)) ||
+        (t.assignee && t.assignee.toLowerCase().includes(sLow)) ||
+        (t.waiting_reason && t.waiting_reason.toLowerCase().includes(sLow)) ||
+        (t.waiting_for_team && t.waiting_for_team.toLowerCase().includes(sLow))
+      );
+    }
 
     const totalWaitingCount = tasks.length;
     const totalSpent = Math.round(tasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0));
@@ -1684,8 +1726,8 @@ router.get('/reports/waiting-html', (req, res) => {
             <td>
               <strong style="color: #0F172A; font-size: 0.92rem;">${t.title}</strong>
             </td>
-            <td><span class="proj-tag">${t.project_id}: ${t.project_title}</span></td>
-            <td>👤 ${t.assignee || 'تیم R&D'}</td>
+            <td><span class="proj-tag">${t.project_id || '-'}: ${t.project_title || '-'}</span></td>
+            <td>👤 ${t.assignee || 'نامشخص'}</td>
             <td><strong style="color:#C2410C;">🏢 ${t.waiting_for_team || 'تیم وابسته'}</strong></td>
             <td>
               <div class="blocking-reason-box">
@@ -1861,12 +1903,12 @@ router.get('/reports/waiting-html', (req, res) => {
 
   <div class="no-print-bar">
     <span>💡 پیش‌نمایش خروجی رسمی تسک‌های منتظر و متوقف‌کننده پلتفرم R&D</span>
-    <button className="no-print-btn" onclick="window.print()">🖨️ دانلود و ذخیره به عنوان PDF</button>
+    <button class="no-print-btn" onclick="window.print()">🖨️ چاپ / ذخیره به عنوان PDF</button>
   </div>
 
   <div class="header-banner">
-    <h1>⏳ گزارش جامع تسک‌های منتظر و علل مسدودکننده (Blocking Tasks Report)</h1>
-    <p class="subtitle">گزارش مدیریتی تسک‌های متوقف‌شده به همراه شناسایی دقیق تسک‌ها و تیم‌های مسدودکننده | تاریخ تنظیم: ۲۰ مرداد ۱۴۰۵</p>
+    <h1>⏳ گزارش جامع تسک‌های منتظر و علل مسدودکننده (Waiting Tasks Report)</h1>
+    <p class="subtitle">تعداد کل تسک‌های فیلترشده: ${totalWaitingCount} تسک | مجموع کارکرد معطل: ${totalSpent} ساعت | تاریخ تنظیم: ${new Date().toLocaleDateString('fa-IR')}</p>
   </div>
 
   <div class="kpi-row">
@@ -1897,7 +1939,7 @@ router.get('/reports/waiting-html', (req, res) => {
         </tr>
       </thead>
       <tbody>
-        ${teamSummaryRowsHTML}
+        ${teamSummaryRowsHTML || '<tr><td colspan="4" style="text-align:center;color:#64748B;">تسکی با شرایط انتخابی یافت نشد.</td></tr>'}
       </tbody>
     </table>
   </div>
@@ -1908,18 +1950,18 @@ router.get('/reports/waiting-html', (req, res) => {
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width: 75px;">کد تسک</th>
-          <th style="width: 200px;">عنوان تسک متوقف‌شده</th>
+          <th style="width: 85px;">کد تسک</th>
+          <th style="width: 220px;">عنوان تسک متوقف‌شده</th>
           <th>پروژه مربوطه</th>
           <th>مسئول تسک</th>
           <th>تیم در انتظار</th>
-          <th style="width: 250px;">⛔ تسک و علت مسدودکننده (Blocking Cause)</th>
+          <th style="width: 250px;">⛔ علت توقف / وابستگی</th>
           <th>اولویت</th>
           <th>ساعات کارکرد</th>
         </tr>
       </thead>
       <tbody>
-        ${detailedTasksTableHTML}
+        ${detailedTasksTableHTML || '<tr><td colspan="8" style="text-align:center;color:#64748B;">تسکی با شرایط انتخابی یافت نشد.</td></tr>'}
       </tbody>
     </table>
   </div>
@@ -1932,6 +1974,361 @@ router.get('/reports/waiting-html', (req, res) => {
     res.send(htmlDocument);
   } catch (err) {
     res.status(500).send('Error generating waiting report: ' + err.message);
+  }
+});
+
+// Standalone Manager Audit Report HTML Endpoint
+router.get('/reports/manager-audit-html', (req, res) => {
+  try {
+    const db = getDb();
+    const { project_keys, audit_type, search } = req.query;
+
+    const tasks = db.prepare(`
+      SELECT t.*, p.title as epic_title, p.status as epic_status
+      FROM tasks t
+      LEFT JOIN projects p ON t.project_id = p.id
+    `).all();
+
+    const projectsList = db.prepare('SELECT id, title FROM projects').all();
+    const validProjectIds = new Set(projectsList.map(p => p.id));
+
+    let historyRows = [];
+    try {
+      historyRows = db.prepare('SELECT * FROM task_estimate_history ORDER BY id ASC').all();
+    } catch (_) {}
+
+    const historyByTask = {};
+    for (const h of historyRows) {
+      if (!historyByTask[h.task_id]) historyByTask[h.task_id] = [];
+      historyByTask[h.task_id].push(h);
+    }
+
+    let orphanCount = 0;
+    let orphanSpentHours = 0;
+    let noSprintCount = 0;
+    let noEstimateCount = 0;
+    let noDueDateCount = 0;
+    let estimateRevisionCount = 0;
+    let netEstimateIncreaseHours = 0;
+    let netEstimateDecreaseHours = 0;
+
+    let auditedTasks = tasks.map(t => {
+      const isOrphan = !t.project_id || !validProjectIds.has(t.project_id);
+      const isNoSprint = !t.sprint_name || t.sprint_name.trim() === '';
+      const isNoEstimate = !t.estimate_hours || Number(t.estimate_hours) === 0;
+      const isNoDueDate = !t.due_date || t.due_date.trim() === '';
+
+      const taskHistory = historyByTask[t.id] || [];
+      const revisionCount = taskHistory.length;
+      let totalDelta = 0;
+      let initialEstimate = t.estimate_hours || 0;
+
+      if (revisionCount > 0) {
+        initialEstimate = taskHistory[0].old_estimate;
+        totalDelta = Math.round(((t.estimate_hours || 0) - initialEstimate) * 100) / 100;
+        estimateRevisionCount++;
+        if (totalDelta > 0) netEstimateIncreaseHours += totalDelta;
+        else netEstimateDecreaseHours += Math.abs(totalDelta);
+      }
+
+      if (isOrphan) {
+        orphanCount++;
+        orphanSpentHours += (t.spent_hours || 0);
+      }
+      if (isNoSprint) noSprintCount++;
+      if (isNoEstimate) noEstimateCount++;
+      if (isNoDueDate) noDueDateCount++;
+
+      const taskProjectKey = t.id && t.id.includes('-') ? t.id.split('-')[0].toUpperCase() : (t.project_id && t.project_id.includes('-') ? t.project_id.split('-')[0].toUpperCase() : 'UNKNOWN');
+
+      return {
+        ...t,
+        spent_hours: Math.round((t.spent_hours || 0) * 100) / 100,
+        estimate_hours: Math.round((t.estimate_hours || 0) * 100) / 100,
+        is_orphan: isOrphan,
+        is_no_sprint: isNoSprint,
+        is_no_estimate: isNoEstimate,
+        is_no_due_date: isNoDueDate,
+        is_estimate_revised: revisionCount > 0,
+        revision_count: revisionCount,
+        initial_estimate: initialEstimate,
+        total_delta: totalDelta,
+        project_key: taskProjectKey
+      };
+    });
+
+    // Filter by project_keys
+    if (project_keys && project_keys.trim() !== '') {
+      const keys = project_keys.split(',').map(k => k.trim().toUpperCase()).filter(Boolean);
+      if (keys.length > 0) {
+        auditedTasks = auditedTasks.filter(t => keys.includes(t.project_key) || keys.includes((t.project_id || '').toUpperCase()));
+      }
+    }
+
+    // Filter by audit_type
+    if (audit_type && audit_type !== 'all') {
+      if (audit_type === 'orphan') auditedTasks = auditedTasks.filter(t => t.is_orphan);
+      else if (audit_type === 'revised') auditedTasks = auditedTasks.filter(t => t.is_estimate_revised);
+      else if (audit_type === 'no_sprint') auditedTasks = auditedTasks.filter(t => t.is_no_sprint);
+      else if (audit_type === 'no_estimate') auditedTasks = auditedTasks.filter(t => t.is_no_estimate);
+      else if (audit_type === 'no_due' || audit_type === 'no_due_date') auditedTasks = auditedTasks.filter(t => t.is_no_due_date);
+    }
+
+    // Filter by search
+    if (search && search.trim() !== '') {
+      const sLow = search.trim().toLowerCase();
+      auditedTasks = auditedTasks.filter(t => 
+        (t.id && t.id.toLowerCase().includes(sLow)) ||
+        (t.title && t.title.toLowerCase().includes(sLow)) ||
+        (t.assignee && t.assignee.toLowerCase().includes(sLow)) ||
+        (t.project_id && t.project_id.toLowerCase().includes(sLow))
+      );
+    }
+
+    const filteredTotalSpent = Math.round(auditedTasks.reduce((sum, t) => sum + (t.spent_hours || 0), 0) * 10) / 10;
+    const filteredTotalEst = Math.round(auditedTasks.reduce((sum, t) => sum + (t.estimate_hours || 0), 0) * 10) / 10;
+
+    let tableRowsHTML = '';
+    auditedTasks.forEach((t, idx) => {
+      let issuesBadges = '';
+      if (t.is_orphan) issuesBadges += '<span class="badge badge-warning">📂 بدون اپیک</span> ';
+      if (t.is_estimate_revised) issuesBadges += `<span class="badge badge-orange">📈 تغییر تخمین (${t.total_delta > 0 ? '+' : ''}${t.total_delta}h)</span> `;
+      if (t.is_no_sprint) issuesBadges += '<span class="badge badge-danger">🏃 خارج از اسپرینت</span> ';
+      if (t.is_no_estimate) issuesBadges += '<span class="badge badge-info">⏱️ بدون Estimate</span> ';
+      if (t.is_no_due_date) issuesBadges += '<span class="badge badge-purple">📅 بدون سررسید</span> ';
+
+      if (!issuesBadges) issuesBadges = '<span class="badge badge-ok">✅ استاندارد</span>';
+
+      tableRowsHTML += `
+        <tr>
+          <td style="text-align: center; color: #64748B;">${idx + 1}</td>
+          <td><code class="task-code">${t.id}</code></td>
+          <td><strong style="color: #0F172A;">${t.title}</strong></td>
+          <td><span class="proj-tag">${t.project_id || 'نامشخص'}${t.epic_title ? `: ${t.epic_title}` : ''}</span></td>
+          <td>👤 ${t.assignee || 'نامشخص'}</td>
+          <td>${t.sprint_name || '-'}</td>
+          <td>${issuesBadges}</td>
+          <td style="font-family: monospace;">${t.spent_hours}h / ${t.estimate_hours}h</td>
+          <td>${t.due_date || '-'}</td>
+        </tr>
+      `;
+    });
+
+    const htmlDocument = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>گزارش ممیزی و کیفیت داده‌های تسک‌ها (Manager Audit Report)</title>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+    body {
+      background: #FFFFFF;
+      color: #0F172A;
+      font-family: 'Vazirmatn', sans-serif;
+      margin: 0;
+      padding: 2rem;
+      direction: rtl;
+      line-height: 1.6;
+    }
+    .no-print-bar {
+      background: #0F172A;
+      color: #FFFFFF;
+      padding: 0.8rem 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .no-print-btn {
+      background: #0EA5E9;
+      color: #FFFFFF;
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .header-banner {
+      background: #F0F9FF;
+      border: 1px solid #BAE6FD;
+      border-radius: 16px;
+      padding: 1.8rem;
+      margin-bottom: 1.5rem;
+      border-top: 4px solid #0284C7;
+    }
+    h1 { margin: 0 0 0.5rem; color: #0369A1; font-size: 1.7rem; font-weight: 800; }
+    .subtitle { color: #0284C7; font-size: 0.92rem; margin: 0; }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+    .kpi-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 1rem;
+      text-align: center;
+    }
+    .kpi-box .val { font-size: 1.5rem; font-weight: 800; color: #0284C7; margin-top: 0.2rem; }
+    .kpi-box .lbl { font-size: 0.8rem; color: #64748B; font-weight: 600; }
+    .card-section {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      page-break-inside: avoid;
+    }
+    .card-section h2 { margin: 0 0 1rem; font-size: 1.25rem; color: #0369A1; font-weight: 800; }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .data-table th, .data-table td {
+      padding: 0.7rem 0.8rem;
+      text-align: right;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .data-table th {
+      background: #F0F9FF;
+      color: #0369A1;
+      font-weight: 700;
+    }
+    .task-code {
+      background: #E0F2FE;
+      color: #0369A1;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    .proj-tag {
+      font-size: 0.78rem;
+      color: #334155;
+      background: #F1F5F9;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+    }
+    .badge {
+      padding: 0.2rem 0.45rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: inline-block;
+      margin-bottom: 0.2rem;
+    }
+    .badge-warning { background: #FEF3C7; color: #D97706; border: 1px solid #FCD34D; }
+    .badge-orange { background: #FFEDD5; color: #EA580C; border: 1px solid #FDBA74; }
+    .badge-danger { background: #FEE2E2; color: #DC2626; border: 1px solid #FCA5A5; }
+    .badge-info { background: #E0F2FE; color: #0284C7; border: 1px solid #7DD3FC; }
+    .badge-purple { background: #F3E8FF; color: #7E22CE; border: 1px solid #D8B4FE; }
+    .badge-ok { background: #DCFCE7; color: #15803D; border: 1px solid #86EFAC; }
+
+    @page {
+      size: A4 landscape;
+      margin: 8mm;
+    }
+    @media print {
+      .no-print-bar { display: none !important; }
+      body {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #FFFFFF !important;
+        font-size: 11px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .header-banner, .card-section, .kpi-box, .data-table {
+        break-inside: avoid;
+        box-shadow: none !important;
+      }
+      .data-table {
+        width: 100% !important;
+        table-layout: auto !important;
+        font-size: 9.5px !important;
+      }
+      .data-table th, .data-table td {
+        padding: 4px 5px !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print-bar">
+    <span>💡 پیش‌نمایش خروجی رسمی گزارش ممیزی و کیفیت تسک‌های مدیران</span>
+    <button class="no-print-btn" onclick="window.print()">🖨️ چاپ / ذخیره به عنوان PDF</button>
+  </div>
+
+  <div class="header-banner">
+    <h1>📋 گزارش ممیزی و ارزیابی کیفیت داده‌های تسک‌ها (Manager Audit Report)</h1>
+    <p class="subtitle">تعداد تسک‌های فیلترشده: ${auditedTasks.length} تسک | مجموع کارکرد: ${filteredTotalSpent}h | مجموع تخمین: ${filteredTotalEst}h | تاریخ تنظیم: ${new Date().toLocaleDateString('fa-IR')}</p>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-box">
+      <div class="lbl">بدون اپیک</div>
+      <div class="val" style="color: #D97706;">${orphanCount}</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">تغییر استیمیت</div>
+      <div class="val" style="color: #EA580C;">${estimateRevisionCount}</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">خارج از اسپرینت</div>
+      <div class="val" style="color: #DC2626;">${noSprintCount}</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">بدون Estimate</div>
+      <div class="val" style="color: #0284C7;">${noEstimateCount}</div>
+    </div>
+    <div class="kpi-box">
+      <div class="lbl">بدون سررسید</div>
+      <div class="val" style="color: #7E22CE;">${noDueDateCount}</div>
+    </div>
+  </div>
+
+  <!-- 📋 Detailed Tasks Table -->
+  <div class="card-section">
+    <h2>📋 فهرست تسک‌های ممیزی‌شده به همراه جزئیات اختلالات</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 35px;">#</th>
+          <th style="width: 80px;">کد تسک</th>
+          <th style="width: 240px;">عنوان تسک</th>
+          <th>پروژه / اپیک</th>
+          <th>مسئول</th>
+          <th>اسپرینت</th>
+          <th style="width: 220px;">موضوع اختلال</th>
+          <th>کارکرد / تخمین</th>
+          <th>تاریخ سررسید</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRowsHTML || '<tr><td colspan="9" style="text-align:center;color:#64748B;">تسکی با شرایط انتخابی یافت نشد.</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(htmlDocument);
+  } catch (err) {
+    res.status(500).send('Error generating manager audit report: ' + err.message);
   }
 });
 

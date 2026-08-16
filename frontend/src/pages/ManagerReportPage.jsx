@@ -134,7 +134,12 @@ const ManagerReportPage = () => {
   }, [filteredTasks]);
 
   const handlePrint = () => {
-    window.print();
+    const token = localStorage.getItem('token') || '';
+    const projKeys = selectedProjectKeys.join(',');
+    const auditType = auditTypeFilter || 'all';
+    const q = encodeURIComponent(searchQuery || '');
+    const url = `/api/reports/manager-audit-html?project_keys=${encodeURIComponent(projKeys)}&audit_type=${encodeURIComponent(auditType)}&search=${q}&token=${token}`;
+    window.open(url, '_blank');
   };
 
   if (loading) {
