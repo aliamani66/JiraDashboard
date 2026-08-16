@@ -75,16 +75,16 @@ const WaitingTasksPage = () => {
     return <div className="page-loading">در حال دریافت اطلاعات تسک‌های منتظر...</div>;
   }
 
+  // Helper to strictly identify waiting/onholding status
+  const isWaitingStatus = (st) => ['waiting', 'onholding', 'on hold', 'on_holding', 'blocked', 'منتظر', 'متوقف'].includes(String(st || '').toLowerCase().trim());
+
   // Filter projects by Jira Project Key and search query
   const filteredByProject = byProject.filter(project => {
     const pId = project.projectId || project.project_id || '';
     const pTitle = project.projectTitle || project.project_name || '';
     const jKey = (project.project_key || (pId ? pId.split('-')[0] : '')).toUpperCase();
 
-    const validTasks = (project.tasks || []).filter(t => {
-      const s = String(t.status || '').toLowerCase().trim();
-      return !['done', 'closed', 'resolved', 'complete', 'completed', 'finished', 'انجام شده', 'بسته شده', 'خاتمه یافته'].includes(s);
-    });
+    const validTasks = (project.tasks || []).filter(t => isWaitingStatus(t.status));
 
     if (validTasks.length === 0) return false;
 
@@ -239,7 +239,7 @@ const WaitingTasksPage = () => {
                   
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                     <span className="waiting-count-tag">
-                      {(project.tasks || []).filter(t => !['done', 'closed', 'resolved', 'complete', 'completed', 'finished', 'انجام شده', 'بسته شده', 'خاتمه یافته'].includes(String(t.status || '').toLowerCase().trim())).length} تسک منتظر
+                      {(project.tasks || []).filter(t => isWaitingStatus(t.status)).length} تسک منتظر
                     </span>
                   </div>
                 </div>
@@ -247,7 +247,7 @@ const WaitingTasksPage = () => {
                 {isExpanded && (
                   <div className="tasks-grid scrollable-tasks-grid">
                     {(project.tasks || [])
-                      .filter(t => !['done', 'closed', 'resolved', 'complete', 'completed', 'finished', 'انجام شده', 'بسته شده', 'خاتمه یافته'].includes(String(t.status || '').toLowerCase().trim()))
+                      .filter(t => isWaitingStatus(t.status))
                       .map(task => {
                       const pri = priorityMap[task.priority] || { label: task.priority || 'متوسط', className: 'normal' };
                       const taskIdStr = task.task_id || task.id;

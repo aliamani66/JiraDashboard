@@ -79,7 +79,7 @@ router.get('/projects', (req, res) => {
       SELECT p.*,
         IFNULL((SELECT COUNT(*) FROM tasks WHERE UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)), 0) as calc_total_tasks,
         IFNULL((SELECT COUNT(*) FROM tasks WHERE (UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)) AND (LOWER(status) IN ('done', 'completed', 'resolved', 'بسته'))), 0) as calc_completed_tasks,
-        IFNULL((SELECT COUNT(*) FROM tasks WHERE (UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)) AND (is_waiting = 1 OR LOWER(status) IN ('waiting', 'onholding', 'blocked', 'منتظر', 'معلق'))), 0) as calc_waiting_tasks,
+        IFNULL((SELECT COUNT(*) FROM tasks WHERE (UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)) AND (LOWER(status) IN ('waiting', 'onholding', 'on hold', 'on_holding', 'blocked', 'منتظر', 'متوقف'))), 0) as calc_waiting_tasks,
         IFNULL((SELECT SUM(estimate_hours) FROM tasks WHERE UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)), 0) as total_estimate_hours,
         IFNULL((SELECT SUM(spent_hours) FROM tasks WHERE UPPER(parent_task_id) = UPPER(p.id) OR UPPER(epic_id) = UPPER(p.id) OR UPPER(project_id) = UPPER(p.id)), 0) as total_spent_hours
       FROM projects p
@@ -118,8 +118,8 @@ router.get('/projects', (req, res) => {
         statusBreakdownMap.set(row.project_ref, { done: 0, active: 0, waiting: 0, todo: 0 });
       }
       const sMap = statusBreakdownMap.get(row.project_ref);
-      const s = (row.status || '').toLowerCase();
-      if (row.is_waiting === 1 || s === 'waiting' || s === 'onholding' || s === 'on hold' || s === 'blocked' || s === 'منتظر' || s === 'معلق') {
+      const s = (row.status || '').toLowerCase().trim();
+      if (['waiting', 'onholding', 'on hold', 'on_holding', 'blocked', 'منتظر', 'متوقف'].includes(s)) {
         sMap.waiting += row.count;
       } else if (s === 'done' || s === 'completed' || s === 'resolved' || s === 'بسته') {
         sMap.done += row.count;
@@ -284,7 +284,7 @@ router.get('/projects/:id', async (req, res) => {
     }
 
     project.tasks = tasks;
-    project.waitingTasks = tasks.filter(t => t.is_waiting === 1 || t.status === 'OnHolding' || t.status === 'Waiting' || t.status === 'Blocked');
+    project.waitingTasks = tasks.filter(t => ['waiting', 'onholding', 'on hold', 'on_holding', 'blocked', 'منتظر', 'متوقف'].includes((t.status || '').toLowerCase().trim()));
     
     const quarterSet = new Set();
     if (project.labels) {
@@ -298,12 +298,12 @@ router.get('/projects/:id', async (req, res) => {
 
       extractQuarterLabels(t.labels).forEach(q => quarterSet.add(q));
 
-      const s = (t.status || '').toLowerCase();
-      if (t.is_waiting === 1 || s === 'waiting' || s === 'onholding' || s === 'on hold') {
+      const s = (t.status || '').toLowerCase().trim();
+      if (['waiting', 'onholding', 'on hold', 'on_holding', 'blocked', 'منتظر', 'متوقف'].includes(s)) {
         statusMap.waiting++;
       } else if (s === 'done' || s === 'completed' || s === 'resolved') {
         statusMap.done++;
-      } else if (s === 'in progress' || s === 'in_progress' || s === 'active' || s === 'in review' || s === 'testing') {
+      } else if (s === 'in progress' || s === 'in_progress' || s === 'active' || s === 'in review' || s === 'testing' || s === 'در حال انجام') {
         statusMap.active++;
       } else {
         statusMap.todo++;
@@ -508,8 +508,7 @@ router.get('/projects/:id/blocked', (req, res) => {
     const tasks = db.prepare(`
       SELECT * FROM tasks 
       WHERE project_id = ? 
-        AND (is_waiting = 1 OR UPPER(status) IN ('WAITING', 'ONHOLDING', 'ON HOLD', 'ON_HOLDING', 'BLOCKED', 'منتظر', 'متوقف'))
-        AND UPPER(status) NOT IN ('DONE', 'CLOSED', 'RESOLVED', 'COMPLETE', 'COMPLETED', 'FINISHED', 'انجام شده', 'بسته شده', 'خاتمه یافته')
+        AND UPPER(status) IN ('WAITING', 'ONHOLDING', 'ON HOLD', 'ON_HOLDING', 'BLOCKED', 'منتظر', 'متوقف')
       ORDER BY sort_order ASC, id ASC
     `).all(req.params.id);
     res.json(tasks);
@@ -526,8 +525,7 @@ router.get('/waiting-tasks', (req, res) => {
       SELECT t.*, p.title as projectTitle 
       FROM tasks t 
       LEFT JOIN projects p ON (UPPER(t.project_id) = UPPER(p.id) OR UPPER(t.parent_task_id) = UPPER(p.id) OR UPPER(t.epic_id) = UPPER(p.id))
-      WHERE (t.is_waiting = 1 OR UPPER(t.status) IN ('WAITING', 'ONHOLDING', 'ON HOLD', 'ON_HOLDING', 'BLOCKED', 'منتظر', 'متوقف'))
-        AND UPPER(t.status) NOT IN ('DONE', 'CLOSED', 'RESOLVED', 'COMPLETE', 'COMPLETED', 'FINISHED', 'انجام شده', 'بسته شده', 'خاتمه یافته')
+      WHERE UPPER(t.status) IN ('WAITING', 'ONHOLDING', 'ON HOLD', 'ON_HOLDING', 'BLOCKED', 'منتظر', 'متوقف')
       ORDER BY t.project_id ASC, t.id ASC
     `).all();
     

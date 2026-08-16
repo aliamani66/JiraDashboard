@@ -271,9 +271,10 @@ async function initDb() {
     db.run("DELETE FROM projects WHERE id IN ('ORD-1','ORD-2','ORD-3','ORD-4','ORD-5','ORD-6','ORD-7','ORD-8','GTX-1','GTX-2','GTX-3','GTX-4','GTX-5','GTX-6','GTX-7','GTX-8','OPS-101','ORD-202','DEV-303') OR title IN ('پایپلاین CI/CD','استک مانیتورینگ','مهاجرت به کوبرنتیز','خودکارسازی امنیت','یکپارچه‌سازی AI با ورکفلوها','برنامه آموزش تیم‌ها','طرح بازیابی از بحران','مدیریت متمرکز لاگ‌ها','سامانه مدیریت عملیات R&D','پلتفرم جدید سفارش‌گیری آنلاین','ارتقا بهینه مانیتورینگ بک‌اند')");
   } catch (_) {}
 
-  // Strictly enforce is_waiting = 0 for any completed/done tasks
+  // Strictly enforce is_waiting flag only for true Waiting/OnHolding tasks
   try {
-    db.run("UPDATE tasks SET is_waiting = 0 WHERE UPPER(status) IN ('DONE', 'CLOSED', 'RESOLVED', 'COMPLETE', 'COMPLETED', 'FINISHED', 'انجام شده', 'بسته شده', 'خاتمه یافته')");
+    db.run("UPDATE tasks SET is_waiting = 0 WHERE UPPER(status) NOT IN ('WAITING', 'ONHOLDING', 'ON HOLD', 'ON_HOLDING', 'BLOCKED', 'منتظر', 'متوقف')");
+    db.run("UPDATE tasks SET is_waiting = 1 WHERE UPPER(status) IN ('WAITING', 'ONHOLDING', 'ON HOLD', 'ON_HOLDING', 'BLOCKED', 'منتظر', 'متوقف')");
   } catch (_) {}
 
   saveDb();
