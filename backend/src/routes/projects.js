@@ -517,7 +517,7 @@ router.get('/projects/:id/blocked', (req, res) => {
   }
 });
 
-// Waiting tasks across all projects (grouped by external team / OPM dependency)
+// Waiting tasks across all projects (grouped by external team / OPM dependency & flat tasks list)
 router.get('/waiting-tasks', (req, res) => {
   try {
     const db = getDb();
@@ -530,30 +530,48 @@ router.get('/waiting-tasks', (req, res) => {
     `).all();
     
     const byTeamMap = new Map();
+    const byProjectMap = new Map();
+    const teamsCountMap = new Map();
     let totalWaiting = 0;
     
     for (const t of tasks) {
       totalWaiting++;
-      const teamGroupKey = t.waiting_for_team || 'تیم توسعه و پشتیبانی';
+      const teamGroupKey = (t.waiting_for_team || t.blocked_by_team || 'سایر وابستگی‌ها').trim();
+      teamsCountMap.set(teamGroupKey, (teamsCountMap.get(teamGroupKey) || 0) + 1);
+
       const realProjId = t.project_id || (t.id ? t.id.split('-')[0] : 'ORD');
+      const projTitle = t.projectTitle || realProjId;
       
+      // Group by team
       if (!byTeamMap.has(teamGroupKey)) {
         byTeamMap.set(teamGroupKey, {
+          teamName: teamGroupKey,
           projectId: realProjId,
           projectTitle: `وابستگی به ${teamGroupKey}`,
           tasks: []
         });
       }
-      
-      const taskResponse = { ...t };
-      delete taskResponse.projectTitle;
-      
-      byTeamMap.get(teamGroupKey).tasks.push(taskResponse);
+      byTeamMap.get(teamGroupKey).tasks.push(t);
+
+      // Group by project
+      if (!byProjectMap.has(realProjId)) {
+        byProjectMap.set(realProjId, {
+          projectId: realProjId,
+          projectTitle: projTitle,
+          tasks: []
+        });
+      }
+      byProjectMap.get(realProjId).tasks.push(t);
     }
     
+    const teams = Array.from(teamsCountMap.entries()).map(([name, count]) => ({ name, count }));
+
     res.json({
       totalWaiting,
-      byProject: Array.from(byTeamMap.values())
+      tasks,
+      teams,
+      byTeam: Array.from(byTeamMap.values()),
+      byProject: Array.from(byProjectMap.values())
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch waiting tasks' });
