@@ -197,13 +197,14 @@ async function jiraSearch(jql, fields = [], options = {}) {
 
       for (let attempt = 0; attempt < retries; attempt++) {
         try {
-          const endpoint = isCloud ? `${cfg.baseUrl}/rest/api/3/search/jql` : `${cfg.baseUrl}/rest/api/2/search`;
+          const endpoint = `${cfg.baseUrl}/rest/api/2/search`;
           const postBody = { jql, fields: validFields, maxResults: pageSize, startAt };
 
           let response;
           try {
             response = await axios.post(endpoint, postBody, { headers, httpsAgent, timeout });
           } catch (postErr) {
+            // Fallback to GET method if POST fails
             const getUrl = `${cfg.baseUrl}/rest/api/2/search?jql=${encodeURIComponent(jql)}&maxResults=${pageSize}&startAt=${startAt}`;
             response = await axios.get(getUrl, { headers, httpsAgent, timeout });
           }
@@ -216,7 +217,8 @@ async function jiraSearch(jql, fields = [], options = {}) {
           if (err.response && (err.response.status === 401 || err.response.status === 403)) {
             break;
           }
-          console.log(`[JiraSearch Attempt ${attempt + 1}/${retries}] Error: ${err.code || err.message}`);
+          const jiraMsg = err.response?.data?.errorMessages?.join(', ') || (err.response?.data?.errors ? JSON.stringify(err.response.data.errors) : '') || '';
+          console.log(`[JiraSearch Attempt ${attempt + 1}/${retries}] Error: ${err.code || err.message} ${jiraMsg ? `(Jira: ${jiraMsg})` : ''} - JQL: "${jql}"`);
           await new Promise(r => setTimeout(r, 1000));
         }
       }
@@ -313,18 +315,13 @@ async function fetchEpics(days = null) {
     if (configuredProjKeysList.length > 1) {
       // Fetch epics for each configured project individually
       const epicPromises = configuredProjKeysList.map(async (pKey) => {
-        const jqlSingle = `project = "${pKey}" AND (issuetype in (Epic, "اپیک") OR "Epic Name" is not EMPTY OR issuetype = Epic) ${dateFilter} ORDER BY created DESC`;
+        const jqlSingle = `project = "${pKey}" AND issuetype = Epic ${dateFilter} ORDER BY created DESC`;
         try {
           const res = await jiraSearch(jqlSingle, fields, { maxResults: 2000 });
           return res.issues || [];
-        } catch (_) {
-          try {
-            const fallbackJql = `project = "${pKey}" AND issuetype = Epic ${dateFilter} ORDER BY created DESC`;
-            const fbRes = await jiraSearch(fallbackJql, fields, { maxResults: 2000 });
-            return fbRes.issues || [];
-          } catch (_) {
-            return [];
-          }
+        } catch (err) {
+          console.warn(`[fetchEpics] Warning fetching epics for ${pKey}:`, err.message);
+          return [];
         }
       });
 
@@ -341,16 +338,15 @@ async function fetchEpics(days = null) {
     } else {
       let projectFilter = '';
       if (configuredProjKeysList.length === 1) {
-        projectFilter = `AND project = "${configuredProjKeysList[0]}"`;
+        projectFilter = `project = "${configuredProjKeysList[0]}" AND `;
       }
-      const jql = `(issuetype in (Epic, "اپیک") OR "Epic Name" is not EMPTY OR issuetype = Epic) ${projectFilter} ${dateFilter} ORDER BY created DESC`;
+      const jql = `${projectFilter}issuetype = Epic ${dateFilter} ORDER BY created DESC`;
       try {
         const data = await jiraSearch(jql, fields, { maxResults: 2000 });
         allIssues = data.issues || [];
-      } catch (_) {
-        const fallbackJql = `issuetype=Epic ${projectFilter} ${dateFilter} ORDER BY created DESC`;
-        const data = await jiraSearch(fallbackJql, fields, { maxResults: 2000 }).catch(() => ({ issues: [] }));
-        allIssues = data.issues || [];
+      } catch (err) {
+        console.warn('[fetchEpics] Warning fetching epics:', err.message);
+        allIssues = [];
       }
     }
 
