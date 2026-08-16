@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, User, CheckCircle2, LogOut, Shield, ChevronDown, Palette, Sparkles, X, Layers, FileCheck, AlertTriangle, Zap, ZapOff } from 'lucide-react';
+import { RefreshCw, User, CheckCircle2, LogOut, Shield, ChevronDown, Palette, Sparkles, X, Layers, FileCheck, AlertTriangle, Zap, ZapOff, Bell, Clock } from 'lucide-react';
 import Sidebar from './Sidebar';
 import './Layout.css';
 import { api } from '../../services/api';
@@ -13,10 +13,16 @@ const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { reducedMotion, toggleReducedMotion } = useMotion();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState('---');
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // 🔔 Topbar Alert & Notifications State
+  const [schedulerStatus, setSchedulerStatus] = useState(null);
+  const [showNotifMenu, setShowNotifMenu] = useState(false);
+  const notifRef = useRef(null);
 
   // 🔄 Dedicated Modern Header Sync Modal State
   const [syncModal, setSyncModal] = useState({
@@ -28,6 +34,17 @@ const Layout = ({ children }) => {
   });
 
   const menuRef = useRef(null);
+
+  const fetchSchedulerStatus = async () => {
+    try {
+      const res = await api.getSchedulerConfig().catch(() => null);
+      if (res && res.success && res.config) {
+        setSchedulerStatus(res.config);
+      }
+    } catch (err) {
+      console.error('Error fetching scheduler status for topbar notif:', err);
+    }
+  };
 
   const formatSyncTime = (rawDateStr) => {
     if (!rawDateStr) return 'همگام‌نشده';
@@ -172,6 +189,113 @@ const Layout = ({ children }) => {
               >
                 <RefreshCw size={17} className={isSyncing ? 'spin-icon' : ''} />
               </button>
+            </div>
+
+            {/* 🔔 Notification Bell Alert */}
+            <div className="topbar-notif-wrap" ref={notifRef}>
+              <button
+                type="button"
+                className={`topbar-notif-btn ${schedulerStatus?.last_status === 'error' ? 'has-error' : schedulerStatus?.last_status === 'running' ? 'is-running' : ''}`}
+                onClick={() => {
+                  setShowNotifMenu(!showNotifMenu);
+                  fetchSchedulerStatus();
+                }}
+                title={schedulerStatus?.last_status === 'error' ? '⚠️ هشدار: آخرین همگام‌سازی جیرا با خطا مواجه شد!' : 'وضعیت همگام‌سازی و اعلانات سیستم'}
+              >
+                <Bell size={17} className={schedulerStatus?.last_status === 'error' ? 'notif-bell-shake' : ''} />
+                {schedulerStatus?.last_status === 'error' && <span className="notif-pulse-dot error" />}
+                {schedulerStatus?.last_status === 'running' && <span className="notif-pulse-dot running" />}
+              </button>
+
+              {showNotifMenu && (
+                <div className="notif-dropdown-card">
+                  <div className="ndc-header">
+                    <div className="ndc-title">
+                      <Bell size={15} className="text-accent-cyan" />
+                      <span>مرکز اعلانات و وضعیت همگام‌سازی</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="ndc-refresh-btn"
+                      onClick={fetchSchedulerStatus}
+                      title="بروزرسانی وضعیت"
+                    >
+                      <RefreshCw size={12} />
+                    </button>
+                  </div>
+
+                  <div className="ndc-divider" />
+
+                  {schedulerStatus?.last_status === 'error' ? (
+                    <div className="ndc-alert-box error">
+                      <div className="ndc-alert-icon">
+                        <AlertTriangle size={20} color="#EF4444" />
+                      </div>
+                      <div className="ndc-alert-content">
+                        <strong className="ndc-alert-title">خطا در آخرین همگام‌سازی جیرا!</strong>
+                        <p className="ndc-alert-desc">
+                          {schedulerStatus?.last_message || 'عدم موفقیت در دریافت اطلاعات از سرور جیرا.'}
+                        </p>
+                        {schedulerStatus?.last_run && (
+                          <span className="ndc-alert-time">
+                            زمان خطا: {new Date(schedulerStatus.last_run).toLocaleString('fa-IR')}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="ndc-action-btn"
+                          onClick={() => {
+                            setShowNotifMenu(false);
+                            navigate('/jira-settings');
+                          }}
+                        >
+                          بررسی تنظیمات و لاگ‌ها
+                        </button>
+                      </div>
+                    </div>
+                  ) : schedulerStatus?.last_status === 'running' ? (
+                    <div className="ndc-alert-box running">
+                      <div className="ndc-alert-icon">
+                        <RefreshCw size={18} className="spin text-accent-yellow" />
+                      </div>
+                      <div className="ndc-alert-content">
+                        <strong className="ndc-alert-title" style={{ color: '#FBBF24' }}>همگام‌سازی در حال اجراست...</strong>
+                        <p className="ndc-alert-desc">داده‌های جدید در حال استخراج و ادغام در پایگاه‌داده هستند.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ndc-alert-box success">
+                      <div className="ndc-alert-icon">
+                        <CheckCircle2 size={20} color="#34D399" />
+                      </div>
+                      <div className="ndc-alert-content">
+                        <strong className="ndc-alert-title">سیستم همگام‌سازی پایدار است</strong>
+                        <p className="ndc-alert-desc">
+                          {schedulerStatus?.last_message || 'آخرین همگام‌سازی خودکار دیتابیس با موفقیت انجام شد.'}
+                        </p>
+                        {schedulerStatus?.last_run && (
+                          <span className="ndc-alert-time">
+                            آخرین اجرا: {new Date(schedulerStatus.last_run).toLocaleString('fa-IR')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="ndc-footer">
+                    <button
+                      type="button"
+                      className="ndc-settings-link"
+                      onClick={() => {
+                        setShowNotifMenu(false);
+                        navigate('/jira-settings');
+                      }}
+                    >
+                      ⚙️ مدیریت زمان‌بندی و پایش دیتابیس
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 👤 Topbar User Profile Menu */}
