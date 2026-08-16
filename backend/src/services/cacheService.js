@@ -1425,11 +1425,150 @@ async function syncRecentFromJira(days = 10) {
   }
 }
 
-function initCron() {
-  if (jiraService.isConfigured) {
-    cron.schedule(`*/${SYNC_INTERVAL} * * * *`, () => syncRecentFromJira(10));
-    console.log(`Scheduled Jira sync every ${SYNC_INTERVAL} minutes`);
+// ─── DYNAMIC AUTOMATED JIRA SYNC SCHEDULER ─────────────────────────────────
+let activeCronJob = null;
+let isSchedulerRunning = false;
+
+function getSchedulerConfig() {
+  const db = getDb();
+  const rows = db.prepare("SELECT key, value FROM system_settings WHERE key LIKE 'scheduler_%'").all();
+  const cfg = {};
+  for (const r of rows) {
+    cfg[r.key] = r.value;
   }
+
+  return {
+    enabled: cfg.scheduler_enabled !== 'false',
+    mode: cfg.scheduler_mode || 'daily', // 'daily' | 'interval'
+    time: cfg.scheduler_time || '02:00', // e.g. '02:00' (2:00 AM)
+    interval_hours: parseInt(cfg.scheduler_interval_hours) || 1,
+    timeframe_months: parseInt(cfg.scheduler_timeframe_months) || 6,
+    sync_type: cfg.scheduler_sync_type || 'timeframe', // 'timeframe' | 'incremental' | 'full'
+    last_run: cfg.scheduler_last_run || null,
+    last_status: cfg.scheduler_last_status || 'idle',
+    last_message: cfg.scheduler_last_message || null,
+    last_duration_sec: cfg.scheduler_last_duration_sec ? Number(cfg.scheduler_last_duration_sec) : null,
+    is_running: isSchedulerRunning
+  };
+}
+
+function saveSchedulerConfig(newCfg) {
+  const db = getDb();
+  const upsert = db.prepare("INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value");
+
+  db.transaction(() => {
+    if (newCfg.enabled !== undefined) upsert.run('scheduler_enabled', String(newCfg.enabled));
+    if (newCfg.mode !== undefined) upsert.run('scheduler_mode', String(newCfg.mode));
+    if (newCfg.time !== undefined) upsert.run('scheduler_time', String(newCfg.time));
+    if (newCfg.interval_hours !== undefined) upsert.run('scheduler_interval_hours', String(newCfg.interval_hours));
+    if (newCfg.timeframe_months !== undefined) upsert.run('scheduler_timeframe_months', String(newCfg.timeframe_months));
+    if (newCfg.sync_type !== undefined) upsert.run('scheduler_sync_type', String(newCfg.sync_type));
+  })();
+
+  setupDynamicScheduler();
+  return getSchedulerConfig();
+}
+
+async function executeScheduledSync() {
+  if (isSchedulerRunning) {
+    console.log('[SCHEDULER] Sync already in progress, skipping trigger.');
+    return { success: false, message: 'Sync already in progress' };
+  }
+
+  if (!jiraService.isConfigured) {
+    console.log('[SCHEDULER] Jira is not configured. Skipping scheduled sync.');
+    return { success: false, message: 'Jira not configured' };
+  }
+
+  isSchedulerRunning = true;
+  const startTime = Date.now();
+  const db = getDb();
+  const upsert = db.prepare("INSERT INTO system_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value");
+  
+  upsert.run('scheduler_last_status', 'running');
+  upsert.run('scheduler_last_run', new Date().toISOString());
+
+  const cfg = getSchedulerConfig();
+  console.log(`[SCHEDULER] ⏰ Triggering scheduled Jira sync (Mode: ${cfg.mode}, Type: ${cfg.sync_type}, Months: ${cfg.timeframe_months})...`);
+
+  try {
+    let result;
+    if (cfg.sync_type === 'incremental') {
+      result = await syncRecentFromJira(10);
+    } else if (cfg.sync_type === 'full') {
+      result = await syncFromJira();
+    } else {
+      // Default: timeframe
+      const months = cfg.timeframe_months || 6;
+      result = await syncMonthlyLastYearFromJira(months);
+    }
+
+    const durationSec = Math.round((Date.now() - startTime) / 1000);
+    const msg = result.success
+      ? `همگام‌سازی زمان‌بندی‌شده با موفقیت انجام شد (${result.projectsSynced || 0} پروژه، ${result.tasksSynced || 0} تسک) در ${durationSec} ثانیه.`
+      : `خطا در همگام‌سازی: ${result.message || 'نامشخص'}`;
+
+    upsert.run('scheduler_last_status', result.success ? 'success' : 'error');
+    upsert.run('scheduler_last_message', msg);
+    upsert.run('scheduler_last_duration_sec', String(durationSec));
+
+    console.log(`[SCHEDULER] ✅ Finished: ${msg}`);
+    return result;
+  } catch (err) {
+    console.error('[SCHEDULER] ❌ Error executing scheduled sync:', err);
+    const durationSec = Math.round((Date.now() - startTime) / 1000);
+    upsert.run('scheduler_last_status', 'error');
+    upsert.run('scheduler_last_message', `خطای سیستمی: ${err.message}`);
+    upsert.run('scheduler_last_duration_sec', String(durationSec));
+    return { success: false, message: err.message };
+  } finally {
+    isSchedulerRunning = false;
+  }
+}
+
+function setupDynamicScheduler() {
+  if (activeCronJob) {
+    activeCronJob.stop();
+    activeCronJob = null;
+    console.log('[SCHEDULER] Stopped existing cron schedule.');
+  }
+
+  const cfg = getSchedulerConfig();
+
+  if (!cfg.enabled) {
+    console.log('[SCHEDULER] Automated scheduler is DISABLED by configuration.');
+    return;
+  }
+
+  let cronExpression = '0 2 * * *'; // Default: every night at 02:00 AM
+
+  if (cfg.mode === 'daily') {
+    const timeParts = (cfg.time || '02:00').split(':');
+    const hour = parseInt(timeParts[0]) || 2;
+    const minute = parseInt(timeParts[1]) || 0;
+    cronExpression = `${minute} ${hour} * * *`;
+  } else if (cfg.mode === 'interval') {
+    const hours = cfg.interval_hours || 1;
+    if (hours === 1) {
+      cronExpression = '0 * * * *'; // every hour
+    } else {
+      cronExpression = `0 */${hours} * * *`;
+    }
+  }
+
+  try {
+    activeCronJob = cron.schedule(cronExpression, () => {
+      console.log(`[SCHEDULER] ⏰ Cron trigger fired at ${new Date().toISOString()} (${cronExpression})`);
+      executeScheduledSync();
+    });
+    console.log(`[SCHEDULER] 🚀 Dynamic Scheduler ACTIVE: [${cronExpression}] (Mode: ${cfg.mode}, Time: ${cfg.time || '-'}, Range: ${cfg.timeframe_months} months)`);
+  } catch (cronErr) {
+    console.error(`[SCHEDULER] Invalid cron expression "${cronExpression}":`, cronErr.message);
+  }
+}
+
+function initCron() {
+  setupDynamicScheduler();
 }
 
 module.exports = {
@@ -1442,5 +1581,9 @@ module.exports = {
   updateProjectStats,
   getLastSync,
   autoLinkTasksToEpics,
-  initCron
+  initCron,
+  getSchedulerConfig,
+  saveSchedulerConfig,
+  executeScheduledSync,
+  setupDynamicScheduler
 };

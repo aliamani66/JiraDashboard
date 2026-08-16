@@ -301,6 +301,20 @@ const JiraSettingsPage = () => {
   const [systemTestsResult, setSystemTestsResult] = useState(null);
   const [systemTestsLoading, setSystemTestsLoading] = useState(false);
 
+  // ⏰ Dynamic Automated Jira Sync Scheduler State
+  const [schedulerConfig, setSchedulerConfig] = useState(null);
+  const [showSchedulerModal, setShowSchedulerModal] = useState(false);
+  const [schedulerForm, setSchedulerForm] = useState({
+    enabled: true,
+    mode: 'daily',
+    time: '02:00',
+    interval_hours: 1,
+    timeframe_months: 6,
+    sync_type: 'timeframe'
+  });
+  const [schedulerSaving, setSchedulerSaving] = useState(false);
+  const [schedulerRunLoading, setSchedulerRunLoading] = useState(false);
+
   // 📜 Backend Logs State & Handlers
   const [systemLogs, setSystemLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -744,6 +758,66 @@ const JiraSettingsPage = () => {
     showToast('✅ وضعیت تطابق بر اساس مقادیر فعلی ستون جیرا و دیتابیس با موفقیت محاسبه گردید.', 'success');
   };
 
+  const fetchSchedulerConfig = useCallback(async () => {
+    try {
+      const res = await api.getSchedulerConfig().catch(() => null);
+      if (res && res.success && res.config) {
+        setSchedulerConfig(res.config);
+        setSchedulerForm({
+          enabled: res.config.enabled !== false,
+          mode: res.config.mode || 'daily',
+          time: res.config.time || '02:00',
+          interval_hours: res.config.interval_hours || 1,
+          timeframe_months: res.config.timeframe_months || 6,
+          sync_type: res.config.sync_type || 'timeframe'
+        });
+      }
+    } catch (e) {
+      console.error('Failed to fetch scheduler config:', e);
+    }
+  }, []);
+
+  const handleOpenSchedulerModal = () => {
+    fetchSchedulerConfig();
+    setShowSchedulerModal(true);
+  };
+
+  const handleSaveScheduler = async (e) => {
+    if (e) e.preventDefault();
+    try {
+      setSchedulerSaving(true);
+      const res = await api.saveSchedulerConfig(schedulerForm);
+      if (res && res.success) {
+        setSchedulerConfig(res.config);
+        showToast(res.message || 'تنظیمات زمان‌بندی خودکار با موفقیت ذخیره شد.', 'success');
+        setShowSchedulerModal(false);
+      } else {
+        showToast(res?.message || 'خطا در ذخیره تنظیمات زمان‌بندی', 'error');
+      }
+    } catch (e) {
+      showToast('خطا در ذخیره تنظیمات زمان‌بندی: ' + e.message, 'error');
+    } finally {
+      setSchedulerSaving(false);
+    }
+  };
+
+  const handleRunSchedulerNow = async () => {
+    try {
+      setSchedulerRunLoading(true);
+      const res = await api.runSchedulerNow();
+      if (res && res.success) {
+        showToast(res.message || 'همگام‌سازی زمان‌بندی‌شده آغاز گردید.', 'success');
+        setTimeout(() => fetchSchedulerConfig(), 3000);
+      } else {
+        showToast(res?.message || 'خطا در آغاز همگام‌سازی', 'error');
+      }
+    } catch (e) {
+      showToast('خطا در اجرای همگام‌سازی: ' + e.message, 'error');
+    } finally {
+      setSchedulerRunLoading(false);
+    }
+  };
+
   const fetchConfig = useCallback(async () => {
     try {
       setLoading(true);
@@ -751,12 +825,13 @@ const JiraSettingsPage = () => {
       setCfg(data);
       const m = data?.rebuildMonths || 3;
       fetchDbStats(m);
+      fetchSchedulerConfig();
     } catch (e) {
       showToast('خطا در دریافت تنظیمات جیرا: ' + (e.message || ''), 'error');
     } finally {
       setLoading(false);
     }
-  }, [fetchDbStats]);
+  }, [fetchDbStats, fetchSchedulerConfig]);
 
   useEffect(() => { fetchConfig(); }, []);
 
@@ -2517,10 +2592,33 @@ const JiraSettingsPage = () => {
                 <span>{monthlySyncing ? 'در حال استخراج...' : 'استخراج بازه زمانی'}</span>
               </button>
 
-              <div style={{ background: 'rgba(14, 165, 233, 0.12)', border: '1px solid rgba(14, 165, 233, 0.35)', borderRadius: '8px', padding: '0.3rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>حجم:</span>
-                <strong style={{ fontSize: '0.85rem', color: '#38BDF8', fontWeight: 800 }}>{dbStats?.dbSizeMb ?? '0.00'} MB</strong>
-              </div>
+              {/* ⏰ دکمه زمان‌بندی همگام‌سازی خودکار (Scheduler) */}
+              <button
+                type="button"
+                className="jsp-run-diag-btn"
+                style={{
+                  background: schedulerConfig?.enabled ? 'linear-gradient(135deg, #0284C7, #0369A1)' : 'rgba(255, 255, 255, 0.08)',
+                  boxShadow: schedulerConfig?.enabled ? '0 4px 15px rgba(2, 132, 199, 0.35)' : 'none',
+                  border: '1px solid rgba(56, 189, 248, 0.45)',
+                  color: '#FFFFFF',
+                  padding: '0.35rem 0.85rem',
+                  fontSize: '0.8rem',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}
+                onClick={handleOpenSchedulerModal}
+                title="تنظیم زمان‌بندی همگام‌سازی خودکار دیتابیس با جیرا"
+              >
+                <Clock size={13} className="text-accent-cyan" />
+                <span>
+                  {schedulerConfig?.enabled
+                    ? `زمان‌بندی: ${schedulerConfig.mode === 'daily' ? `هر شب ${schedulerConfig.time}` : `هر ${schedulerConfig.interval_hours} ساعت`}`
+                    : 'زمان‌بندی خودکار'}
+                </span>
+              </button>
 
               <button
                 type="button"
@@ -2597,13 +2695,17 @@ const JiraSettingsPage = () => {
           {/* ⚖️ UNIFIED COMPREHENSIVE JIRA VS DATABASE COMPARISON TABLE */}
           <div style={{ marginTop: '0.5rem', marginBottom: '1.25rem' }}>
             <div style={{ marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#38BDF8', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#38BDF8', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <span>جدول مقایسه شاخص‌ها (جیرا vs دیتابیس)</span>
                 {Array.isArray(dbStats?.projectTaskCounts) && dbStats.projectTaskCounts.length > 0 && (
-                  <span style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.35)', color: '#FCD34D', padding: '0.12rem 0.55rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>
+                  <span style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.35)', color: '#FCD34D', padding: '0.15rem 0.6rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>
                     {dbStats.projectTaskCounts.map(p => `پروژه ${p.id}: ${p.epicCount || 0} اپیک کل — ${p.taskCount || 0} تسک`).join(' | ')}
                   </span>
                 )}
+                <span style={{ background: 'rgba(14, 165, 233, 0.15)', border: '1px solid rgba(14, 165, 233, 0.4)', color: '#38BDF8', padding: '0.15rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Database size={13} />
+                  <span>حجم دیتابیس: <strong>{dbStats?.dbSizeMb ?? '0.00'} MB</strong></span>
+                </span>
               </span>
             </div>
 
@@ -4448,6 +4550,426 @@ const JiraSettingsPage = () => {
                   {confirmModal.confirmText || 'تأیید و ادامه'}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ⏰ JIRA SYNC SCHEDULER CONFIGURATION MODAL */}
+      <AnimatePresence>
+        {showSchedulerModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(11, 15, 25, 0.85)',
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '1.5rem',
+            direction: 'rtl'
+          }} onClick={() => setShowSchedulerModal(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98))',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
+                boxShadow: '0 25px 70px -15px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.2)',
+                borderRadius: '24px',
+                padding: '1.85rem',
+                maxWidth: '620px',
+                width: '100%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                color: '#F8FAFC',
+                direction: 'rtl'
+              }}
+            >
+              {/* Modal Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '14px',
+                    background: 'rgba(56, 189, 248, 0.15)',
+                    border: '1px solid rgba(56, 189, 248, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#38BDF8'
+                  }}>
+                    <Clock size={24} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#F8FAFC' }}>
+                      زمان‌بندی همگام‌سازی خودکار دیتابیس با جیرا
+                    </h3>
+                    <span style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: '0.2rem', display: 'inline-block' }}>
+                      اجرای منظم و خودکار به‌روزرسانی داده‌های جیرا در پس‌زمینه سرور
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSchedulerModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveScheduler}>
+                {/* 1. Master Toggle */}
+                <div style={{
+                  background: schedulerForm.enabled ? 'rgba(14, 165, 233, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+                  border: schedulerForm.enabled ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '16px',
+                  padding: '1rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '1.25rem',
+                  transition: 'all 0.2s ease'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      background: schedulerForm.enabled ? '#34D399' : '#94A3B8',
+                      boxShadow: schedulerForm.enabled ? '0 0 10px #34D399' : 'none'
+                    }} />
+                    <div>
+                      <strong style={{ fontSize: '0.92rem', color: '#FFFFFF' }}>وضعیت زمان‌بندی خودکار:</strong>
+                      <div style={{ fontSize: '0.76rem', color: '#94A3B8', marginTop: '2px' }}>
+                        {schedulerForm.enabled ? 'همگام‌سازی طبق زمان و بازه انتخابی در سرور فعال است.' : 'همگام‌سازی خودکار غیرفعال است (فقط دستی).'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '26px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={schedulerForm.enabled}
+                      onChange={e => setSchedulerForm({ ...schedulerForm, enabled: e.target.checked })}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute',
+                      cursor: 'pointer',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: schedulerForm.enabled ? '#0284C7' : 'rgba(255, 255, 255, 0.2)',
+                      borderRadius: '34px',
+                      transition: '0.3s'
+                    }}>
+                      <span style={{
+                        position: 'absolute',
+                        height: '20px',
+                        width: '20px',
+                        left: schedulerForm.enabled ? '25px' : '3px',
+                        bottom: '3px',
+                        background: '#FFFFFF',
+                        borderRadius: '50%',
+                        transition: '0.3s'
+                      }} />
+                    </span>
+                  </label>
+                </div>
+
+                {/* 2. Frequency Mode Selection */}
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.65)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '16px',
+                  padding: '1.15rem',
+                  marginBottom: '1.25rem'
+                }}>
+                  <label style={{ fontSize: '0.86rem', fontWeight: 800, color: '#38BDF8', display: 'block', marginBottom: '0.75rem' }}>
+                    ⏰ الگوی زمان اجرا (Schedule Mode):
+                  </label>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setSchedulerForm({ ...schedulerForm, mode: 'daily' })}
+                      style={{
+                        padding: '0.65rem 0.9rem',
+                        borderRadius: '12px',
+                        border: schedulerForm.mode === 'daily' ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.1)',
+                        background: schedulerForm.mode === 'daily' ? 'rgba(56, 189, 248, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                        color: schedulerForm.mode === 'daily' ? '#FFFFFF' : '#94A3B8',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: '0.84rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.45rem',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <span>🌙 روزانه در ساعت مشخص</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSchedulerForm({ ...schedulerForm, mode: 'interval' })}
+                      style={{
+                        padding: '0.65rem 0.9rem',
+                        borderRadius: '12px',
+                        border: schedulerForm.mode === 'interval' ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.1)',
+                        background: schedulerForm.mode === 'interval' ? 'rgba(56, 189, 248, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                        color: schedulerForm.mode === 'interval' ? '#FFFFFF' : '#94A3B8',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: '0.84rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.45rem',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <span>⏱️ دوره‌ای (هر چند ساعت)</span>
+                    </button>
+                  </div>
+
+                  {schedulerForm.mode === 'daily' ? (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#E2E8F0' }}>ساعت اجرای هر شب:</span>
+                        <input
+                          type="time"
+                          value={schedulerForm.time || '02:00'}
+                          onChange={e => setSchedulerForm({ ...schedulerForm, time: e.target.value })}
+                          style={{
+                            background: '#0F172A',
+                            border: '1px solid #38BDF8',
+                            color: '#38BDF8',
+                            borderRadius: '10px',
+                            padding: '0.4rem 0.85rem',
+                            fontSize: '1rem',
+                            fontWeight: 800,
+                            direction: 'ltr',
+                            outline: 'none'
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                          {['01:00', '02:00', '03:00', '04:00'].map(t => (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => setSchedulerForm({ ...schedulerForm, time: t })}
+                              style={{
+                                background: schedulerForm.time === t ? 'rgba(56, 189, 248, 0.3)' : 'rgba(255, 255, 255, 0.06)',
+                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                color: schedulerForm.time === t ? '#38BDF8' : '#CBD5E1',
+                                padding: '0.25rem 0.55rem',
+                                borderRadius: '8px',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '0.74rem', color: '#94A3B8', marginTop: '0.5rem', display: 'block' }}>
+                        💡 پیشنهاد: ساعت ۲ الی ۴ بامداد خلوت‌ترین زمان سرور جیرا و شبکه می‌باشد.
+                      </span>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#E2E8F0' }}>فاصله تکرار:</span>
+                        {[1, 2, 3, 6, 12].map(hrs => (
+                          <button
+                            key={hrs}
+                            type="button"
+                            onClick={() => setSchedulerForm({ ...schedulerForm, interval_hours: hrs })}
+                            style={{
+                              background: schedulerForm.interval_hours === hrs ? 'rgba(56, 189, 248, 0.3)' : 'rgba(255, 255, 255, 0.06)',
+                              border: schedulerForm.interval_hours === hrs ? '1px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.15)',
+                              color: schedulerForm.interval_hours === hrs ? '#38BDF8' : '#CBD5E1',
+                              padding: '0.35rem 0.75rem',
+                              borderRadius: '8px',
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            هر {hrs} ساعت
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Data Range / Timeframe Selection */}
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.65)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '16px',
+                  padding: '1.15rem',
+                  marginBottom: '1.25rem'
+                }}>
+                  <label style={{ fontSize: '0.86rem', fontWeight: 800, color: '#38BDF8', display: 'block', marginBottom: '0.75rem' }}>
+                    📅 بازه زمانی استخراج داده از جیرا (Sync Timeframe):
+                  </label>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.6rem' }}>
+                    {[
+                      { type: 'incremental', months: 0, label: '🚀 ۱۰ روز اخیر (سریع)', desc: 'تغییرات اخیر' },
+                      { type: 'timeframe', months: 1, label: '۱ ماه اخیر', desc: '۱ ماه گذشته' },
+                      { type: 'timeframe', months: 3, label: '۳ ماه اخیر', desc: 'فصل جاری' },
+                      { type: 'timeframe', months: 6, label: '🌟 ۶ ماه اخیر', desc: 'پیشنهادی' },
+                      { type: 'timeframe', months: 12, label: '۱۲ ماه اخیر', desc: 'یک سال گذشته' },
+                      { type: 'full', months: 0, label: '⚡ بازسازی کامل', desc: 'تمام تاریخچه' }
+                    ].map(opt => {
+                      const isSelected = schedulerForm.sync_type === opt.type && (opt.type !== 'timeframe' || schedulerForm.timeframe_months === opt.months);
+                      return (
+                        <div
+                          key={opt.label}
+                          onClick={() => setSchedulerForm({
+                            ...schedulerForm,
+                            sync_type: opt.type,
+                            timeframe_months: opt.months || schedulerForm.timeframe_months
+                          })}
+                          style={{
+                            background: isSelected ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                            border: isSelected ? '1px solid #34D399' : '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '12px',
+                            padding: '0.65rem 0.75rem',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <strong style={{ fontSize: '0.82rem', color: isSelected ? '#34D399' : '#FFFFFF', display: 'block' }}>
+                            {opt.label}
+                          </strong>
+                          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '2px', display: 'block' }}>
+                            {opt.desc}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 4. Live Status Panel */}
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.9)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '14px',
+                  padding: '0.85rem 1rem',
+                  fontSize: '0.78rem',
+                  color: '#94A3B8',
+                  marginBottom: '1.5rem',
+                  lineHeight: '1.6'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <span>
+                      وضعیت آخرین اجرا: 
+                      <strong style={{
+                        color: schedulerConfig?.last_status === 'running' ? '#FBBF24' : schedulerConfig?.last_status === 'success' ? '#34D399' : schedulerConfig?.last_status === 'error' ? '#EF4444' : '#94A3B8',
+                        marginRight: '6px'
+                      }}>
+                        {schedulerConfig?.last_status === 'running' ? '⏳ در حال اجرا...' : schedulerConfig?.last_status === 'success' ? '✅ موفق' : schedulerConfig?.last_status === 'error' ? '❌ خطا' : '⚪ در انتظار'}
+                      </strong>
+                    </span>
+                    {schedulerConfig?.last_run && (
+                      <span style={{ fontSize: '0.72rem', color: '#CBD5E1', direction: 'ltr' }}>
+                        {new Date(schedulerConfig.last_run).toLocaleString('fa-IR')}
+                      </span>
+                    )}
+                  </div>
+                  {schedulerConfig?.last_message && (
+                    <div style={{ color: '#CBD5E1', fontSize: '0.74rem' }}>
+                      {schedulerConfig.last_message}
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer Buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.85rem' }}>
+                  <button
+                    type="button"
+                    onClick={handleRunSchedulerNow}
+                    disabled={schedulerRunLoading || schedulerConfig?.is_running}
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      color: '#38BDF8',
+                      padding: '0.55rem 1.1rem',
+                      borderRadius: '12px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: (schedulerRunLoading || schedulerConfig?.is_running) ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem'
+                    }}
+                  >
+                    <RefreshCw size={14} className={(schedulerRunLoading || schedulerConfig?.is_running) ? 'spin' : ''} />
+                    <span>{schedulerRunLoading ? 'در حال ارسال دستور...' : 'اجرای آزمایشی الان'}</span>
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowSchedulerModal(false)}
+                      style={{
+                        padding: '0.55rem 1.25rem',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        color: '#94A3B8',
+                        fontSize: '0.84rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      انصراف
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={schedulerSaving}
+                      style={{
+                        padding: '0.55rem 1.5rem',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(52, 211, 153, 0.5)',
+                        background: 'linear-gradient(135deg, #10B981, #059669)',
+                        boxShadow: '0 4px 16px rgba(16, 185, 129, 0.35)',
+                        color: '#FFFFFF',
+                        fontSize: '0.84rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.45rem'
+                      }}
+                    >
+                      <Save size={15} />
+                      <span>{schedulerSaving ? 'در حال ذخیره...' : 'ذخیره تنظیمات زمان‌بندی'}</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

@@ -176,6 +176,36 @@ router.get('/config', (req, res) => {
   }
 });
 
+// GET /api/jira/scheduler - Get automated sync scheduler config & live status
+router.get('/scheduler', (req, res) => {
+  try {
+    const config = cacheService.getSchedulerConfig();
+    res.json({ success: true, config });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch scheduler config: ' + err.message });
+  }
+});
+
+// POST /api/jira/scheduler - Save scheduler config and restart cron
+router.post('/scheduler', (req, res) => {
+  try {
+    const updated = cacheService.saveSchedulerConfig(req.body || {});
+    res.json({ success: true, message: 'تنظیمات زمان‌بندی همگام‌سازی با موفقیت ذخیره و فعال گردید.', config: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to save scheduler config: ' + err.message });
+  }
+});
+
+// POST /api/jira/scheduler/run-now - Trigger scheduled job immediately
+router.post('/scheduler/run-now', async (req, res) => {
+  try {
+    cacheService.executeScheduledSync().catch(e => console.error('Error in run-now:', e));
+    res.json({ success: true, message: 'همگام‌سازی زمان‌بندی‌شده آغاز گردید و در پس‌زمینه در حال اجراست.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to trigger sync: ' + err.message });
+  }
+});
+
 // PUT save settings
 router.put('/config', (req, res) => {
   try {
