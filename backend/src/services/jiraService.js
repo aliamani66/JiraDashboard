@@ -268,8 +268,8 @@ function parseJiraDescription(desc) {
   return '';
 }
 
-// Fetch all epics from the configured project(s)
-async function fetchEpics() {
+// Fetch all epics (or recent epics if days is provided) from the configured project(s)
+async function fetchEpics(days = null) {
   const cfg = getJiraConfig();
   if (!cfg.isConfigured) return [];
   const mapping = cfg.mapping || jiraMapping;
@@ -279,6 +279,13 @@ async function fetchEpics() {
     const configuredProjKeysList = (projKeyStr && projKeyStr !== 'ALL' && projKeyStr !== '*')
       ? projKeyStr.split(',').map(p => p.trim().toUpperCase().replace(/["']/g, '')).filter(Boolean)
       : [];
+
+    let dateFilter = '';
+    if (days && typeof days === 'number' && days > 0) {
+      const pastDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000));
+      const pastDateStr = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, '0')}-${String(pastDate.getDate()).padStart(2, '0')}`;
+      dateFilter = `AND (created >= "${pastDateStr}" OR updated >= "${pastDateStr}")`;
+    }
 
     const fields = [
       '*navigable',
@@ -304,15 +311,15 @@ async function fetchEpics() {
     let allIssues = [];
 
     if (configuredProjKeysList.length > 1) {
-      // Fetch epics for each configured project individually to guarantee 100% of epics are retrieved without pagination loss
+      // Fetch epics for each configured project individually
       const epicPromises = configuredProjKeysList.map(async (pKey) => {
-        const jqlSingle = `project = "${pKey}" AND (issuetype in (Epic, "اپیک") OR "Epic Name" is not EMPTY OR issuetype = Epic) ORDER BY created DESC`;
+        const jqlSingle = `project = "${pKey}" AND (issuetype in (Epic, "اپیک") OR "Epic Name" is not EMPTY OR issuetype = Epic) ${dateFilter} ORDER BY created DESC`;
         try {
           const res = await jiraSearch(jqlSingle, fields, { maxResults: 2000 });
           return res.issues || [];
         } catch (_) {
           try {
-            const fallbackJql = `project = "${pKey}" AND issuetype = Epic ORDER BY created DESC`;
+            const fallbackJql = `project = "${pKey}" AND issuetype = Epic ${dateFilter} ORDER BY created DESC`;
             const fbRes = await jiraSearch(fallbackJql, fields, { maxResults: 2000 });
             return fbRes.issues || [];
           } catch (_) {
@@ -336,12 +343,12 @@ async function fetchEpics() {
       if (configuredProjKeysList.length === 1) {
         projectFilter = `AND project = "${configuredProjKeysList[0]}"`;
       }
-      const jql = `(issuetype in (Epic, "اپیک") OR "Epic Name" is not EMPTY OR issuetype = Epic) ${projectFilter} ORDER BY created DESC`;
+      const jql = `(issuetype in (Epic, "اپیک") OR "Epic Name" is not EMPTY OR issuetype = Epic) ${projectFilter} ${dateFilter} ORDER BY created DESC`;
       try {
         const data = await jiraSearch(jql, fields, { maxResults: 2000 });
         allIssues = data.issues || [];
       } catch (_) {
-        const fallbackJql = `issuetype=Epic ${projectFilter} ORDER BY created DESC`;
+        const fallbackJql = `issuetype=Epic ${projectFilter} ${dateFilter} ORDER BY created DESC`;
         const data = await jiraSearch(fallbackJql, fields, { maxResults: 2000 }).catch(() => ({ issues: [] }));
         allIssues = data.issues || [];
       }

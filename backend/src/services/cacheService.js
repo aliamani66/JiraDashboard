@@ -1301,9 +1301,11 @@ async function syncRecentFromJira(days = 10) {
   const syncTime = new Date().toISOString();
 
   try {
-    // 1. Fetch/Upsert Epics
-    console.log(`[RECENT SYNC] Fetching epics from Jira...`);
-    const epics = await jiraService.fetchEpics();
+    // 1. Fetch/Upsert ONLY recent Epics modified or created in the past X days
+    console.log(`[RECENT SYNC] Fetching recent ${days} days epics from Jira...`);
+    const epics = await jiraService.fetchEpics(days);
+    console.log(`[RECENT SYNC] Raw epics returned from Jira for last ${days} days: ${epics.length}`);
+
     const insertProject = db.prepare(`
       INSERT INTO projects (id, title, description, status, capabilities, category, confluence_link, start_date, due_date, labels, assignee, priority, linked_tasks, last_synced)
       VALUES (@id, @title, @description, @status, @capabilities, @category, @confluence_link, @start_date, @due_date, @labels, @assignee, @priority, @linked_tasks, @last_synced)
@@ -1323,19 +1325,21 @@ async function syncRecentFromJira(days = 10) {
         last_synced=excluded.last_synced
     `);
 
-    db.transaction(() => {
-      for (const epic of epics) {
-        epic.last_synced = syncTime;
-        if (!epic.capabilities) epic.capabilities = '';
-        if (!epic.confluence_link) epic.confluence_link = null;
-        if (!epic.labels) epic.labels = '[]';
-        if (!epic.assignee) epic.assignee = null;
-        if (!epic.priority) epic.priority = 'Medium';
-        if (!epic.linked_tasks) epic.linked_tasks = '[]';
-        insertProject.run(epic);
-        projectsSynced++;
-      }
-    })();
+    if (epics.length > 0) {
+      db.transaction(() => {
+        for (const epic of epics) {
+          epic.last_synced = syncTime;
+          if (!epic.capabilities) epic.capabilities = '';
+          if (!epic.confluence_link) epic.confluence_link = null;
+          if (!epic.labels) epic.labels = '[]';
+          if (!epic.assignee) epic.assignee = null;
+          if (!epic.priority) epic.priority = 'Medium';
+          if (!epic.linked_tasks) epic.linked_tasks = '[]';
+          insertProject.run(epic);
+          projectsSynced++;
+        }
+      })();
+    }
 
     // 2. Fetch/Upsert Tasks modified or created in the past X days
     const cfg = jiraService.getJiraConfig();
