@@ -1,3 +1,5 @@
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+
 :root {
   --bg-primary: #080c16;
   --bg-secondary: #0e1526;
@@ -84,6 +86,10 @@
 
 *, *::before, *::after {
   font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+code, pre, kbd, samp, .task-id-badge, .badge-mono, .code-font, .task-code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
 }
 
 body {
